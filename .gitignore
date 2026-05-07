@@ -1,6 +1,11 @@
 .DS_Store
 node_modules/
 **/node_modules/
+.astro/
+dist/
+runs/
+test-results/
+playwright-report/
 
 # Local recording scratch
 app/**/.frames-*/

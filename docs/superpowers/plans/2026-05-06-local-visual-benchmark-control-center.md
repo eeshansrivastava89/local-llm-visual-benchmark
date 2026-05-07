@@ -36,12 +36,12 @@
 
 ## Phase 0: Project Scaffold
 
-- [ ] Create Astro + TypeScript project structure without deleting the existing prototype files.
-- [ ] Add scripts: `dev`, `build`, `preview`, `test`, `test:e2e`, `lint` or `check`.
-- [ ] Add dependencies: Astro, TypeScript, Vitest, Playwright, and `gray-matter` for Markdown frontmatter.
-- [ ] Update `.gitignore` for `node_modules/`, `.astro/`, `dist/`, `runs/`, Playwright artifacts, and local logs.
-- [ ] Verify `npm install`, `npm run build`, and `npm test` run on the empty scaffold.
-- [ ] Commit scaffold separately.
+- [x] Create Astro + TypeScript project structure without deleting the existing prototype files.
+- [x] Add scripts: `dev`, `build`, `preview`, `test`, `test:e2e`, `lint` or `check`.
+- [x] Add dependencies: Astro, TypeScript, Vitest, Playwright, and `gray-matter` for Markdown frontmatter.
+- [x] Update `.gitignore` for `node_modules/`, `.astro/`, `dist/`, `runs/`, Playwright artifacts, and local logs.
+- [x] Verify `npm install`, `npm run build`, and `npm test` run on the empty scaffold.
+- [x] Commit scaffold separately.
 
 ## Phase 1: File-Backed Benchmark Definitions
 
