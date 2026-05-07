@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { RunPaths } from "./paths";
 import type { RunError, RunMetadata } from "./types";
 
@@ -27,6 +28,36 @@ export async function writeRunHtml(paths: RunPaths, html: string): Promise<void>
 
 export async function readRunMetadata(paths: RunPaths): Promise<RunMetadata> {
   return JSON.parse(await readFile(paths.metadataPath, "utf8")) as RunMetadata;
+}
+
+export async function listRunMetadata(
+  runsRoot = join(process.cwd(), "runs")
+): Promise<RunMetadata[]> {
+  const runMetadata: RunMetadata[] = [];
+  const benchmarkDirectories = await readDirectoriesIfPresent(runsRoot);
+
+  for (const benchmarkDirectory of benchmarkDirectories) {
+    const benchmarkPath = join(runsRoot, benchmarkDirectory);
+    const modelDirectories = await readDirectoriesIfPresent(benchmarkPath);
+
+    for (const modelDirectory of modelDirectories) {
+      const modelPath = join(benchmarkPath, modelDirectory);
+      const runDirectories = await readDirectoriesIfPresent(modelPath);
+
+      for (const runDirectory of runDirectories) {
+        const metadataPath = join(modelPath, runDirectory, "metadata.json");
+        const metadata = await readMetadataIfPresent(metadataPath);
+
+        if (metadata) {
+          runMetadata.push(metadata);
+        }
+      }
+    }
+  }
+
+  return runMetadata.sort((left, right) =>
+    sortTimestamp(right).localeCompare(sortTimestamp(left))
+  );
 }
 
 export async function updateRunMetadata(
@@ -88,4 +119,45 @@ function toRunError(error: unknown): RunError {
 
 async function writePrettyJson(path: string, value: unknown): Promise<void> {
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+async function readDirectoriesIfPresent(path: string): Promise<string[]> {
+  try {
+    const entries = await readdir(path, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort((left, right) => left.localeCompare(right));
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+async function readMetadataIfPresent(path: string): Promise<RunMetadata | undefined> {
+  try {
+    return JSON.parse(await readFile(path, "utf8")) as RunMetadata;
+  } catch (error) {
+    if (isMissingPathError(error) || error instanceof SyntaxError) {
+      return undefined;
+    }
+
+    throw error;
+  }
+}
+
+function sortTimestamp(metadata: RunMetadata): string {
+  return metadata.updatedAt || metadata.createdAt || metadata.runId;
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ENOENT"
+  );
 }

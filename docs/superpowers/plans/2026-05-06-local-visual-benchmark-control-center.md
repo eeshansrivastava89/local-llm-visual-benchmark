@@ -109,11 +109,11 @@
 
 ## Phase 7: Local API Layer
 
-- [ ] Add local API endpoints for status, benchmarks, LM Studio models, system stats, saved runs, start queue, stop after current, and cancel now.
-- [ ] Keep endpoints thin; they call runner core only.
-- [ ] Add API-level tests or handler tests that confirm endpoints delegate to runner functions and return stable response shapes.
-- [ ] Verify tests and build.
-- [ ] Commit local API.
+- [x] Add local API endpoints for status, benchmarks, LM Studio models, system stats, saved runs, start queue, stop after current, and cancel now.
+- [x] Keep endpoints thin; they call runner core only.
+- [x] Add API-level tests or handler tests that confirm endpoints delegate to runner functions and return stable response shapes.
+- [x] Verify tests and build.
+- [x] Commit local API.
 
 ## Phase 8: Control Center UI
 
