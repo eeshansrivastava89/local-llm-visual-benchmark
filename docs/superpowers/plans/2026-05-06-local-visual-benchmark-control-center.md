@@ -117,17 +117,17 @@
 
 ## Phase 8: Control Center UI
 
-- [ ] Build the Astro page shell with a restrained app UI, not a marketing page.
-- [ ] Add connection panel for base URL, test status, and discovered LM Studio models.
-- [ ] Add run setup controls for benchmarks, models, repeat count, PNG capture timestamp, and optional video generation.
-- [ ] Add queue controls: Start, Stop after current, Cancel now.
-- [ ] Add queue/status panel with current benchmark, model, repeat, elapsed time, and run counts.
-- [ ] Add system stats panel with unavailable states for unsupported metrics.
-- [ ] Add result grid defaulting to PNG previews.
-- [ ] Add top-level Image/Video toggle with PNG fallback when video is missing.
-- [ ] Add run detail view with metadata, raw response link/view, prompt text, and open generated HTML.
-- [ ] Verify responsive layout with desktop and mobile browser screenshots.
-- [ ] Commit control center UI.
+- [x] Build the Astro page shell with a restrained app UI, not a marketing page.
+- [x] Add connection panel for base URL, test status, and discovered LM Studio models.
+- [x] Add run setup controls for benchmarks, models, repeat count, PNG capture timestamp, and optional video generation.
+- [x] Add queue controls: Start, Stop after current, Cancel now.
+- [x] Add queue/status panel with current benchmark, model, repeat, elapsed time, and run counts.
+- [x] Add system stats panel with unavailable states for unsupported metrics.
+- [x] Add result grid defaulting to PNG previews.
+- [x] Add top-level Image/Video toggle with PNG fallback when video is missing.
+- [x] Add run detail view with metadata, raw response link/view, prompt text, and open generated HTML.
+- [x] Verify responsive layout with desktop and mobile browser screenshots.
+- [x] Commit control center UI.
 
 ## Phase 9: Static Export And GitHub Pages Build
 
