@@ -138,11 +138,11 @@
 - [ ] Add a build test that simulates exported runs and verifies `npm run build` succeeds.
 - [ ] Commit static export path.
 
-## Phase 10: Migration From Existing Prototype Data
+## Phase 10: Documentation And Prototype Cleanup
 
-- [ ] Preserve existing `outputs/`, `app/previews/`, and `app/collage.html` as historical/prototype evidence unless explicitly removed later.
-- [ ] Do not add an import script in v1; document the manual path for using current Sakura/Solar prototype data in `README.md`.
-- [ ] Confirm generated app can display current copied prompt definitions and any existing preview assets where compatible.
+- [x] Remove old untracked prototype artifacts that are not part of the current Astro/runner plan.
+- [ ] Do not add an import script in v1; document the manual path for adding benchmark prompts and generated run outputs.
+- [ ] Confirm generated app can display current copied prompt definitions.
 - [ ] Update `README.md` with local run, LM Studio setup, prompt editing, static export, and publish instructions.
 - [ ] Verify end-to-end with at least one mocked or real LM Studio run.
 - [ ] Commit migration/docs.
