@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildRunPaths, createRunId, slugModelId } from "../../src/runner/paths";
+import { buildRunPaths, createRunId, slugModelId } from "../../src/lib/paths";
 
 describe("slugModelId", () => {
   it("creates deterministic lowercase filesystem-safe model slugs", () => {

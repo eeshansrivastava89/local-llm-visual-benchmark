@@ -2,7 +2,7 @@
 
 ## Goal
 
-Turn the app into a local-first viewer and prompt-prep tool for visual benchmark artifacts. The app no longer runs models, manages queues, or sends completion requests.
+Turn the app into a local-first viewer and prompt-prep tool for visual benchmark artifacts. The app no longer runs models or sends completion requests.
 
 ## Product Shape
 
@@ -40,10 +40,10 @@ response.raw.txt
 
 ## Boundaries
 
-- No queue.
+- No model execution orchestration.
 - No start/stop/cancel controls.
 - No LM Studio chat completion calls.
-- No runner logging.
+- No model-execution lifecycle logging.
 - No leaderboard or voting.
 - No framework component kit unless custom Astro components become a blocker.
 

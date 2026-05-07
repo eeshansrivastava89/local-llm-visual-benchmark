@@ -12,7 +12,7 @@ Local-first viewer for visual benchmark outputs. The app helps you prepare run f
 - Displays saved runs as a gallery and comparison viewer.
 - Exports saved results as a static GitHub Pages-ready site.
 
-It does not run models, send chat-completion requests, manage queues, load models, change LM Studio settings, rank outputs, or use a hosted backend.
+It does not run models, send chat-completion requests, load models, change LM Studio settings, rank outputs, or use a hosted backend.
 
 ## Requirements
 

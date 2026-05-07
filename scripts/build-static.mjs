@@ -2,7 +2,7 @@ import { cp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { generateStaticExport } from "../src/runner/export.ts";
+import { generateStaticExport } from "../src/lib/export.ts";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 

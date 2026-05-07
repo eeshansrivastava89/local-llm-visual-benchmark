@@ -18,7 +18,7 @@ Precise, calm, craft-aware. The product should feel like a focused lab bench for
 
 ## Anti-references
 
-Avoid runner dashboards, queue monitors, leaderboard products, decorative AI gradients, heavy SaaS chrome, and interfaces that hide file paths or output conventions from the user.
+Avoid orchestration dashboards, leaderboard products, decorative AI gradients, heavy SaaS chrome, and interfaces that hide file paths or output conventions from the user.
 
 ## Design Principles
 

@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { generateStaticExport } from "../../src/runner/export";
-import type { RunMetadata } from "../../src/runner/types";
+import { generateStaticExport } from "../../src/lib/export";
+import type { RunMetadata } from "../../src/lib/types";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const execFileAsync = promisify(execFile);

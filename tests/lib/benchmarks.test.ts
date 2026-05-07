@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendHtmlOutputContract,
   loadBenchmarks
-} from "../../src/runner/benchmarks";
+} from "../../src/lib/benchmarks";
 
 async function createBenchmarkDir(files: Record<string, string>) {
   const dir = await mkdtemp(join(tmpdir(), "llm-benchmarks-"));

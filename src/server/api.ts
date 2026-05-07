@@ -1,14 +1,14 @@
 import { join } from "node:path";
-import { loadBenchmarks as defaultLoadBenchmarks } from "../runner/benchmarks";
+import { loadBenchmarks as defaultLoadBenchmarks } from "../lib/benchmarks";
 import {
   checkLmStudioConnection as defaultCheckLmStudioConnection,
   listLmStudioModels as defaultListLmStudioModels,
   normalizeLmStudioBaseUrl
-} from "../runner/lmstudio";
-import { prepareRun as defaultPrepareRun, type PromptTool } from "../runner/prompt-prep";
-import { listRunMetadata as defaultListRunMetadata } from "../runner/runs";
-import { getSystemStats as defaultGetSystemStats } from "../runner/system-stats";
-import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../runner/types";
+} from "../lib/lmstudio";
+import { prepareRun as defaultPrepareRun, type PromptTool } from "../lib/prompt-prep";
+import { listRunMetadata as defaultListRunMetadata } from "../lib/runs";
+import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
+import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../lib/types";
 
 const STATUS_TIMEOUT_MS = 2000;
 const MODEL_LIST_TIMEOUT_MS = 10000;

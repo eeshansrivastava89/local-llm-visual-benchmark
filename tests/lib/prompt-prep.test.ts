@@ -2,8 +2,8 @@ import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { prepareRun } from "../../src/runner/prompt-prep";
-import type { BenchmarkRecord } from "../../src/runner/types";
+import { prepareRun } from "../../src/lib/prompt-prep";
+import type { BenchmarkRecord } from "../../src/lib/types";
 
 const benchmark: BenchmarkRecord = {
   id: "sakura",

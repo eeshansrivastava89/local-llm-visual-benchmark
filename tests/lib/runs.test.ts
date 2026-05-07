@@ -2,7 +2,7 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildRunPaths } from "../../src/runner/paths";
+import { buildRunPaths } from "../../src/lib/paths";
 import {
   markRunFailed,
   updateRunMetadata,
@@ -10,8 +10,8 @@ import {
   writeRawResponse,
   writeRunHtml,
   writeRunMetadata
-} from "../../src/runner/runs";
-import type { RunMetadata } from "../../src/runner/types";
+} from "../../src/lib/runs";
+import type { RunMetadata } from "../../src/lib/types";
 
 async function createRunsRoot() {
   return mkdtemp(join(tmpdir(), "llm-visual-runs-"));

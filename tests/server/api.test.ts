@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { createLocalApi } from "../../src/server/api";
-import type { BenchmarkRecord, LMStudioModel, PreparedRun } from "../../src/runner/types";
+import type { BenchmarkRecord, LMStudioModel, PreparedRun } from "../../src/lib/types";
 
 const benchmarks: BenchmarkRecord[] = [
   {

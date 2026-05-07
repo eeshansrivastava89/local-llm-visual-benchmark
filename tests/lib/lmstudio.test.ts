@@ -3,7 +3,7 @@ import {
   checkLmStudioConnection,
   listLmStudioModels,
   normalizeLmStudioBaseUrl
-} from "../../src/runner/lmstudio";
+} from "../../src/lib/lmstudio";
 
 const originalFetch = globalThis.fetch;
 

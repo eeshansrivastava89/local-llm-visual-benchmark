@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the benchmark runner with a local artifact viewer and prompt-prep workflow.
+**Goal:** Replace benchmark execution with a local artifact viewer and prompt-prep workflow.
 
-**Architecture:** Keep Astro, benchmark loading, run discovery, static export, LM Studio passive status, and system stats. Remove queue/completion/capture execution paths. Add a small prompt-prep module that creates run folders, metadata, and copyable tool prompts.
+**Architecture:** Keep Astro, benchmark loading, run discovery, static export, LM Studio passive status, and system stats. Remove model-execution and preview-capture paths. Add a small prompt-prep module that creates run folders, metadata, and copyable tool prompts.
 
 **Tech Stack:** Astro, TypeScript, Vitest, Playwright, custom CSS, vanilla client script.
 
@@ -14,14 +14,14 @@
 
 - [x] Add product/design context for the viewer pivot.
 - [x] Add the reduced pivot spec and implementation checklist.
-- [x] Remove outdated runner-control docs or mark them superseded.
+- [x] Remove outdated execution-control docs or mark them superseded.
 
 ## Phase 2: Delete Execution Surface
 
-- [x] Delete queue API routes and runner queue/capture/extraction modules.
+- [x] Delete execution API routes and old execution/capture/extraction modules.
 - [x] Remove LM Studio chat-completion code.
-- [x] Remove queue state from the local API response.
-- [x] Delete or rewrite tests that assert runner behavior.
+- [x] Remove execution state from the local API response.
+- [x] Delete or rewrite tests that assert model-execution behavior.
 
 ## Phase 3: Add Prompt Prep
 
@@ -32,7 +32,7 @@
 
 ## Phase 4: Rebuild Viewer UI
 
-- [x] Replace runner controls with left-sidebar filters, gallery, compare modes, setup guidance, and run-prep panel.
+- [x] Replace execution controls with left-sidebar filters, gallery, compare modes, setup guidance, and run-prep panel.
 - [x] Preserve static fallback browsing.
 - [x] Keep detail inspection for prompt, HTML, preview, metadata, and errors.
 - [x] Add E2E coverage for passive discovery, prompt prep, compare filtering, and static mode.

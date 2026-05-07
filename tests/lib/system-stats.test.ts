@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSystemStats } from "../../src/runner/system-stats";
+import { getSystemStats } from "../../src/lib/system-stats";
 
 describe("getSystemStats", () => {
   it("returns best-effort local OS, CPU, RAM, platform, and GPU stats", () => {
