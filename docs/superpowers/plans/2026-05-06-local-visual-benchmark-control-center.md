@@ -55,14 +55,14 @@
 
 ## Phase 2: Runner Types, Paths, And Run Metadata
 
-- [ ] Define shared TypeScript types for benchmark records, LM Studio models, queue jobs, run status, run metadata, and assets.
-- [ ] Implement safe model slugging while preserving the exact LM Studio model ID in metadata.
-- [ ] Implement timestamp-based run IDs.
-- [ ] Implement run folder path creation under `runs/<benchmark-id>/<model-slug>/<run-id>/`.
-- [ ] Implement metadata write/update helpers with statuses: `queued`, `running`, `completed`, `failed`, `cancelled`, `skipped`.
-- [ ] Add tests for slugging, run ID shape, folder paths, and metadata writes.
-- [ ] Verify tests and build.
-- [ ] Commit runner storage foundation.
+- [x] Define shared TypeScript types for benchmark records, LM Studio models, queue jobs, run status, run metadata, and assets.
+- [x] Implement safe model slugging while preserving the exact LM Studio model ID in metadata.
+- [x] Implement timestamp-based run IDs.
+- [x] Implement run folder path creation under `runs/<benchmark-id>/<model-slug>/<run-id>/`.
+- [x] Implement metadata write/update helpers with statuses: `queued`, `running`, `completed`, `failed`, `cancelled`, `skipped`.
+- [x] Add tests for slugging, run ID shape, folder paths, and metadata writes.
+- [x] Verify tests and build.
+- [x] Commit runner storage foundation.
 
 ## Phase 3: LM Studio Client
 
