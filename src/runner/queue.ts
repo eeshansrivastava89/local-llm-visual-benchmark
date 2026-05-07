@@ -80,7 +80,23 @@ export interface BenchmarkQueueDependencies {
   createRunId?: (job: QueueJob, now: Date) => string;
   requestCompletion?: QueueRequestCompletion;
   capturePreview?: QueueCapturePreview;
+  logger?: QueueLogger;
 }
+
+export type QueueLogEvent =
+  | "queue:start"
+  | "queue:stop-after-current"
+  | "queue:cancel-now"
+  | "queue:complete"
+  | "job:start"
+  | "job:complete"
+  | "job:failed"
+  | "job:cancelled";
+
+export type QueueLogger = (
+  event: QueueLogEvent,
+  details: Record<string, unknown>
+) => void;
 
 interface ActiveRun {
   job: QueueJob;
@@ -119,6 +135,7 @@ export class BenchmarkQueue {
   private readonly createRunIdForJob: (job: QueueJob, now: Date) => string;
   private readonly requestCompletion: QueueRequestCompletion;
   private readonly capturePreview: QueueCapturePreview;
+  private readonly logger: QueueLogger;
   private readonly usedRunIds = new Map<string, number>();
   private readonly state: QueueState;
   private activeAbortController?: AbortController;
@@ -151,6 +168,7 @@ export class BenchmarkQueue {
           settings: request.settings,
           now: request.now
         }));
+    this.logger = dependencies.logger ?? (() => undefined);
     this.state = {
       status: "idle",
       pendingJobs: jobs.map((job) => ({ ...job, status: "queued" })),
@@ -169,6 +187,10 @@ export class BenchmarkQueue {
     if (this.state.status === "running") {
       this.stopRequested = true;
       this.state.status = "stopping";
+      this.log("queue:stop-after-current", {
+        activeJobId: this.state.activeJob?.id,
+        pendingJobs: this.state.pendingJobs.length
+      });
     }
   }
 
@@ -176,6 +198,11 @@ export class BenchmarkQueue {
     if (this.state.status === "running" || this.state.status === "stopping") {
       this.cancelRequested = true;
       this.state.status = "cancelled";
+      this.log("queue:cancel-now", {
+        activeJobId: this.state.activeJob?.id,
+        pendingJobs: this.state.pendingJobs.length,
+        reason
+      });
       this.activeAbortController?.abort(new Error(reason));
     }
   }
@@ -187,6 +214,9 @@ export class BenchmarkQueue {
 
     this.started = true;
     this.state.status = "running";
+    this.log("queue:start", {
+      totalJobs: this.state.totalJobs
+    });
 
     while (this.state.pendingJobs.length > 0) {
       if (this.cancelRequested) {
@@ -232,6 +262,13 @@ export class BenchmarkQueue {
     } else {
       this.state.status = "completed";
     }
+    this.log("queue:complete", {
+      status: this.state.status,
+      completedJobs: this.state.completedJobs.length,
+      failedJobs: this.state.failedJobs.length,
+      skippedJobs: this.state.skippedJobs.length,
+      cancelled: Boolean(this.state.cancelledJob)
+    });
 
     return this.getState();
   }
@@ -243,6 +280,7 @@ export class BenchmarkQueue {
     const activeRun = await this.createRun(job);
 
     try {
+      this.log("job:start", this.jobLogDetails(job, activeRun.paths));
       throwIfAborted(signal);
       const rawResponse = await this.requestCompletion({
         job,
@@ -268,6 +306,7 @@ export class BenchmarkQueue {
       throwIfAborted(signal);
       await this.markCompleted(activeRun);
       this.state.completedJobs.push({ ...job, status: "completed" });
+      this.log("job:complete", this.jobLogDetails(job, activeRun.paths));
       return "completed";
     } catch (error) {
       if (this.cancelRequested || signal.aborted) {
@@ -277,11 +316,19 @@ export class BenchmarkQueue {
           this.now()
         );
         this.state.cancelledJob = { ...job, status: "cancelled" };
+        this.log("job:cancelled", {
+          ...this.jobLogDetails(job, activeRun.paths),
+          error: errorMessage(error)
+        });
         return "cancelled";
       }
 
       await markRunFailed(activeRun.paths, error, this.now());
       this.state.failedJobs.push({ ...job, status: "failed" });
+      this.log("job:failed", {
+        ...this.jobLogDetails(job, activeRun.paths),
+        error: errorMessage(error)
+      });
       return "failed";
     }
   }
@@ -344,6 +391,20 @@ export class BenchmarkQueue {
     this.state.skippedJobs.push(...skipped);
   }
 
+  private log(event: QueueLogEvent, details: Record<string, unknown>): void {
+    this.logger(event, details);
+  }
+
+  private jobLogDetails(job: QueueJob, paths: RunPaths): Record<string, unknown> {
+    return {
+      jobId: job.id,
+      benchmarkId: job.benchmark.id,
+      modelId: job.model.id,
+      repeat: `${job.repeatIndex}/${job.repeatTotal}`,
+      runDirectory: paths.runDirectory
+    };
+  }
+
   private uniqueRunId(job: QueueJob, now: Date): string {
     const baseRunId = this.createRunIdForJob(job, now);
     const currentCount = this.usedRunIds.get(baseRunId) ?? 0;
@@ -377,6 +438,10 @@ function cancellationError(error: unknown, signal: AbortSignal): Error {
   }
 
   return new Error("Queue job was cancelled.");
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function cloneState(state: QueueState): QueueState {

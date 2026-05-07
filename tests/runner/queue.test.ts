@@ -240,6 +240,49 @@ describe("BenchmarkQueue", () => {
     });
   });
 
+  it("emits terminal-friendly lifecycle log events", async () => {
+    const runsRoot = await createRunsRoot();
+    const logger = vi.fn();
+    const jobs = expandQueueMatrix({
+      benchmarks: benchmarks.slice(0, 1),
+      models: models.slice(0, 1),
+      repeatCount: 1
+    });
+    const queue = new BenchmarkQueue(jobs, {
+      runsRoot,
+      createRunId: () => "run-1",
+      now: () => new Date("2026-05-06T01:02:03.004Z"),
+      requestCompletion: vi.fn(async () => HTML),
+      capturePreview: vi.fn(async () => undefined),
+      logger
+    });
+
+    await queue.start();
+
+    expect(logger).toHaveBeenCalledWith("queue:start", { totalJobs: 1 });
+    expect(logger).toHaveBeenCalledWith(
+      "job:start",
+      expect.objectContaining({
+        benchmarkId: "sakura",
+        modelId: "model-a",
+        repeat: "1/1"
+      })
+    );
+    expect(logger).toHaveBeenCalledWith(
+      "job:complete",
+      expect.objectContaining({
+        benchmarkId: "sakura",
+        modelId: "model-a"
+      })
+    );
+    expect(logger).toHaveBeenCalledWith(
+      "queue:complete",
+      expect.objectContaining({
+        completedJobs: 1
+      })
+    );
+  });
+
   it("records failed model or extraction metadata and continues to the next job", async () => {
     const runsRoot = await createRunsRoot();
     const jobs = expandQueueMatrix({

@@ -238,17 +238,22 @@ async function mockApi(
           cpu: {
             model: "Apple M",
             cores: 12,
-            loadAverage: [1.2, 1.5, 1.8]
+            usagePercent: 18.5
           },
           memory: {
             totalBytes: 34359738368,
+            availableBytes: 8589934592,
             freeBytes: 8589934592,
-            usedBytes: 25769803776
+            usedBytes: 25769803776,
+            pressurePercent: 75,
+            pressureLabel: "medium",
+            source: "mock memory stats"
           },
           gpu: {
-            available: false,
-            devices: [],
-            reason: "GPU telemetry is unavailable in the local API v1."
+            available: true,
+            telemetryAvailable: false,
+            devices: [{ name: "Apple M", cores: "20" }],
+            reason: "GPU hardware detected. Live GPU utilization is not available from the local API v1."
           }
         }
       })

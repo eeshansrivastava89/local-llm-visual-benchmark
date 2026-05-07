@@ -148,6 +148,15 @@
 - [x] Verify end-to-end with at least one mocked or real LM Studio run.
 - [x] Commit migration/docs.
 
+## Follow-Up Corrections
+
+- [x] Make the system timestamp and telemetry refresh live in the local UI.
+- [x] Replace raw load averages with sampled CPU usage percent.
+- [x] Use macOS VM stats for clearer memory used/available reporting.
+- [x] Detect Apple GPU hardware while keeping live GPU utilization marked unsupported.
+- [x] Add terminal lifecycle logs for queue and model-run execution.
+- [x] Verify tests, type checks, local build, static export, and E2E coverage.
+
 ## Verification Checklist
 
 - [x] `npm test`

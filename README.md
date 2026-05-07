@@ -45,6 +45,8 @@ npm run dev
 
 Open the Astro dev URL shown in the terminal. The local UI can call the API routes used for LM Studio status, model listing, queue control, system stats, and saved runs.
 
+When you start a benchmark from the UI, the terminal running `npm run dev` prints lifecycle logs with a `[benchmark]` prefix. The logs include queue start/stop/cancel events, model IDs, benchmark IDs, repeat index, run directory, and job failures.
+
 ## Benchmark Prompts
 
 Benchmark prompts are Markdown files in `benchmarks/`.

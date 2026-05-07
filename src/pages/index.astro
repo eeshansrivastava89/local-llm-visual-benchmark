@@ -731,8 +731,8 @@ const title = "Local LLM Visual Benchmark";
             </div>
             <div class="panel-body form-grid" id="statsPanel">
               <div class="stats-grid">
-                <div class="metric"><span>CPU</span><strong id="cpuStat">Unavailable</strong></div>
-                <div class="metric"><span>Load</span><strong id="loadStat">Unavailable</strong></div>
+                <div class="metric"><span>Hardware</span><strong id="cpuStat">Unavailable</strong></div>
+                <div class="metric"><span>CPU use</span><strong id="loadStat">Sampling</strong></div>
                 <div class="metric"><span>Memory</span><strong id="memoryStat">Unavailable</strong></div>
                 <div class="metric"><span>GPU</span><strong id="gpuStat">Unavailable</strong></div>
               </div>
@@ -778,6 +778,7 @@ const title = "Local LLM Visual Benchmark";
         runs: [],
         queue: null,
         stats: null,
+        statsUpdatedAt: null,
         selectedBenchmarks: new Set(),
         selectedModels: new Set(),
         media: "image",
@@ -840,6 +841,12 @@ const title = "Local LLM Visual Benchmark";
         renderQueue(idleQueue());
         void refreshAll();
         setInterval(tickElapsed, 1000);
+        setInterval(updateStatsClock, 1000);
+        setInterval(() => {
+          if (!state.staticMode) {
+            void loadStats();
+          }
+        }, 3000);
       }
 
       function wireEvents() {
@@ -941,6 +948,7 @@ const title = "Local LLM Visual Benchmark";
         try {
           const data = await fetchJson("/api/system-stats");
           state.stats = data.stats;
+          state.statsUpdatedAt = Date.now();
           renderStats();
         } catch (error) {
           els.statsMessage.textContent = error.message;
@@ -1144,12 +1152,20 @@ const title = "Local LLM Visual Benchmark";
           return;
         }
 
-        els.statsTimestamp.textContent = new Date(stats.collectedAt).toLocaleTimeString();
+        updateStatsClock();
         els.cpuStat.textContent = `${stats.cpu?.cores ?? "-"} cores`;
-        els.loadStat.textContent = (stats.cpu?.loadAverage ?? []).slice(0, 3).map((value) => value.toFixed(2)).join(" / ") || "Unavailable";
+        els.loadStat.textContent = Number.isFinite(stats.cpu?.usagePercent)
+          ? `${stats.cpu.usagePercent.toFixed(1)}%`
+          : "Sampling";
         els.memoryStat.textContent = `${formatBytes(stats.memory?.usedBytes)} / ${formatBytes(stats.memory?.totalBytes)}`;
-        els.gpuStat.textContent = stats.gpu?.available ? `${stats.gpu.devices.length} devices` : "Unavailable";
-        els.statsMessage.textContent = stats.gpu?.available ? `${stats.os?.type ?? "OS"} ${stats.os?.release ?? ""}` : stats.gpu?.reason ?? "GPU telemetry unavailable.";
+        els.gpuStat.textContent = stats.gpu?.available
+          ? (stats.gpu.devices ?? []).map((device) => device.cores ? `${device.name} (${device.cores} cores)` : device.name).join(", ")
+          : "Unavailable";
+        const memorySource = stats.memory?.pressureLabel
+          ? `Memory pressure ${stats.memory.pressureLabel}`
+          : "Memory pressure unavailable";
+        const gpuNote = stats.gpu?.reason ?? "GPU telemetry unavailable.";
+        els.statsMessage.textContent = `${memorySource}. ${stats.memory?.source ?? ""} ${gpuNote}`;
       }
 
       function renderRuns() {
@@ -1240,6 +1256,17 @@ const title = "Local LLM Visual Benchmark";
         const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
         const seconds = String(elapsedSeconds % 60).padStart(2, "0");
         els.elapsedTime.textContent = `${minutes}:${seconds}`;
+      }
+
+      function updateStatsClock() {
+        if (state.staticMode) {
+          return;
+        }
+        const now = new Date();
+        const refreshed = state.statsUpdatedAt
+          ? `${Math.max(0, Math.floor((Date.now() - state.statsUpdatedAt) / 1000))}s ago`
+          : "waiting";
+        els.statsTimestamp.textContent = `${now.toLocaleTimeString()} · ${refreshed}`;
       }
 
       async function fetchJson(url) {

@@ -11,6 +11,7 @@ import {
   BenchmarkQueue,
   expandQueueMatrix,
   type BenchmarkQueueDependencies,
+  type QueueLogEvent,
   type QueueState
 } from "../runner/queue";
 import type { PartialCaptureSettings } from "../runner/capture";
@@ -141,7 +142,8 @@ class LocalQueueController {
 
     const queue = this.options.queueFactory(input.jobs, {
       runsRoot: this.options.runsRoot,
-      lmStudioBaseUrl: normalizeLmStudioBaseUrl(input.baseUrl)
+      lmStudioBaseUrl: normalizeLmStudioBaseUrl(input.baseUrl),
+      logger: logQueueEvent
     });
     this.activeQueue = queue;
     this.activeRun = queue.start().catch(() => {
@@ -244,6 +246,9 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
         repeatCount: request.repeatCount ?? 1,
         settings: request.capture
       });
+      console.info(
+        `[benchmark] starting queue: ${jobs.length} jobs, ${benchmarks.length} benchmarks, ${models.length} models, repeat ${request.repeatCount ?? 1}`
+      );
 
       return {
         queue: queueController.start({
@@ -366,4 +371,11 @@ function idleQueueState(): QueueState {
 
 function isQueueActive(state?: QueueState): boolean {
   return state?.status === "running" || state?.status === "stopping";
+}
+
+function logQueueEvent(
+  event: QueueLogEvent,
+  details: Record<string, unknown>
+): void {
+  console.info(`[benchmark] ${event}`, details);
 }
