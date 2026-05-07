@@ -77,13 +77,13 @@
 
 ## Phase 4: HTML Extraction And Run Writing
 
-- [ ] Implement raw response saving before extraction.
-- [ ] Implement HTML extraction from complete HTML, fenced HTML, and messy text containing a document.
-- [ ] Save extraction failures as failed runs with raw response and error metadata.
-- [ ] Save successful extraction to `index.html`.
-- [ ] Add tests for clean HTML, fenced HTML, missing HTML, malformed HTML, and failure metadata.
-- [ ] Verify tests and build.
-- [ ] Commit extraction and run writing.
+- [x] Implement raw response saving before extraction.
+- [x] Implement HTML extraction from complete HTML, fenced HTML, and messy text containing a document.
+- [x] Save extraction failures as failed runs with raw response and error metadata.
+- [x] Save successful extraction to `index.html`.
+- [x] Add tests for clean HTML, fenced HTML, missing HTML, malformed HTML, and failure metadata.
+- [x] Verify tests and build.
+- [x] Commit extraction and run writing.
 
 ## Phase 5: Preview Capture
 

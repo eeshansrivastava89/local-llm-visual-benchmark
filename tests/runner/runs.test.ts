@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildRunPaths } from "../../src/runner/paths";
-import { updateRunMetadata, writeRunMetadata } from "../../src/runner/runs";
+import {
+  markRunFailed,
+  updateRunMetadata,
+  writeRawResponse,
+  writeRunHtml,
+  writeRunMetadata
+} from "../../src/runner/runs";
 import type { RunMetadata } from "../../src/runner/types";
 
 async function createRunsRoot() {
@@ -94,6 +100,67 @@ describe("run metadata helpers", () => {
       status: "running",
       model: {
         id: "lmstudio-community/Qwen2.5 Coder:7B Instruct"
+      }
+    });
+  });
+
+  it("writes raw model responses to the run raw response path", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "sakura",
+      modelId: "lmstudio-community/Qwen2.5 Coder:7B Instruct",
+      runId: "2026-05-06T01-02-03-004Z"
+    });
+
+    await writeRawResponse(paths, "raw response text");
+
+    await expect(readFile(paths.rawResponsePath, "utf8")).resolves.toBe(
+      "raw response text"
+    );
+  });
+
+  it("writes extracted HTML to the run index path", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "sakura",
+      modelId: "lmstudio-community/Qwen2.5 Coder:7B Instruct",
+      runId: "2026-05-06T01-02-03-004Z"
+    });
+    const html = "<!doctype html><html><head></head><body></body></html>";
+
+    await writeRunHtml(paths, html);
+
+    await expect(readFile(paths.htmlPath, "utf8")).resolves.toBe(html);
+  });
+
+  it("marks failed metadata with error details while preserving model identity", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "sakura",
+      modelId: "lmstudio-community/Qwen2.5 Coder:7B Instruct",
+      runId: "2026-05-06T01-02-03-004Z"
+    });
+    const metadata = createMetadata(paths.runDirectory);
+
+    await writeRunMetadata(paths, metadata);
+    const updated = await markRunFailed(
+      paths,
+      new Error("HTML extraction failed"),
+      new Date("2026-05-06T01:02:05.004Z")
+    );
+
+    expect(updated).toMatchObject({
+      status: "failed",
+      updatedAt: "2026-05-06T01:02:05.004Z",
+      failedAt: "2026-05-06T01:02:05.004Z",
+      model: {
+        id: "lmstudio-community/Qwen2.5 Coder:7B Instruct"
+      },
+      error: {
+        message: "HTML extraction failed"
       }
     });
   });
