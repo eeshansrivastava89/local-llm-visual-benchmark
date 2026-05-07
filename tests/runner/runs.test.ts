@@ -39,7 +39,7 @@ function createMetadata(runDirectory: string): RunMetadata {
     },
     assets: {
       metadata: "metadata.json",
-      rawResponse: "raw.txt",
+      rawResponse: "response.raw.txt",
       html: "index.html",
       preview: "preview.png"
     }

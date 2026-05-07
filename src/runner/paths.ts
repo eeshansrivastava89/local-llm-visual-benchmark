@@ -76,7 +76,7 @@ export function buildRunPaths(input: BuildRunPathsInput): RunPaths {
     modelDirectory,
     runDirectory,
     metadataPath: join(runDirectory, "metadata.json"),
-    rawResponsePath: join(runDirectory, "raw.txt"),
+    rawResponsePath: join(runDirectory, "response.raw.txt"),
     htmlPath: join(runDirectory, "index.html"),
     previewPath: join(runDirectory, "preview.png"),
     videoPath: join(runDirectory, "preview.webm")
