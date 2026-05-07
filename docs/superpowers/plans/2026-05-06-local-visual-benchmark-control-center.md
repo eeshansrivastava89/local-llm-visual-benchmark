@@ -66,14 +66,14 @@
 
 ## Phase 3: LM Studio Client
 
-- [ ] Implement base URL normalization with default `http://localhost:1234/v1`.
-- [ ] Implement connection check.
-- [ ] Implement model listing via `/models`.
-- [ ] Implement chat/completion request for one benchmark prompt and one model using LM Studio's OpenAI-compatible API.
-- [ ] Add timeout and abort signal support so `Cancel now` can interrupt active requests.
-- [ ] Add tests using mocked `fetch` for reachable server, unreachable server, model list success/failure, and aborted request.
-- [ ] Verify tests and build.
-- [ ] Commit LM Studio client.
+- [x] Implement base URL normalization with default `http://localhost:1234/v1`.
+- [x] Implement connection check.
+- [x] Implement model listing via `/models`.
+- [x] Implement chat/completion request for one benchmark prompt and one model using LM Studio's OpenAI-compatible API.
+- [x] Add timeout and abort signal support so `Cancel now` can interrupt active requests.
+- [x] Add tests using mocked `fetch` for reachable server, unreachable server, model list success/failure, and aborted request.
+- [x] Verify tests and build.
+- [x] Commit LM Studio client.
 
 ## Phase 4: HTML Extraction And Run Writing
 
