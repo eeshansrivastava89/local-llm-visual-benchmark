@@ -55,6 +55,7 @@ describe("buildRunPaths", () => {
       )
     );
     expect(paths.metadataPath).toBe(join(paths.runDirectory, "metadata.json"));
+    expect(paths.promptPath).toBe(join(paths.runDirectory, "prompt.md"));
     expect(paths.rawResponsePath).toBe(join(paths.runDirectory, "response.raw.txt"));
     expect(paths.htmlPath).toBe(join(paths.runDirectory, "index.html"));
     expect(paths.previewPath).toBe(join(paths.runDirectory, "preview.png"));

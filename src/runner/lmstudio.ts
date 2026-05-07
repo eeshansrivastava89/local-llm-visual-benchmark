@@ -1,7 +1,7 @@
 import type { LMStudioModel } from "./types";
 
 const DEFAULT_BASE_URL = "http://localhost:1234/v1";
-const DEFAULT_TIMEOUT_MS = 60_000;
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 export interface LMStudioRequestOptions {
   baseUrl?: string;
@@ -15,17 +15,8 @@ export interface LMStudioConnectionResult {
   error?: string;
 }
 
-export interface LMStudioCompletionRequest extends LMStudioRequestOptions {
-  modelId: string;
-  prompt: string;
-}
-
 interface ModelsResponse {
   data?: unknown;
-}
-
-interface ChatCompletionResponse {
-  choices?: unknown;
 }
 
 export function normalizeLmStudioBaseUrl(baseUrl?: string): string {
@@ -103,39 +94,6 @@ export async function listLmStudioModels(
   });
 }
 
-export async function requestLmStudioCompletion(
-  request: LMStudioCompletionRequest
-): Promise<string> {
-  const normalizedBaseUrl = normalizeLmStudioBaseUrl(request.baseUrl);
-  const body = (await fetchJson(`${normalizedBaseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      model: request.modelId,
-      messages: [
-        {
-          role: "user",
-          content: request.prompt
-        }
-      ]
-    }),
-    signal: request.signal,
-    timeoutMs: request.timeoutMs,
-    context: "requesting LM Studio chat completion"
-  })) as ChatCompletionResponse;
-
-  const content = extractAssistantContent(body);
-  if (typeof content !== "string") {
-    throw new Error(
-      "Malformed LM Studio chat completion response: expected choices[0].message.content string."
-    );
-  }
-
-  return content;
-}
-
 async function fetchJson(
   url: string,
   options: RequestInit & {
@@ -196,19 +154,6 @@ async function fetchJson(
     }
     options.signal?.removeEventListener("abort", abortFromCaller);
   }
-}
-
-function extractAssistantContent(response: ChatCompletionResponse): unknown {
-  if (!Array.isArray(response.choices) || response.choices.length === 0) {
-    return undefined;
-  }
-
-  const [firstChoice] = response.choices;
-  if (!isRecord(firstChoice) || !isRecord(firstChoice.message)) {
-    return undefined;
-  }
-
-  return firstChoice.message.content;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

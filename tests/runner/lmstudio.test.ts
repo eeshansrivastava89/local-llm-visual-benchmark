@@ -2,8 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   checkLmStudioConnection,
   listLmStudioModels,
-  normalizeLmStudioBaseUrl,
-  requestLmStudioCompletion
+  normalizeLmStudioBaseUrl
 } from "../../src/runner/lmstudio";
 
 const originalFetch = globalThis.fetch;
@@ -103,41 +102,7 @@ describe("listLmStudioModels", () => {
   });
 });
 
-describe("requestLmStudioCompletion", () => {
-  it("extracts assistant content from a chat completion response", async () => {
-    const fetchMock = mockFetch(async (input, init) => {
-      expect(String(input)).toBe("http://localhost:1234/v1/chat/completions");
-      expect(init?.method).toBe("POST");
-      expect(init?.headers).toMatchObject({
-        "content-type": "application/json"
-      });
-      expect(JSON.parse(String(init?.body))).toMatchObject({
-        model: "exact/model:id",
-        messages: [{ role: "user", content: "Build HTML." }]
-      });
-
-      return jsonResponse({
-        choices: [
-          {
-            message: {
-              role: "assistant",
-              content: "<!doctype html><html></html>"
-            }
-          }
-        ]
-      });
-    });
-
-    await expect(
-      requestLmStudioCompletion({
-        modelId: "exact/model:id",
-        prompt: "Build HTML.",
-        baseUrl: "http://localhost:1234"
-      })
-    ).resolves.toBe("<!doctype html><html></html>");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
+describe("passive LM Studio requests", () => {
   it("rejects aborted requests with abort context", async () => {
     const controller = new AbortController();
     controller.abort();
@@ -150,11 +115,7 @@ describe("requestLmStudioCompletion", () => {
     });
 
     await expect(
-      requestLmStudioCompletion({
-        modelId: "exact-model",
-        prompt: "Build HTML.",
-        signal: controller.signal
-      })
+      listLmStudioModels(undefined, { signal: controller.signal })
     ).rejects.toThrow(/aborted/i);
   });
 });

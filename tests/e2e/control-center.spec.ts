@@ -16,51 +16,31 @@ const benchmarks = [
 ];
 
 const models = [
-  { id: "local/qwen2.5-vl" },
-  { id: "local/llava-next" }
+  { id: "google/gemma-4-e4b" },
+  { id: "local/qwen2.5-vl" }
 ];
 
 const sampleRun = {
   runId: "2026-05-06T19-12-00-000Z",
   benchmark: benchmarks[0],
   model: {
-    id: models[0].id,
+    id: models[1].id,
     slug: "local-qwen2-5-vl"
   },
   status: "completed",
   createdAt: "2026-05-06T19:12:00.000Z",
   updatedAt: "2026-05-06T19:13:00.000Z",
   runDirectory: "/tmp/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z",
-  settings: {
-    preview: {
-      captureAtMs: 5000,
-      viewport: {
-        width: 1280,
-        height: 720
-      },
-      video: false
-    }
-  },
   assets: {
     metadata: "metadata.json",
-    rawResponse: "raw-response.txt",
+    prompt: "prompt.md",
+    rawResponse: "response.raw.txt",
     html: "index.html",
     preview: "preview.png"
-  },
-  capture: {
-    preview: {
-      status: "ready",
-      path: "preview.png",
-      capturedAt: "2026-05-06T19:13:00.000Z"
-    },
-    video: {
-      status: "skipped",
-      reason: "disabled"
-    }
   }
 };
 
-test("renders control center and handles unreachable LM Studio", async ({ page }) => {
+test("renders viewer with passive LM Studio discovery", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: false });
 
   await page.goto("/");
@@ -71,80 +51,85 @@ test("renders control center and handles unreachable LM Studio", async ({ page }
   await expect(page.getByLabel("LM Studio base URL")).toHaveValue(
     "http://localhost:1234/v1"
   );
-  await expect(
-    page.getByLabel("Connection").getByText("Offline", { exact: true })
-  ).toBeVisible();
-  await expect(page.getByText("No models discovered")).toBeVisible();
-
-  await page.getByRole("button", { name: "Test" }).click();
-
-  await expect(page.getByText("Connection unavailable")).toBeVisible();
-  await expect(page.getByText(/network error/i)).toBeVisible();
+  await expect(page.getByText("Offline", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Prompts", { exact: true }).getByText("Sakura Particle Field")).toBeVisible();
+  await expect(page.getByText("1 with HTML, 0 prepared, 0 failed")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sakura Particle Field/ })).toBeVisible();
 });
 
-test("starts a mocked queue and opens run detail with PNG fallback", async ({
-  page
-}) => {
-  let startPayload: unknown;
+test("prepares a run slot and shows the generated prompt", async ({ page }) => {
+  let preparePayload: unknown;
   await mockApi(page, {
     lmStudioOnline: true,
-    onStart: (payload) => {
-      startPayload = payload;
+    onPrepare: (payload) => {
+      preparePayload = payload;
     }
   });
 
   await page.goto("/");
+  await page.getByRole("button", { name: "Prepare run" }).click();
+  await page.getByLabel("Prompt", { exact: true }).selectOption("solar-system");
+  await page.getByLabel("Discovered model").selectOption("google/gemma-4-e4b");
+  await page.getByLabel("Tool prompt").selectOption("opencode");
+  await page.getByRole("button", { name: "Prepare run slot" }).click();
 
-  await expect(page.getByText("2 benchmarks")).toBeVisible();
-  await expect(page.getByText("2 models")).toBeVisible();
+  await expect.poll(() => preparePayload).toMatchObject({
+    benchmarkId: "solar-system",
+    modelId: "google/gemma-4-e4b",
+    tool: "opencode"
+  });
+  await expect(page.getByLabel("Tool prompt")).toHaveValue("opencode");
+  await expect(page.getByPlaceholder("Prepare a run slot")).toHaveValue(
+    /Save one complete self-contained HTML document/
+  );
+  await expect(page.getByText("Run slot prepared")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Solar System Orrery/ })).toBeVisible();
+});
 
-  await page.getByLabel("Solar System Orrery").check();
-  await page.getByLabel("local/llava-next").check();
-  await page.getByLabel("Repeats").fill("2");
-  await page.getByLabel("PNG timestamp").fill("3500");
-  await page.getByLabel("Video generation").check();
-  await page.getByRole("button", { name: "Start" }).click();
+test("supports prompt comparison and run details", async ({ page }) => {
+  await mockApi(page, {
+    lmStudioOnline: true,
+    runs: [
+      sampleRun,
+      {
+        ...sampleRun,
+        runId: "2026-05-06T20-12-00-000Z",
+        model: {
+          id: models[0].id,
+          slug: "google-gemma-4-e4b"
+        },
+        runDirectory: "/tmp/runs/sakura/google-gemma-4-e4b/2026-05-06T20-12-00-000Z"
+      }
+    ]
+  });
 
-  await expect
-    .poll(() => startPayload)
-    .toMatchObject({
-      benchmarkIds: ["sakura", "solar-system"],
-      modelIds: ["local/qwen2.5-vl", "local/llava-next"],
-      repeatCount: 2,
-      capture: {
-        preview: {
-          captureAtMs: 3500,
-          video: true
-        }
-      },
-      baseUrl: "http://localhost:1234/v1"
-    });
-  await expect(page.getByText("sakura / local/qwen2.5-vl")).toBeVisible();
+  await page.goto("/");
+  await page.getByRole("button", { name: "By prompt" }).click();
 
-  await page.getByRole("button", { name: "Video" }).click();
-  await expect(page.getByText("Video missing, showing PNG")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sakura Particle Field" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sakura Particle Field google\/gemma-4-e4b/ })).toBeVisible();
 
-  await page.getByRole("button", { name: /Sakura Particle Field/ }).click();
+  await page.getByRole("button", { name: /Sakura Particle Field local\/qwen2.5-vl/ }).click();
   await expect(page.getByRole("dialog", { name: "Run detail" })).toBeVisible();
   await expect(page.getByText("Create a sakura animation")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Raw response" })).toHaveAttribute(
-    "href",
-    /raw-response\.txt$/
-  );
   await expect(page.getByRole("link", { name: "Open HTML" })).toHaveAttribute(
     "href",
     /index\.html$/
   );
+  await expect(page.getByRole("link", { name: "Prompt file" })).toHaveAttribute(
+    "href",
+    /prompt\.md$/
+  );
 });
 
-test("keeps the control center usable on mobile widths", async ({ page }) => {
+test("keeps the viewer usable on mobile widths", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: false, runs: [] });
   await page.setViewportSize({ width: 390, height: 900 });
 
   await page.goto("/");
 
-  await expect(page.getByRole("button", { name: "Start" })).toBeVisible();
-  await expect(page.getByText("No runs yet")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Prepare run" })).toBeVisible();
+  await expect(page.getByText("No runs match the current filters")).toBeVisible();
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -152,9 +137,7 @@ test("keeps the control center usable on mobile widths", async ({ page }) => {
   expect(overflow).toBe(false);
 });
 
-test("falls back to exported static data when local API is unavailable", async ({
-  page
-}) => {
+test("falls back to exported static data without prepare controls", async ({ page }) => {
   await page.route("**/api/**", async (route) => {
     await route.fulfill({
       status: 404,
@@ -185,22 +168,11 @@ test("falls back to exported static data when local API is unavailable", async (
   });
 
   await page.goto("/");
+  await page.getByRole("button", { name: "Prepare run" }).click();
 
-  await expect(
-    page.getByLabel("Connection").getByText("Static mode", { exact: true })
-  ).toBeVisible();
-  await expect(page.getByText("2 benchmarks")).toBeVisible();
-  await expect(page.getByText("1 run")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /Sakura Particle Field/ })
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start" })).toBeDisabled();
-
-  await page.getByRole("button", { name: /Sakura Particle Field/ }).click();
-  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveAttribute(
-    "href",
-    /export\/runs\/sakura\/local-qwen2-5-vl\/2026-05-06T19-12-00-000Z\/index\.html$/
-  );
+  await expect(page.getByLabel("LM Studio", { exact: true }).getByText("Static", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Prepare run slot" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /Sakura Particle Field/ })).toBeVisible();
 });
 
 async function mockApi(
@@ -208,7 +180,7 @@ async function mockApi(
   options: {
     lmStudioOnline: boolean;
     runs?: unknown[];
-    onStart?: (payload: unknown) => void;
+    onPrepare?: (payload: unknown) => void;
   }
 ): Promise<void> {
   await page.route("**/api/benchmarks", async (route) => {
@@ -224,36 +196,16 @@ async function mockApi(
       body: JSON.stringify({
         stats: {
           collectedAt: "2026-05-06T19:12:00.000Z",
-          platform: {
-            node: "v25.6.0",
-            platform: "darwin",
-            arch: "arm64"
-          },
-          os: {
-            type: "Darwin",
-            release: "25.0.0",
-            hostname: "local",
-            uptimeSeconds: 1234
-          },
           cpu: {
-            model: "Apple M",
             cores: 12,
             usagePercent: 18.5
           },
           memory: {
             totalBytes: 34359738368,
-            availableBytes: 8589934592,
-            freeBytes: 8589934592,
-            usedBytes: 25769803776,
-            pressurePercent: 75,
-            pressureLabel: "medium",
-            source: "mock memory stats"
+            usedBytes: 25769803776
           },
           gpu: {
-            available: true,
-            telemetryAvailable: false,
-            devices: [{ name: "Apple M", cores: "20" }],
-            reason: "GPU hardware detected. Live GPU utilization is not available from the local API v1."
+            devices: [{ name: "Apple M", cores: "20" }]
           }
         }
       })
@@ -272,14 +224,6 @@ async function mockApi(
       contentType: "application/json",
       body: JSON.stringify({
         app: { status: "ok" },
-        queue: {
-          status: "idle",
-          pendingJobs: [],
-          completedJobs: [],
-          failedJobs: [],
-          skippedJobs: [],
-          totalJobs: 0
-        },
         lmStudio: {
           baseUrl: "http://localhost:1234/v1",
           connection: options.lmStudioOnline
@@ -317,60 +261,45 @@ async function mockApi(
     });
   });
 
-  await page.route("**/api/queue/start", async (route) => {
+  await page.route("**/api/prepare-run", async (route) => {
     const payload = route.request().postDataJSON();
-    options.onStart?.(payload);
+    options.onPrepare?.(payload);
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
-        queue: {
-          status: "running",
-          activeJob: {
-            id: "sakura__local-qwen2-5-vl__repeat-1-of-2",
-            benchmark: benchmarks[0],
-            model: models[0],
-            repeatIndex: 1,
-            repeatTotal: 2,
-            settings: payload.capture,
-            status: "running"
+        preparedRun: {
+          run: {
+            runId: "2026-05-07T04-00-32-122Z",
+            benchmark: benchmarks.find((benchmark) => benchmark.id === payload.benchmarkId),
+            model: {
+              id: payload.modelId,
+              slug: "google-gemma-4-e4b"
+            },
+            status: "prepared",
+            tool: payload.tool,
+            createdAt: "2026-05-07T04:00:32.122Z",
+            updatedAt: "2026-05-07T04:00:32.122Z",
+            runDirectory:
+              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z",
+            assets: {
+              metadata: "metadata.json",
+              prompt: "prompt.md"
+            }
           },
-          pendingJobs: [],
-          completedJobs: [],
-          failedJobs: [],
-          skippedJobs: [],
-          totalJobs: 4
-        }
-      })
-    });
-  });
-
-  await page.route("**/api/queue/stop-after-current", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        queue: {
-          status: "stopping",
-          pendingJobs: [],
-          completedJobs: [],
-          failedJobs: [],
-          skippedJobs: [],
-          totalJobs: 4
-        }
-      })
-    });
-  });
-
-  await page.route("**/api/queue/cancel-now", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        queue: {
-          status: "cancelled",
-          pendingJobs: [],
-          completedJobs: [],
-          failedJobs: [],
-          skippedJobs: [],
-          totalJobs: 4
+          prompt:
+            "OpenCode\nSave one complete self-contained HTML document to: /tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/index.html",
+          paths: {
+            runDirectory:
+              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z",
+            promptPath:
+              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/prompt.md",
+            htmlPath:
+              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/index.html",
+            metadataPath:
+              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/metadata.json",
+            previewPath:
+              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/preview.png"
+          }
         }
       })
     });

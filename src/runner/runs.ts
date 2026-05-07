@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { RunPaths } from "./paths";
 import type { RunError, RunMetadata } from "./types";
@@ -19,6 +19,14 @@ export async function writeRawResponse(
 ): Promise<void> {
   await mkdir(paths.runDirectory, { recursive: true });
   await writeFile(paths.rawResponsePath, rawResponse, "utf8");
+}
+
+export async function writePromptMarkdown(
+  paths: RunPaths,
+  prompt: string
+): Promise<void> {
+  await mkdir(paths.runDirectory, { recursive: true });
+  await writeFile(paths.promptPath, prompt, "utf8");
 }
 
 export async function writeRunHtml(paths: RunPaths, html: string): Promise<void> {
@@ -139,10 +147,44 @@ async function readDirectoriesIfPresent(path: string): Promise<string[]> {
 
 async function readMetadataIfPresent(path: string): Promise<RunMetadata | undefined> {
   try {
-    return JSON.parse(await readFile(path, "utf8")) as RunMetadata;
+    const metadata = JSON.parse(await readFile(path, "utf8")) as RunMetadata;
+    return hydrateAssetAvailability(metadata);
   } catch (error) {
     if (isMissingPathError(error) || error instanceof SyntaxError) {
       return undefined;
+    }
+
+    throw error;
+  }
+}
+
+async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetadata> {
+  const assets = {
+    metadata: metadata.assets?.metadata ?? "metadata.json",
+    ...(await assetExists(metadata, metadata.assets?.prompt) ? { prompt: metadata.assets?.prompt } : {}),
+    ...(await assetExists(metadata, metadata.assets?.rawResponse) ? { rawResponse: metadata.assets?.rawResponse } : {}),
+    ...(await assetExists(metadata, metadata.assets?.html) ? { html: metadata.assets?.html } : {}),
+    ...(await assetExists(metadata, metadata.assets?.preview) ? { preview: metadata.assets?.preview } : {}),
+    ...(await assetExists(metadata, metadata.assets?.video) ? { video: metadata.assets?.video } : {})
+  };
+
+  return {
+    ...metadata,
+    assets
+  };
+}
+
+async function assetExists(metadata: RunMetadata, asset?: string): Promise<boolean> {
+  if (!asset || !metadata.runDirectory) {
+    return false;
+  }
+
+  try {
+    const result = await stat(join(metadata.runDirectory, asset));
+    return result.isFile();
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return false;
     }
 
     throw error;

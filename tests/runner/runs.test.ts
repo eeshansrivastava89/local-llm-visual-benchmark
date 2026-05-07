@@ -6,6 +6,7 @@ import { buildRunPaths } from "../../src/runner/paths";
 import {
   markRunFailed,
   updateRunMetadata,
+  writePromptMarkdown,
   writeRawResponse,
   writeRunHtml,
   writeRunMetadata
@@ -29,7 +30,7 @@ function createMetadata(runDirectory: string): RunMetadata {
       id: "lmstudio-community/Qwen2.5 Coder:7B Instruct",
       slug: "lmstudio-community-qwen2-5-coder-7b-instruct-1234567890"
     },
-    status: "queued",
+    status: "prepared",
     createdAt: "2026-05-06T01:02:03.004Z",
     updatedAt: "2026-05-06T01:02:03.004Z",
     runDirectory,
@@ -45,7 +46,8 @@ function createMetadata(runDirectory: string): RunMetadata {
     },
     assets: {
       metadata: "metadata.json",
-      rawResponse: "response.raw.txt",
+        prompt: "prompt.md",
+        rawResponse: "response.raw.txt",
       html: "index.html",
       preview: "preview.png"
     }
@@ -71,7 +73,7 @@ describe("run metadata helpers", () => {
       model: {
         id: "lmstudio-community/Qwen2.5 Coder:7B Instruct"
       },
-      status: "queued"
+      status: "prepared"
     });
   });
 
@@ -87,17 +89,17 @@ describe("run metadata helpers", () => {
 
     await writeRunMetadata(paths, metadata);
     const updated = await updateRunMetadata(paths, {
-      status: "running",
+      status: "completed",
       updatedAt: "2026-05-06T01:02:05.004Z"
     });
 
-    expect(updated.status).toBe("running");
+    expect(updated.status).toBe("completed");
     expect(updated.model.id).toBe("lmstudio-community/Qwen2.5 Coder:7B Instruct");
     expect(updated.updatedAt).toBe("2026-05-06T01:02:05.004Z");
 
     const saved = JSON.parse(await readFile(paths.metadataPath, "utf8"));
     expect(saved).toMatchObject({
-      status: "running",
+      status: "completed",
       model: {
         id: "lmstudio-community/Qwen2.5 Coder:7B Instruct"
       }
@@ -117,6 +119,22 @@ describe("run metadata helpers", () => {
 
     await expect(readFile(paths.rawResponsePath, "utf8")).resolves.toBe(
       "raw response text"
+    );
+  });
+
+  it("writes prepared prompts to the run prompt path", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "sakura",
+      modelId: "lmstudio-community/Qwen2.5 Coder:7B Instruct",
+      runId: "2026-05-06T01-02-03-004Z"
+    });
+
+    await writePromptMarkdown(paths, "copy this prompt");
+
+    await expect(readFile(paths.promptPath, "utf8")).resolves.toBe(
+      "copy this prompt"
     );
   });
 

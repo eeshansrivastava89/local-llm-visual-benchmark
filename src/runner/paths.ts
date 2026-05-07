@@ -20,6 +20,7 @@ export interface RunPaths {
   modelDirectory: string;
   runDirectory: string;
   metadataPath: string;
+  promptPath: string;
   rawResponsePath: string;
   htmlPath: string;
   previewPath: string;
@@ -76,6 +77,7 @@ export function buildRunPaths(input: BuildRunPathsInput): RunPaths {
     modelDirectory,
     runDirectory,
     metadataPath: join(runDirectory, "metadata.json"),
+    promptPath: join(runDirectory, "prompt.md"),
     rawResponsePath: join(runDirectory, "response.raw.txt"),
     htmlPath: join(runDirectory, "index.html"),
     previewPath: join(runDirectory, "preview.png"),

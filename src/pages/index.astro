@@ -2,428 +2,365 @@
 const title = "Local LLM Visual Benchmark";
 ---
 
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <style is:global>
+    <style>
       :root {
         color-scheme: light;
-        --bg: #eef1f3;
-        --surface: #f9fafb;
-        --panel: #ffffff;
-        --panel-strong: #f3f6f7;
-        --ink: #11161a;
-        --muted: #5d6670;
-        --subtle: #7b848d;
-        --border: #d6dde2;
-        --border-strong: #aeb8c0;
-        --accent: #0f766e;
-        --accent-strong: #0b5d57;
-        --warn: #a35f00;
-        --danger: #b42318;
-        --ok: #247a3d;
-        --shadow: 0 1px 2px rgba(18, 28, 35, 0.06);
+        --surface: oklch(0.985 0.006 95);
+        --panel: oklch(0.958 0.008 95);
+        --panel-strong: oklch(0.925 0.01 95);
+        --ink: oklch(0.19 0.012 250);
+        --muted: oklch(0.48 0.018 250);
+        --line: oklch(0.82 0.012 95);
+        --accent: oklch(0.56 0.105 155);
+        --accent-soft: oklch(0.9 0.045 155);
+        --amber: oklch(0.67 0.13 72);
+        --amber-soft: oklch(0.91 0.07 72);
+        --danger: oklch(0.56 0.14 28);
+        --danger-soft: oklch(0.91 0.05 28);
+        --shadow: 0 18px 45px oklch(0.22 0.012 250 / 0.12);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       }
 
       * {
         box-sizing: border-box;
       }
 
-      html {
-        min-width: 0;
-        background: var(--bg);
-      }
-
       body {
         margin: 0;
-        min-width: 0;
-        min-height: 100vh;
-        background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(238, 241, 243, 0) 220px),
-          var(--bg);
+        background: var(--surface);
         color: var(--ink);
-        font-family: Aptos, "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        letter-spacing: 0;
+      }
+
+      a {
+        color: inherit;
       }
 
       button,
-      input {
+      input,
+      select,
+      textarea {
         font: inherit;
-        letter-spacing: 0;
+      }
+
+      button,
+      select,
+      input,
+      textarea {
+        border: 1px solid var(--line);
+        border-radius: 7px;
       }
 
       button {
-        min-height: 32px;
-        border: 1px solid var(--border-strong);
-        border-radius: 6px;
-        background: var(--panel);
+        min-height: 34px;
+        padding: 0 12px;
+        background: var(--surface);
         color: var(--ink);
         cursor: pointer;
-        font-size: 13px;
-        font-weight: 650;
-        line-height: 1;
-        padding: 0 11px;
+        transition: background 160ms ease, border-color 160ms ease;
       }
 
-      button:hover:not(:disabled) {
-        border-color: #7d8b94;
-        background: #f7f9fa;
+      button:hover {
+        background: var(--panel);
+        border-color: oklch(0.72 0.018 95);
       }
 
-      button:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-
-      input[type="text"],
-      input[type="number"] {
-        width: 100%;
-        min-width: 0;
-        min-height: 34px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: #ffffff;
-        color: var(--ink);
-        padding: 0 10px;
-      }
-
+      button:focus-visible,
       input:focus-visible,
-      button:focus-visible {
-        outline: 2px solid rgba(15, 118, 110, 0.26);
+      select:focus-visible,
+      textarea:focus-visible {
+        outline: 2px solid var(--accent);
         outline-offset: 2px;
       }
 
-      .app {
-        width: min(1480px, calc(100vw - 28px));
-        margin: 0 auto;
-        padding: 18px 0 28px;
+      button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: oklch(0.985 0.006 155);
       }
 
-      .topbar {
+      button[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      button:disabled {
+        color: oklch(0.65 0.012 250);
+        cursor: not-allowed;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        min-height: 36px;
+        padding: 8px 10px;
+        background: oklch(0.995 0.004 95);
+        color: var(--ink);
+      }
+
+      textarea {
+        min-height: 240px;
+        resize: vertical;
+        line-height: 1.45;
+      }
+
+      .app {
+        min-height: 100vh;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: end;
-        gap: 16px;
-        margin-bottom: 14px;
+        grid-template-columns: 320px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        min-height: 100vh;
+        padding: 18px;
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+        position: sticky;
+        top: 0;
+        align-self: start;
+      }
+
+      .brand,
+      .stack,
+      .section,
+      .copy-panel,
+      .content-grid,
+      .group,
+      .run-body,
+      .run-title {
+        display: grid;
+      }
+
+      .brand {
+        gap: 4px;
+        margin-bottom: 20px;
+      }
+
+      .stack,
+      .content-grid {
+        gap: 14px;
+      }
+
+      .section,
+      .copy-panel,
+      .group,
+      .run-body {
+        gap: 10px;
+      }
+
+      .run-title {
+        gap: 3px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
       }
 
       h1 {
-        margin: 0;
-        font-size: clamp(22px, 2.4vw, 30px);
-        line-height: 1.05;
-        font-weight: 760;
+        font-size: 1.05rem;
       }
 
-      .subline {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 8px;
+      h2 {
+        font-size: 0.86rem;
+      }
+
+      h3 {
+        font-size: 0.95rem;
+      }
+
+      .muted,
+      .small {
         color: var(--muted);
-        font-size: 13px;
+      }
+
+      .small {
+        font-size: 0.78rem;
+        line-height: 1.35;
+      }
+
+      .section-head,
+      .row,
+      .topbar,
+      .card-foot,
+      .detail-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .section-head,
+      .topbar {
+        justify-content: space-between;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      label,
+      .label {
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+
+      .pill,
+      .count,
+      .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px 9px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .status[data-state="online"],
+      .status[data-status="completed"] {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .status[data-state="offline"],
+      .status[data-status="failed"],
+      .status[data-status="cancelled"] {
+        border-color: var(--danger);
+        background: var(--danger-soft);
+      }
+
+      .status[data-status="prepared"],
+      .status[data-state="static"] {
+        border-color: var(--amber);
+        background: var(--amber-soft);
+      }
+
+      .choice-list {
+        display: grid;
+        gap: 6px;
+      }
+
+      .choice {
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr);
+        gap: 8px;
+        align-items: start;
+        padding: 8px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+      }
+
+      .choice:has(input:checked) {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .choice input {
+        width: 16px;
+        min-height: 16px;
+        margin: 2px 0 0;
+      }
+
+      .main {
+        min-width: 0;
+        padding: 18px 22px 28px;
+      }
+
+      .topbar {
+        min-height: 54px;
+        border-bottom: 1px solid var(--line);
+        margin: -18px -22px 18px;
+        padding: 10px 22px;
+        background: oklch(0.99 0.004 95 / 0.88);
+        backdrop-filter: blur(10px);
+        position: sticky;
+        top: 0;
+        z-index: 4;
       }
 
       .toolbar {
         display: flex;
         flex-wrap: wrap;
-        justify-content: flex-end;
         gap: 8px;
       }
 
-      .status-pill,
-      .chip,
-      .metric {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        min-height: 28px;
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        background: var(--panel);
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 700;
-        padding: 0 10px;
-        white-space: nowrap;
-      }
-
-      .status-pill::before {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--subtle);
-        content: "";
-      }
-
-      .status-pill[data-state="online"]::before {
-        background: var(--ok);
-      }
-
-      .status-pill[data-state="offline"]::before,
-      .status-pill[data-state="error"]::before {
-        background: var(--danger);
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: minmax(300px, 380px) minmax(0, 1fr) minmax(280px, 340px);
-        gap: 12px;
-        align-items: start;
-      }
-
-      .stack {
-        display: grid;
-        gap: 12px;
-        min-width: 0;
-      }
-
-      .panel {
-        min-width: 0;
-        border: 1px solid var(--border);
+      .guide,
+      .prep,
+      .empty {
+        border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--panel);
-        box-shadow: var(--shadow);
+        padding: 14px;
       }
 
-      .panel-header {
+      .guide[hidden],
+      .prep[hidden] {
+        display: none;
+      }
+
+      .guide-grid,
+      .prep-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .prep-grid {
+        grid-template-columns: 220px 1fr;
+      }
+
+      .run-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 14px;
+      }
+
+      .group + .group {
+        margin-top: 18px;
+      }
+
+      .group-head {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        gap: 10px;
-        min-height: 43px;
-        border-bottom: 1px solid var(--border);
-        padding: 9px 12px;
-      }
-
-      .panel-title {
-        margin: 0;
-        font-size: 13px;
-        font-weight: 780;
-        text-transform: uppercase;
-      }
-
-      .panel-body {
-        padding: 12px;
-      }
-
-      .form-grid {
-        display: grid;
-        gap: 10px;
-      }
-
-      .field {
-        display: grid;
-        gap: 5px;
-      }
-
-      .label-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 720;
-      }
-
-      .inline-field {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 8px;
-      }
-
-      .split {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-
-      .check-list {
-        display: grid;
-        gap: 7px;
-        max-height: 210px;
-        overflow: auto;
-        padding-right: 2px;
-      }
-
-      .check-row {
-        display: grid;
-        grid-template-columns: 17px minmax(0, 1fr);
-        gap: 8px;
-        align-items: start;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--surface);
-        padding: 8px;
-      }
-
-      .check-row input {
-        margin: 1px 0 0;
-      }
-
-      .check-title {
-        display: block;
-        overflow-wrap: anywhere;
-        font-size: 13px;
-        font-weight: 720;
-        line-height: 1.25;
-      }
-
-      .check-desc {
-        display: block;
-        margin-top: 2px;
-        color: var(--subtle);
-        font-size: 12px;
-        line-height: 1.3;
-      }
-
-      .actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 8px;
-      }
-
-      .primary {
-        border-color: var(--accent-strong);
-        background: var(--accent);
-        color: #ffffff;
-      }
-
-      .primary:hover:not(:disabled) {
-        border-color: #084c47;
-        background: var(--accent-strong);
-      }
-
-      .danger {
-        border-color: rgba(180, 35, 24, 0.55);
-        color: var(--danger);
-      }
-
-      .segmented {
-        display: inline-grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2px;
-        border: 1px solid var(--border);
-        border-radius: 7px;
-        background: var(--panel-strong);
-        padding: 2px;
-      }
-
-      .segmented button {
-        min-height: 28px;
-        border: 0;
-        background: transparent;
-        padding: 0 10px;
-      }
-
-      .segmented button[aria-pressed="true"] {
-        background: var(--panel);
-        box-shadow: var(--shadow);
-        color: var(--accent-strong);
-      }
-
-      .queue-grid,
-      .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-      }
-
-      .metric {
-        justify-content: space-between;
-        min-height: 46px;
-        border-radius: 7px;
-        white-space: normal;
-      }
-
-      .metric strong {
-        color: var(--ink);
-        font-size: 14px;
-      }
-
-      .metric span {
-        color: var(--subtle);
-        font-size: 11px;
-        text-transform: uppercase;
-      }
-
-      .current-job {
-        display: grid;
-        gap: 6px;
-        min-height: 74px;
-        border: 1px solid var(--border);
-        border-radius: 7px;
-        background: var(--panel-strong);
-        padding: 10px;
-      }
-
-      .current-job strong {
-        overflow-wrap: anywhere;
-        font-size: 14px;
-      }
-
-      .small {
-        color: var(--subtle);
-        font-size: 12px;
-        line-height: 1.4;
-      }
-
-      .message {
-        min-height: 20px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.35;
-      }
-
-      .message[data-tone="error"] {
-        color: var(--danger);
-      }
-
-      .message[data-tone="warn"] {
-        color: var(--warn);
-      }
-
-      .results-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-        gap: 10px;
+        gap: 12px;
+        align-items: end;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 8px;
       }
 
       .run-card {
         display: grid;
-        gap: 8px;
-        width: 100%;
+        gap: 10px;
         min-width: 0;
-        min-height: 0;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--panel);
-        padding: 8px;
+        padding: 0;
+        overflow: hidden;
         text-align: left;
-      }
-
-      .run-card:hover {
-        border-color: var(--border-strong);
+        border-radius: 8px;
+        background: oklch(0.995 0.004 95);
+        box-shadow: 0 1px 0 oklch(0.2 0.012 250 / 0.04);
       }
 
       .preview {
-        position: relative;
         display: grid;
         place-items: center;
-        aspect-ratio: 16 / 9;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background:
-          linear-gradient(135deg, #eef3f2 25%, transparent 25%) -8px 0 / 16px 16px,
-          linear-gradient(225deg, #eef3f2 25%, transparent 25%) -8px 0 / 16px 16px,
-          linear-gradient(315deg, #eef3f2 25%, transparent 25%) 0 0 / 16px 16px,
-          linear-gradient(45deg, #eef3f2 25%, #f7f9fa 25%) 0 0 / 16px 16px;
+        aspect-ratio: 16 / 10;
+        background: linear-gradient(135deg, oklch(0.93 0.012 95), oklch(0.88 0.015 155));
         color: var(--muted);
-        font-size: 12px;
-        font-weight: 720;
+        overflow: hidden;
       }
 
       .preview img,
@@ -433,952 +370,276 @@ const title = "Local LLM Visual Benchmark";
         object-fit: cover;
       }
 
-      .fallback-note {
-        position: absolute;
-        right: 6px;
-        bottom: 6px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.92);
-        color: var(--warn);
-        font-size: 11px;
-        font-weight: 760;
-        padding: 4px 7px;
-      }
-
-      .run-meta {
+      .preview-placeholder {
         display: grid;
-        gap: 3px;
-      }
-
-      .run-meta strong {
-        overflow-wrap: anywhere;
-        font-size: 13px;
-        line-height: 1.25;
-      }
-
-      .empty {
-        display: grid;
-        place-items: center;
-        min-height: 220px;
-        border: 1px dashed var(--border-strong);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.48);
-        color: var(--muted);
-        font-size: 13px;
-        font-weight: 700;
+        gap: 5px;
+        justify-items: center;
+        padding: 16px;
         text-align: center;
-        padding: 18px;
+      }
+
+      .run-body {
+        padding: 0 12px 12px;
+      }
+
+      .run-title strong,
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .card-foot {
+        justify-content: space-between;
       }
 
       .detail-backdrop {
         position: fixed;
         inset: 0;
-        z-index: 20;
         display: none;
-        align-items: center;
-        justify-content: center;
-        background: rgba(16, 23, 28, 0.48);
-        padding: 16px;
+        place-items: center;
+        padding: 24px;
+        background: oklch(0.18 0.012 250 / 0.42);
+        z-index: 10;
       }
 
       .detail-backdrop[open] {
-        display: flex;
+        display: grid;
       }
 
-      .detail-dialog {
-        width: min(940px, 100%);
-        max-height: min(760px, calc(100vh - 32px));
+      .detail {
+        width: min(1060px, 100%);
+        max-height: min(860px, calc(100vh - 48px));
         overflow: auto;
-        border: 1px solid var(--border-strong);
+        border: 1px solid var(--line);
         border-radius: 8px;
-        background: var(--panel);
-        box-shadow: 0 18px 44px rgba(15, 25, 33, 0.24);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .detail-head,
+      .detail-body {
+        padding: 16px;
+      }
+
+      .detail-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
       }
 
       .detail-body {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
-        gap: 12px;
-        padding: 12px;
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        gap: 16px;
       }
 
-      .kv {
+      .meta-grid {
         display: grid;
-        grid-template-columns: 120px minmax(0, 1fr);
-        gap: 5px 10px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.35;
-      }
-
-      .kv strong {
-        color: var(--ink);
+        grid-template-columns: 110px minmax(0, 1fr);
+        gap: 8px 10px;
+        font-size: 0.86rem;
       }
 
       pre {
-        max-height: 240px;
+        max-height: 260px;
         overflow: auto;
         margin: 0;
-        border: 1px solid var(--border);
+        padding: 12px;
+        border: 1px solid var(--line);
         border-radius: 7px;
-        background: #f6f8f9;
-        color: #172026;
-        font-size: 12px;
-        line-height: 1.45;
+        background: var(--panel);
         white-space: pre-wrap;
-        overflow-wrap: anywhere;
-        padding: 10px;
+        word-break: break-word;
       }
 
-      a {
-        color: var(--accent-strong);
-        font-weight: 720;
-        text-decoration: none;
-      }
-
-      a:hover {
-        text-decoration: underline;
-      }
-
-      .link-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 9px;
-      }
-
-      @media (max-width: 1120px) {
-        .grid {
-          grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
-        }
-
-        .right-rail {
-          grid-column: 1 / -1;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-      }
-
-      @media (max-width: 760px) {
+      @media (max-width: 860px) {
         .app {
-          width: min(100%, calc(100vw - 20px));
-          padding-top: 12px;
+          grid-template-columns: 1fr;
         }
 
-        .topbar,
-        .grid,
-        .right-rail,
+        .sidebar {
+          position: static;
+          min-height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .guide-grid,
+        .prep-grid,
         .detail-body {
           grid-template-columns: 1fr;
         }
 
-        .toolbar {
-          justify-content: flex-start;
-        }
-
-        .split,
-        .actions,
-        .queue-grid,
-        .stats-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .panel-header {
-          align-items: flex-start;
-          flex-direction: column;
-        }
-
-        .inline-field {
-          grid-template-columns: 1fr;
+        .topbar {
+          position: static;
         }
       }
     </style>
   </head>
   <body>
-    <main class="app" data-control-center>
-      <header class="topbar">
-        <div>
-          <h1>{title}</h1>
-          <div class="subline">
-            <span>Local control center</span>
-            <span id="benchmarkCount">Loading benchmarks</span>
-            <span id="modelCount">Models pending</span>
-          </div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>Local LLM Visual Benchmark</h1>
+          <p class="small">Viewer and prompt prep for local visual artifacts.</p>
         </div>
-        <div class="toolbar" aria-label="Global controls">
-          <span class="status-pill" data-state="checking" id="connectionPill">Checking</span>
-          <div class="segmented" aria-label="Result media">
-            <button type="button" data-media="image" aria-pressed="true">Image</button>
-            <button type="button" data-media="video" aria-pressed="false">Video</button>
-          </div>
-        </div>
-      </header>
 
-      <div class="grid">
         <div class="stack">
-          <section class="panel" aria-labelledby="connectionTitle">
-            <div class="panel-header">
-              <h2 class="panel-title" id="connectionTitle">Connection</h2>
-              <span class="chip" id="connectionLabel">Not tested</span>
+          <section class="section" aria-labelledby="connectionTitle">
+            <div class="section-head">
+              <h2 id="connectionTitle">LM Studio</h2>
+              <span class="status" id="connectionPill" data-state="offline">Checking</span>
             </div>
-            <div class="panel-body form-grid">
-              <div class="field">
-                <div class="label-row">
-                  <label for="baseUrl">LM Studio base URL</label>
-                </div>
-                <div class="inline-field">
-                  <input id="baseUrl" name="baseUrl" type="text" value="http://localhost:1234/v1" autocomplete="off" />
-                  <button type="button" id="testConnection">Test</button>
-                </div>
-              </div>
-              <div class="message" id="connectionMessage">Waiting for local API.</div>
-              <div class="field">
-                <div class="label-row">
-                  <span>Discovered models</span>
-                  <span id="modelListCount">0</span>
-                </div>
-                <div class="check-list" id="modelList" aria-live="polite">
-                  <div class="empty">No models discovered</div>
-                </div>
+            <div class="field">
+              <label for="baseUrl">Base URL</label>
+              <div class="row">
+                <input id="baseUrl" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
+                <button type="button" id="refreshConnection">Test</button>
               </div>
             </div>
+            <p class="small" id="connectionMessage">Waiting for local API.</p>
           </section>
 
-          <section class="panel" aria-labelledby="setupTitle">
-            <div class="panel-header">
-              <h2 class="panel-title" id="setupTitle">Run Setup</h2>
-              <span class="chip" id="matrixSize">0 jobs</span>
+          <section class="section" aria-labelledby="modelsTitle">
+            <div class="section-head">
+              <h2 id="modelsTitle">Models</h2>
+              <span class="count" id="modelCount">0</span>
             </div>
-            <div class="panel-body form-grid">
-              <div class="field">
-                <div class="label-row">
-                  <span>Benchmarks</span>
-                  <span id="benchmarkListCount">0</span>
-                </div>
-                <div class="check-list" id="benchmarkList" aria-live="polite">
-                  <div class="empty">Loading benchmarks</div>
-                </div>
-              </div>
-              <div class="split">
-                <div class="field">
-                  <div class="label-row">
-                    <label for="repeatCount">Repeats</label>
-                  </div>
-                  <input id="repeatCount" type="number" min="1" max="50" step="1" value="1" />
-                </div>
-                <div class="field">
-                  <div class="label-row">
-                    <label for="captureAtMs">PNG timestamp</label>
-                    <span>ms</span>
-                  </div>
-                  <input id="captureAtMs" type="number" min="0" step="250" value="5000" />
-                </div>
-              </div>
-              <label class="check-row" for="videoGeneration">
-                <input id="videoGeneration" type="checkbox" />
-                <span>
-                  <span class="check-title">Video generation</span>
-                  <span class="check-desc">Off by default; PNG remains the fallback.</span>
-                </span>
-              </label>
-              <div class="actions">
-                <button class="primary" type="button" id="startQueue">Start</button>
-                <button type="button" id="stopQueue">Stop after current</button>
-                <button class="danger" type="button" id="cancelQueue">Cancel now</button>
-              </div>
-              <div class="message" id="queueMessage"></div>
+            <div class="choice-list" id="modelChoices"></div>
+          </section>
+
+          <section class="section" aria-labelledby="benchmarksTitle">
+            <div class="section-head">
+              <h2 id="benchmarksTitle">Prompts</h2>
+              <span class="count" id="benchmarkCount">0</span>
             </div>
+            <div class="choice-list" id="benchmarkChoices"></div>
+          </section>
+
+          <section class="section" aria-labelledby="systemTitle">
+            <div class="section-head">
+              <h2 id="systemTitle">System</h2>
+              <span class="count" id="statsTime">Local</span>
+            </div>
+            <p class="small" id="systemSummary">Stats load when the local API is available.</p>
           </section>
         </div>
+      </aside>
 
-        <section class="panel" aria-labelledby="resultsTitle">
-          <div class="panel-header">
-            <h2 class="panel-title" id="resultsTitle">Results</h2>
-            <span class="chip" id="runCount">0 runs</span>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <strong id="viewTitle">Run gallery</strong>
+            <p class="small" id="viewSubtitle">Browse saved visual outputs.</p>
           </div>
-          <div class="panel-body">
-            <div class="results-grid" id="resultsGrid" aria-live="polite">
-              <div class="empty">No runs yet</div>
-            </div>
+          <div class="toolbar" aria-label="View controls">
+            <button type="button" id="setupToggle">How to set up</button>
+            <button type="button" id="runToggle">Prepare run</button>
+            <button type="button" data-mode="gallery" aria-pressed="true">Gallery</button>
+            <button type="button" data-mode="model">By model</button>
+            <button type="button" data-mode="benchmark">By prompt</button>
+            <button type="button" id="refreshRuns">Refresh</button>
           </div>
-        </section>
+        </div>
 
-        <div class="stack right-rail">
-          <section class="panel" aria-labelledby="queueTitle">
-            <div class="panel-header">
-              <h2 class="panel-title" id="queueTitle">Queue</h2>
-              <span class="chip" id="queueState">Idle</span>
-            </div>
-            <div class="panel-body form-grid">
-              <div class="current-job">
-                <span class="small">Current</span>
-                <strong id="currentJob">No active job</strong>
-                <span class="small" id="currentRepeat">Repeat -</span>
+        <div class="content-grid">
+          <section class="guide" id="setupPanel" hidden>
+            <div class="guide-grid">
+              <div>
+                <h3>1. Keep outputs local</h3>
+                <p class="small">The viewer reads runs by benchmark, model, and run ID. It does not run models.</p>
               </div>
-              <div class="queue-grid">
-                <div class="metric"><span>Elapsed</span><strong id="elapsedTime">00:00</strong></div>
-                <div class="metric"><span>Total</span><strong id="totalJobs">0</strong></div>
-                <div class="metric"><span>Complete</span><strong id="completedJobs">0</strong></div>
-                <div class="metric"><span>Failed</span><strong id="failedJobs">0</strong></div>
-                <div class="metric"><span>Pending</span><strong id="pendingJobs">0</strong></div>
-                <div class="metric"><span>Skipped</span><strong id="skippedJobs">0</strong></div>
+              <div>
+                <h3>2. Prepare a slot</h3>
+                <p class="small">Pick a prompt and model, then copy the generated OpenCode, Pi, or generic instructions.</p>
+              </div>
+              <div>
+                <h3>3. Save index.html</h3>
+                <p class="small">Paste the prompt into your tool. Refresh this viewer after the tool writes files.</p>
               </div>
             </div>
           </section>
 
-          <section class="panel" aria-labelledby="statsTitle">
-            <div class="panel-header">
-              <h2 class="panel-title" id="statsTitle">System</h2>
-              <span class="chip" id="statsTimestamp">Unavailable</span>
-            </div>
-            <div class="panel-body form-grid" id="statsPanel">
-              <div class="stats-grid">
-                <div class="metric"><span>Hardware</span><strong id="cpuStat">Unavailable</strong></div>
-                <div class="metric"><span>CPU use</span><strong id="loadStat">Sampling</strong></div>
-                <div class="metric"><span>Memory</span><strong id="memoryStat">Unavailable</strong></div>
-                <div class="metric"><span>GPU</span><strong id="gpuStat">Unavailable</strong></div>
+          <section class="prep" id="prepPanel" hidden>
+            <div class="prep-grid">
+              <div class="stack">
+                <div class="field">
+                  <label for="prepBenchmark">Prompt</label>
+                  <select id="prepBenchmark"></select>
+                </div>
+                <div class="field">
+                  <label for="prepModelSelect">Discovered model</label>
+                  <select id="prepModelSelect"></select>
+                </div>
+                <div class="field">
+                  <label for="prepModel">Model ID</label>
+                  <input id="prepModel" placeholder="google/gemma-4-e4b" />
+                </div>
+                <div class="field">
+                  <label for="prepTool">Tool prompt</label>
+                  <select id="prepTool">
+                    <option value="opencode">OpenCode</option>
+                    <option value="pi">Pi</option>
+                    <option value="generic">Generic</option>
+                  </select>
+                </div>
+                <button class="primary" type="button" id="prepareRun">Prepare run slot</button>
+                <p class="small" id="prepMessage">The app will create the folder, metadata.json, and prompt.md.</p>
               </div>
-              <div class="small" id="statsMessage">Waiting for system stats.</div>
+              <div class="copy-panel">
+                <div class="section-head">
+                  <h3>Generated prompt</h3>
+                  <button type="button" id="copyPrompt">Copy</button>
+                </div>
+                <textarea id="preparedPrompt" readonly placeholder="Prepare a run slot to generate a paste-ready prompt."></textarea>
+                <p class="small" id="preparedPaths"></p>
+              </div>
             </div>
+          </section>
+
+          <section class="section" aria-labelledby="runsTitle">
+            <div class="section-head">
+              <div>
+                <h2 id="runsTitle">Runs</h2>
+                <p class="small" id="runSummary">Loading saved runs.</p>
+              </div>
+              <span class="count" id="runCount">0</span>
+            </div>
+            <div id="runsSurface"></div>
           </section>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
 
-    <div class="detail-backdrop" id="detailBackdrop" role="presentation">
-      <section class="detail-dialog" role="dialog" aria-modal="true" aria-label="Run detail">
-        <div class="panel-header">
-          <h2 class="panel-title" id="detailTitle">Run detail</h2>
+    <div class="detail-backdrop" id="detailBackdrop">
+      <article class="detail" role="dialog" aria-modal="true" aria-label="Run detail">
+        <div class="detail-head">
+          <div>
+            <h2 id="detailTitle">Run detail</h2>
+            <p class="small" id="detailSubtitle"></p>
+          </div>
           <button type="button" id="closeDetail">Close</button>
         </div>
         <div class="detail-body">
           <div class="stack">
-            <div class="preview" id="detailPreview">No preview</div>
-            <div>
-              <div class="label-row"><span>Prompt</span></div>
-              <pre id="detailPrompt"></pre>
+            <div id="detailPreview"></div>
+            <div class="detail-actions">
+              <a class="pill" id="htmlLink" href="#" target="_blank" rel="noreferrer">Open HTML</a>
+              <a class="pill" id="promptLink" href="#" target="_blank" rel="noreferrer">Prompt file</a>
+              <a class="pill" id="rawLink" href="#" target="_blank" rel="noreferrer">Raw response</a>
             </div>
+            <pre id="detailPrompt"></pre>
           </div>
-          <aside class="stack">
-            <div class="kv" id="detailMeta"></div>
-            <div class="link-row">
-              <a id="rawLink" href="#">Raw response</a>
-              <a id="htmlLink" href="#">Open HTML</a>
-            </div>
-            <pre id="rawPreview"></pre>
-          </aside>
+          <div class="stack">
+            <div class="meta-grid" id="detailMeta"></div>
+            <pre id="detailPaths"></pre>
+          </div>
         </div>
-      </section>
+      </article>
     </div>
 
-    <script is:inline>
-      const DEFAULT_BASE_URL = "http://localhost:1234/v1";
-
-      const state = {
-        benchmarks: [],
-        models: [],
-        runs: [],
-        queue: null,
-        stats: null,
-        statsUpdatedAt: null,
-        selectedBenchmarks: new Set(),
-        selectedModels: new Set(),
-        media: "image",
-        queueStartedAt: null,
-        staticMode: false
-      };
-
-      const els = {
-        baseUrl: document.querySelector("#baseUrl"),
-        testConnection: document.querySelector("#testConnection"),
-        connectionPill: document.querySelector("#connectionPill"),
-        connectionLabel: document.querySelector("#connectionLabel"),
-        connectionMessage: document.querySelector("#connectionMessage"),
-        modelList: document.querySelector("#modelList"),
-        modelCount: document.querySelector("#modelCount"),
-        modelListCount: document.querySelector("#modelListCount"),
-        benchmarkList: document.querySelector("#benchmarkList"),
-        benchmarkCount: document.querySelector("#benchmarkCount"),
-        benchmarkListCount: document.querySelector("#benchmarkListCount"),
-        repeatCount: document.querySelector("#repeatCount"),
-        captureAtMs: document.querySelector("#captureAtMs"),
-        videoGeneration: document.querySelector("#videoGeneration"),
-        matrixSize: document.querySelector("#matrixSize"),
-        startQueue: document.querySelector("#startQueue"),
-        stopQueue: document.querySelector("#stopQueue"),
-        cancelQueue: document.querySelector("#cancelQueue"),
-        queueMessage: document.querySelector("#queueMessage"),
-        queueState: document.querySelector("#queueState"),
-        currentJob: document.querySelector("#currentJob"),
-        currentRepeat: document.querySelector("#currentRepeat"),
-        elapsedTime: document.querySelector("#elapsedTime"),
-        totalJobs: document.querySelector("#totalJobs"),
-        completedJobs: document.querySelector("#completedJobs"),
-        failedJobs: document.querySelector("#failedJobs"),
-        pendingJobs: document.querySelector("#pendingJobs"),
-        skippedJobs: document.querySelector("#skippedJobs"),
-        statsTimestamp: document.querySelector("#statsTimestamp"),
-        cpuStat: document.querySelector("#cpuStat"),
-        loadStat: document.querySelector("#loadStat"),
-        memoryStat: document.querySelector("#memoryStat"),
-        gpuStat: document.querySelector("#gpuStat"),
-        statsMessage: document.querySelector("#statsMessage"),
-        resultsGrid: document.querySelector("#resultsGrid"),
-        runCount: document.querySelector("#runCount"),
-        detailBackdrop: document.querySelector("#detailBackdrop"),
-        closeDetail: document.querySelector("#closeDetail"),
-        detailTitle: document.querySelector("#detailTitle"),
-        detailPreview: document.querySelector("#detailPreview"),
-        detailPrompt: document.querySelector("#detailPrompt"),
-        detailMeta: document.querySelector("#detailMeta"),
-        rawLink: document.querySelector("#rawLink"),
-        htmlLink: document.querySelector("#htmlLink"),
-        rawPreview: document.querySelector("#rawPreview")
-      };
-
-      init();
-
-      function init() {
-        wireEvents();
-        renderQueue(idleQueue());
-        void refreshAll();
-        setInterval(tickElapsed, 1000);
-        setInterval(updateStatsClock, 1000);
-        setInterval(() => {
-          if (!state.staticMode) {
-            void loadStats();
-          }
-        }, 3000);
-      }
-
-      function wireEvents() {
-        els.testConnection.addEventListener("click", () => testConnection());
-        els.startQueue.addEventListener("click", () => startQueue());
-        els.stopQueue.addEventListener("click", () => queueCommand("/api/queue/stop-after-current", "Stop requested."));
-        els.cancelQueue.addEventListener("click", () => queueCommand("/api/queue/cancel-now", "Cancel requested."));
-        els.repeatCount.addEventListener("input", renderMatrixSize);
-        els.captureAtMs.addEventListener("input", renderMatrixSize);
-        els.videoGeneration.addEventListener("change", renderMatrixSize);
-        els.closeDetail.addEventListener("click", closeDetail);
-        els.detailBackdrop.addEventListener("click", (event) => {
-          if (event.target === els.detailBackdrop) {
-            closeDetail();
-          }
-        });
-        document.querySelectorAll("[data-media]").forEach((button) => {
-          button.addEventListener("click", () => {
-            state.media = button.dataset.media;
-            document.querySelectorAll("[data-media]").forEach((candidate) => {
-              candidate.setAttribute("aria-pressed", String(candidate === button));
-            });
-            renderRuns();
-          });
-        });
-      }
-
-      async function refreshAll() {
-        const [benchmarksResult, runsResult, statusResult] = await Promise.allSettled([
-          loadBenchmarks(),
-          loadRuns(),
-          testConnection(false)
-        ]);
-        void loadStats();
-
-        if ([benchmarksResult, runsResult, statusResult].some((result) => result.status === "rejected")) {
-          const reason = [benchmarksResult, runsResult, statusResult].find((result) => result.status === "rejected")?.reason;
-          await enterStaticMode(reason);
-        }
-      }
-
-      async function loadBenchmarks() {
-        try {
-          const data = await fetchJson("/api/benchmarks");
-          state.benchmarks = data.benchmarks ?? [];
-          state.selectedBenchmarks = new Set(state.benchmarks.map((benchmark) => benchmark.id));
-          renderBenchmarks();
-        } catch (error) {
-          els.benchmarkList.innerHTML = `<div class="empty">Benchmarks unavailable</div>`;
-          els.benchmarkCount.textContent = "Benchmarks unavailable";
-          setMessage(els.queueMessage, error.message, "error");
-          throw error;
-        }
-      }
-
-      async function testConnection(showMessage = true) {
-        const baseUrl = els.baseUrl.value.trim() || DEFAULT_BASE_URL;
-        setConnection("checking", "Checking", showMessage ? "Testing LM Studio." : "Checking local LM Studio.");
-
-        try {
-          const data = await fetchJson(`/api/status?baseUrl=${encodeURIComponent(baseUrl)}`);
-          const connection = data.lmStudio?.connection;
-          renderQueue(data.queue ?? idleQueue());
-
-          if (connection?.ok) {
-            setConnection("online", "Online", "LM Studio reachable.");
-            await loadModels(baseUrl);
-            return;
-          }
-
-          state.models = [];
-          state.selectedModels = new Set();
-          renderModels();
-          setConnection("offline", "Offline", "Connection unavailable. " + (connection?.error ?? ""));
-        } catch (error) {
-          state.models = [];
-          state.selectedModels = new Set();
-          renderModels();
-          setConnection("error", "Offline", "Connection unavailable. " + error.message);
-          throw error;
-        }
-      }
-
-      async function loadModels(baseUrl) {
-        try {
-          const data = await fetchJson(`/api/lmstudio/models?baseUrl=${encodeURIComponent(baseUrl)}`);
-          state.models = data.models ?? [];
-          state.selectedModels = new Set(state.models.map((model) => model.id));
-          renderModels();
-        } catch (error) {
-          state.models = [];
-          state.selectedModels = new Set();
-          renderModels();
-          setConnection("error", "Offline", "Connection unavailable. " + error.message);
-        }
-      }
-
-      async function loadStats() {
-        try {
-          const data = await fetchJson("/api/system-stats");
-          state.stats = data.stats;
-          state.statsUpdatedAt = Date.now();
-          renderStats();
-        } catch (error) {
-          els.statsMessage.textContent = error.message;
-        }
-      }
-
-      async function loadRuns() {
-        try {
-          const data = await fetchJson("/api/runs");
-          state.runs = data.runs ?? [];
-          renderRuns();
-        } catch (error) {
-          state.runs = [];
-          renderRuns();
-          throw error;
-        }
-      }
-
-      async function enterStaticMode(reason) {
-        try {
-          const manifest = await fetchStaticManifest();
-          state.staticMode = true;
-          state.benchmarks = manifest.benchmarks ?? [];
-          state.runs = manifest.runs ?? [];
-          state.models = [];
-          state.selectedBenchmarks = new Set(state.benchmarks.map((benchmark) => benchmark.id));
-          state.selectedModels = new Set();
-          renderBenchmarks();
-          renderModels();
-          renderRuns();
-          renderQueue(idleQueue());
-          setConnection("offline", "Static mode", "Local API unavailable. Browsing exported runs.");
-          setMessage(els.queueMessage, "Static mode: local runner controls are unavailable.", "warn");
-          els.statsTimestamp.textContent = "Static mode";
-          els.statsMessage.textContent = "System stats require the local API.";
-        } catch (error) {
-          setConnection("error", "API unavailable", "Local API unavailable and no static export manifest was found.");
-          setMessage(els.queueMessage, `${reason?.message ?? "Local API unavailable."} ${error.message}`, "error");
-        }
-      }
-
-      async function startQueue() {
-        if (state.staticMode) {
-          setMessage(els.queueMessage, "Static mode cannot start local benchmark runs.", "warn");
-          return;
-        }
-
-        const benchmarkIds = [...state.selectedBenchmarks];
-        const modelIds = [...state.selectedModels];
-
-        if (benchmarkIds.length === 0 || modelIds.length === 0) {
-          setMessage(els.queueMessage, "Select at least one benchmark and one model.", "error");
-          return;
-        }
-
-        const payload = {
-          benchmarkIds,
-          modelIds,
-          repeatCount: readPositiveInteger(els.repeatCount.value, 1),
-          capture: {
-            preview: {
-              captureAtMs: readPositiveInteger(els.captureAtMs.value, 0),
-              video: els.videoGeneration.checked
-            }
-          },
-          baseUrl: els.baseUrl.value.trim() || DEFAULT_BASE_URL
-        };
-
-        try {
-          const data = await postJson("/api/queue/start", payload);
-          state.queueStartedAt = Date.now();
-          renderQueue(data.queue);
-          setMessage(els.queueMessage, "Queue started.", "");
-          void loadRuns();
-        } catch (error) {
-          setMessage(els.queueMessage, error.message, "error");
-        }
-      }
-
-      async function queueCommand(url, message) {
-        if (state.staticMode) {
-          setMessage(els.queueMessage, "Static mode cannot control the local queue.", "warn");
-          return;
-        }
-
-        try {
-          const data = await postJson(url, {});
-          renderQueue(data.queue);
-          setMessage(els.queueMessage, message, "");
-        } catch (error) {
-          setMessage(els.queueMessage, error.message, "error");
-        }
-      }
-
-      function renderBenchmarks() {
-        els.benchmarkCount.textContent = `${state.benchmarks.length} benchmarks`;
-        els.benchmarkListCount.textContent = String(state.benchmarks.length);
-
-        if (state.benchmarks.length === 0) {
-          els.benchmarkList.innerHTML = `<div class="empty">No benchmarks found</div>`;
-          renderMatrixSize();
-          return;
-        }
-
-        els.benchmarkList.replaceChildren(
-          ...state.benchmarks.map((benchmark) => {
-            const label = document.createElement("label");
-            label.className = "check-row";
-            label.innerHTML = `
-              <input type="checkbox" value="${escapeHtml(benchmark.id)}" checked />
-              <span>
-                <span class="check-title">${escapeHtml(benchmark.title)}</span>
-                <span class="check-desc">${escapeHtml(benchmark.description)}</span>
-              </span>
-            `;
-            const input = label.querySelector("input");
-            input.addEventListener("change", () => {
-              updateSelection(state.selectedBenchmarks, benchmark.id, input.checked);
-              renderMatrixSize();
-            });
-            return label;
-          })
-        );
-        renderMatrixSize();
-      }
-
-      function renderModels() {
-        els.modelCount.textContent = state.staticMode ? "API unavailable" : `${state.models.length} models`;
-        els.modelListCount.textContent = String(state.models.length);
-
-        if (state.models.length === 0) {
-          els.modelList.innerHTML = state.staticMode
-            ? `<div class="empty">Local API unavailable</div>`
-            : `<div class="empty">No models discovered</div>`;
-          renderMatrixSize();
-          return;
-        }
-
-        els.modelList.replaceChildren(
-          ...state.models.map((model) => {
-            const label = document.createElement("label");
-            label.className = "check-row";
-            label.innerHTML = `
-              <input type="checkbox" value="${escapeHtml(model.id)}" checked />
-              <span>
-                <span class="check-title">${escapeHtml(model.id)}</span>
-                <span class="check-desc">LM Studio model</span>
-              </span>
-            `;
-            const input = label.querySelector("input");
-            input.addEventListener("change", () => {
-              updateSelection(state.selectedModels, model.id, input.checked);
-              renderMatrixSize();
-            });
-            return label;
-          })
-        );
-        renderMatrixSize();
-      }
-
-      function renderMatrixSize() {
-        const repeats = readPositiveInteger(els.repeatCount.value, 1);
-        const count = state.selectedBenchmarks.size * state.selectedModels.size * repeats;
-        els.matrixSize.textContent = `${count} ${count === 1 ? "job" : "jobs"}`;
-        els.startQueue.disabled = state.staticMode || count === 0;
-        els.testConnection.disabled = state.staticMode;
-        els.baseUrl.disabled = state.staticMode;
-        els.repeatCount.disabled = state.staticMode;
-        els.captureAtMs.disabled = state.staticMode;
-        els.videoGeneration.disabled = state.staticMode;
-      }
-
-      function renderQueue(queue) {
-        state.queue = queue ?? idleQueue();
-        const active = state.queue.activeJob;
-        const status = titleCase(state.queue.status);
-
-        els.queueState.textContent = status;
-        els.currentJob.textContent = active ? `${active.benchmark.id} / ${active.model.id}` : "No active job";
-        els.currentRepeat.textContent = active ? `Repeat ${active.repeatIndex} of ${active.repeatTotal}` : "Repeat -";
-        els.totalJobs.textContent = String(state.queue.totalJobs ?? 0);
-        els.completedJobs.textContent = String(state.queue.completedJobs?.length ?? 0);
-        els.failedJobs.textContent = String(state.queue.failedJobs?.length ?? 0);
-        els.pendingJobs.textContent = String(state.queue.pendingJobs?.length ?? 0);
-        els.skippedJobs.textContent = String(state.queue.skippedJobs?.length ?? 0);
-        els.stopQueue.disabled = !(state.queue.status === "running");
-        els.cancelQueue.disabled = !(state.queue.status === "running" || state.queue.status === "stopping");
-
-        if (active && !state.queueStartedAt) {
-          state.queueStartedAt = Date.now();
-        }
-        if (!active && state.queue.status !== "running" && state.queue.status !== "stopping") {
-          state.queueStartedAt = null;
-        }
-        tickElapsed();
-      }
-
-      function renderStats() {
-        const stats = state.stats;
-        if (!stats) {
-          return;
-        }
-
-        updateStatsClock();
-        els.cpuStat.textContent = `${stats.cpu?.cores ?? "-"} cores`;
-        els.loadStat.textContent = Number.isFinite(stats.cpu?.usagePercent)
-          ? `${stats.cpu.usagePercent.toFixed(1)}%`
-          : "Sampling";
-        els.memoryStat.textContent = `${formatBytes(stats.memory?.usedBytes)} / ${formatBytes(stats.memory?.totalBytes)}`;
-        els.gpuStat.textContent = stats.gpu?.available
-          ? (stats.gpu.devices ?? []).map((device) => device.cores ? `${device.name} (${device.cores} cores)` : device.name).join(", ")
-          : "Unavailable";
-        const memorySource = stats.memory?.pressureLabel
-          ? `Memory pressure ${stats.memory.pressureLabel}`
-          : "Memory pressure unavailable";
-        const gpuNote = stats.gpu?.reason ?? "GPU telemetry unavailable.";
-        els.statsMessage.textContent = `${memorySource}. ${stats.memory?.source ?? ""} ${gpuNote}`;
-      }
-
-      function renderRuns() {
-        els.runCount.textContent = `${state.runs.length} ${state.runs.length === 1 ? "run" : "runs"}`;
-
-        if (state.runs.length === 0) {
-          els.resultsGrid.innerHTML = `<div class="empty">No runs yet</div>`;
-          return;
-        }
-
-        els.resultsGrid.replaceChildren(
-          ...state.runs.map((run) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "run-card";
-            button.innerHTML = `
-              ${renderPreview(run, state.media)}
-              <span class="run-meta">
-                <strong>${escapeHtml(run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run")}</strong>
-                <span class="small">${escapeHtml(run.model?.id ?? "Unknown model")}</span>
-                <span class="chip">${escapeHtml(run.status ?? "unknown")}</span>
-              </span>
-            `;
-            button.addEventListener("click", () => openDetail(run));
-            return button;
-          })
-        );
-      }
-
-      function renderPreview(run, media) {
-        const previewHref = assetHref(run, run.assets?.preview);
-        const videoHref = assetHref(run, run.assets?.video);
-
-        if (media === "video" && videoHref) {
-          return `<span class="preview"><video src="${escapeAttribute(videoHref)}" muted loop playsinline></video></span>`;
-        }
-
-        const fallback = media === "video" && !videoHref ? `<span class="fallback-note">Video missing, showing PNG</span>` : "";
-        if (previewHref) {
-          return `<span class="preview"><img src="${escapeAttribute(previewHref)}" alt="" />${fallback}</span>`;
-        }
-
-        return `<span class="preview">No preview${fallback}</span>`;
-      }
-
-      function openDetail(run) {
-        els.detailTitle.textContent = `${run.benchmark?.title ?? "Run detail"}`;
-        els.detailPreview.innerHTML = renderPreview(run, state.media);
-        els.detailPrompt.textContent = run.benchmark?.prompt ?? "Prompt unavailable.";
-        els.detailMeta.innerHTML = `
-          <span>Status</span><strong>${escapeHtml(run.status ?? "unknown")}</strong>
-          <span>Run ID</span><strong>${escapeHtml(run.runId ?? "-")}</strong>
-          <span>Model</span><strong>${escapeHtml(run.model?.id ?? "-")}</strong>
-          <span>Benchmark</span><strong>${escapeHtml(run.benchmark?.id ?? "-")}</strong>
-          <span>Updated</span><strong>${escapeHtml(formatDate(run.updatedAt))}</strong>
-          <span>Capture</span><strong>${escapeHtml(String(run.settings?.preview?.captureAtMs ?? "-"))} ms</strong>
-        `;
-        els.rawLink.href = assetHref(run, run.assets?.rawResponse) ?? "#";
-        els.htmlLink.href = assetHref(run, run.assets?.html) ?? "#";
-        els.rawPreview.textContent = run.assets?.rawResponse
-          ? `Raw response: ${assetPath(run, run.assets.rawResponse)}`
-          : "Raw response unavailable.";
-        els.detailBackdrop.setAttribute("open", "");
-      }
-
-      function closeDetail() {
-        els.detailBackdrop.removeAttribute("open");
-      }
-
-      function setConnection(stateName, label, message) {
-        els.connectionPill.dataset.state = stateName;
-        els.connectionPill.textContent = label;
-        els.connectionLabel.textContent = label;
-        setMessage(els.connectionMessage, message, stateName === "offline" || stateName === "error" ? "error" : "");
-      }
-
-      function setMessage(element, message, tone) {
-        element.textContent = message ?? "";
-        element.dataset.tone = tone ?? "";
-      }
-
-      function tickElapsed() {
-        if (!state.queueStartedAt) {
-          els.elapsedTime.textContent = "00:00";
-          return;
-        }
-        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - state.queueStartedAt) / 1000));
-        const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
-        const seconds = String(elapsedSeconds % 60).padStart(2, "0");
-        els.elapsedTime.textContent = `${minutes}:${seconds}`;
-      }
-
-      function updateStatsClock() {
-        if (state.staticMode) {
-          return;
-        }
-        const now = new Date();
-        const refreshed = state.statsUpdatedAt
-          ? `${Math.max(0, Math.floor((Date.now() - state.statsUpdatedAt) / 1000))}s ago`
-          : "waiting";
-        els.statsTimestamp.textContent = `${now.toLocaleTimeString()} · ${refreshed}`;
-      }
-
-      async function fetchJson(url) {
-        const response = await fetch(url);
-        return readJsonResponse(response);
-      }
-
-      async function fetchStaticManifest() {
-        try {
-          return await fetchJson("export/manifest.json");
-        } catch {
-          return fetchJson("/export/manifest.json");
-        }
-      }
-
-      async function postJson(url, body) {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json"
-          },
-          body: JSON.stringify(body)
-        });
-        return readJsonResponse(response);
-      }
-
-      async function readJsonResponse(response) {
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.error?.message ?? `Request failed with HTTP ${response.status}.`);
-        }
-        return data;
-      }
-
-      function updateSelection(set, value, selected) {
-        if (selected) {
-          set.add(value);
-        } else {
-          set.delete(value);
-        }
-      }
-
-      function readPositiveInteger(value, fallback) {
-        const parsed = Number.parseInt(value, 10);
-        return Number.isFinite(parsed) && parsed >= fallback ? parsed : fallback;
-      }
-
-      function idleQueue() {
-        return {
-          status: "idle",
-          pendingJobs: [],
-          completedJobs: [],
-          failedJobs: [],
-          skippedJobs: [],
-          totalJobs: 0
-        };
-      }
-
-      function assetPath(run, asset) {
-        if (!asset || !run.runDirectory) {
-          return "";
-        }
-        return `${String(run.runDirectory).replace(/\/+$/u, "")}/${asset}`;
-      }
-
-      function assetHref(run, asset) {
-        const path = assetPath(run, asset);
-        if (!path) {
-          return null;
-        }
-        if (/^[a-z][a-z0-9+.-]*:/iu.test(path)) {
-          return path;
-        }
-        if (state.staticMode) {
-          return path.replace(/^\/+/u, "");
-        }
-        return `file://${path.split("/").map(encodeURIComponent).join("/")}`;
-      }
-
-      function formatBytes(value) {
-        if (!Number.isFinite(value)) {
-          return "Unavailable";
-        }
-        const units = ["B", "KB", "MB", "GB", "TB"];
-        let size = value;
-        let unitIndex = 0;
-        while (size >= 1024 && unitIndex < units.length - 1) {
-          size /= 1024;
-          unitIndex += 1;
-        }
-        return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
-      }
-
-      function formatDate(value) {
-        return value ? new Date(value).toLocaleString() : "-";
-      }
-
-      function titleCase(value) {
-        return String(value ?? "").replace(/^\w/u, (match) => match.toUpperCase());
-      }
-
-      function escapeHtml(value) {
-        return String(value ?? "")
-          .replace(/&/gu, "&amp;")
-          .replace(/</gu, "&lt;")
-          .replace(/>/gu, "&gt;")
-          .replace(/"/gu, "&quot;");
-      }
-
-      function escapeAttribute(value) {
-        return escapeHtml(value).replace(/'/gu, "&#39;");
-      }
-    </script>
+    <script is:inline src="viewer.js"></script>
   </body>
 </html>

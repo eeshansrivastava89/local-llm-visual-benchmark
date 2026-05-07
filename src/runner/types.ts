@@ -1,14 +1,12 @@
 export type RunStatus =
-  | "queued"
-  | "running"
+  | "prepared"
   | "completed"
   | "failed"
   | "cancelled"
   | "skipped";
 
 export const RUN_STATUSES: readonly RunStatus[] = [
-  "queued",
-  "running",
+  "prepared",
   "completed",
   "failed",
   "cancelled",
@@ -51,18 +49,9 @@ export interface CaptureSettings {
   preview: PreviewSettings;
 }
 
-export interface QueueJob {
-  id: string;
-  benchmark: BenchmarkRecord;
-  model: LMStudioModel;
-  repeatIndex: number;
-  repeatTotal: number;
-  settings: CaptureSettings;
-  status: RunStatus;
-}
-
 export interface RunAssets {
   metadata: string;
+  prompt?: string;
   rawResponse?: string;
   html?: string;
   preview?: string;
@@ -97,14 +86,26 @@ export interface RunMetadata {
   createdAt: string;
   updatedAt: string;
   runDirectory: string;
-  settings: CaptureSettings;
+  settings?: CaptureSettings;
   assets: RunAssets;
-  queuedAt?: string;
-  startedAt?: string;
+  preparedAt?: string;
+  tool?: "opencode" | "pi" | "generic";
   completedAt?: string;
   failedAt?: string;
   cancelledAt?: string;
   skippedAt?: string;
   error?: RunError;
   capture?: RunCaptureMetadata;
+}
+
+export interface PreparedRun {
+  run: RunMetadata;
+  prompt: string;
+  paths: {
+    runDirectory: string;
+    promptPath: string;
+    htmlPath: string;
+    metadataPath: string;
+    previewPath: string;
+  };
 }

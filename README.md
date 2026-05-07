@@ -1,35 +1,30 @@
 # Local LLM Visual Benchmark
 
-Local control center for running visual HTML benchmark prompts against LM Studio models, saving every run to disk, capturing previews, and publishing saved results as a static demo.
+Local-first viewer for visual benchmark outputs. The app helps you prepare run folders and copy prompts for external tools, then browses and compares the saved HTML artifacts.
 
 ## What It Does
 
-- Connects to LM Studio's OpenAI-compatible local server.
-- Lists models from `/v1/models`.
-- Runs one or many benchmark prompts across one or many selected models.
-- Supports repeat counts, defaulting to `1`.
-- Saves raw responses, extracted `index.html`, metadata, and previews under `runs/`.
-- Captures a mandatory PNG preview and optional video preview.
-- Preserves failed, malformed, and cancelled runs as evidence.
-- Shows local system stats as best-effort informational telemetry.
-- Exports saved runs to a static GitHub Pages-ready build.
+- Checks whether LM Studio's local OpenAI-compatible server is reachable.
+- Lists models from LM Studio's `/v1/models` endpoint when available.
+- Loads benchmark prompt definitions from `benchmarks/`.
+- Creates prepared run slots under `runs/`.
+- Generates copyable OpenCode, Pi, or generic prompts with exact output paths.
+- Displays saved runs as a gallery and comparison viewer.
+- Exports saved results as a static GitHub Pages-ready site.
 
-It does not launch LM Studio, load or unload models, change LM Studio settings, manage resources, vote on results, or use a hosted backend.
+It does not run models, send chat-completion requests, manage queues, load models, change LM Studio settings, rank outputs, or use a hosted backend.
 
 ## Requirements
 
 - Node.js 24+
 - npm
-- LM Studio with the local server enabled
-- Playwright browsers installed by npm dependencies
+- Optional: LM Studio with the local server enabled
 
 LM Studio default base URL:
 
 ```text
 http://localhost:1234/v1
 ```
-
-The UI exposes this value so you can change it if your LM Studio server uses a different host or port.
 
 ## Install
 
@@ -43,9 +38,42 @@ npm install
 npm run dev
 ```
 
-Open the Astro dev URL shown in the terminal. The local UI can call the API routes used for LM Studio status, model listing, queue control, system stats, and saved runs.
+Open the Astro dev URL shown in the terminal. The UI can call local API routes for LM Studio status, model listing, system stats, benchmark prompts, saved runs, and run-slot preparation.
 
-When you start a benchmark from the UI, the terminal running `npm run dev` prints lifecycle logs with a `[benchmark]` prefix. The logs include queue start/stop/cancel events, model IDs, benchmark IDs, repeat index, run directory, and job failures.
+## Preparing A Run
+
+In the UI:
+
+1. Click `Prepare run`.
+2. Choose a benchmark prompt.
+3. Choose a discovered model or type a model ID.
+4. Pick `OpenCode`, `Pi`, or `Generic`.
+5. Click `Prepare run slot`.
+6. Copy the generated prompt into your external tool.
+
+The app creates:
+
+```text
+runs/<benchmark-id>/<model-slug>/<run-id>/
+  metadata.json
+  prompt.md
+```
+
+The generated prompt tells the external tool to save the final artifact here:
+
+```text
+runs/<benchmark-id>/<model-slug>/<run-id>/index.html
+```
+
+Optional files:
+
+```text
+preview.png
+preview.webm
+response.raw.txt
+```
+
+Refresh the viewer after the external tool writes files.
 
 ## Benchmark Prompts
 
@@ -63,29 +91,17 @@ description: Dreamy Japanese cherry blossom tree animation.
 Prompt text goes here.
 ```
 
-Edit prompts in your normal editor. The app reads them from disk; v1 does not edit prompts in the browser.
+Edit prompts in your normal editor. The app reads them from disk; it does not edit prompts in the browser.
 
-The runner appends a shared HTML output contract automatically. Do not duplicate that contract in every prompt unless the benchmark itself needs extra constraints.
+## Viewing And Comparing
 
-## Runs
+The left sidebar filters by model and benchmark prompt. The main area supports:
 
-Generated runs are written under:
+- `Gallery`: all filtered runs.
+- `By model`: model attempts grouped by prompt.
+- `By prompt`: prompt outputs compared across models.
 
-```text
-runs/<benchmark-id>/<model-slug>/<run-id>/
-```
-
-Typical files:
-
-```text
-metadata.json
-response.raw.txt
-index.html
-preview.png
-preview.webm
-```
-
-`preview.webm` only exists when video preview generation is enabled. `runs/` is ignored by default so local experiments do not get committed accidentally.
+Run cards open a detail view with metadata, prompt text, file paths, and artifact links.
 
 ## Static Publishing
 
@@ -101,27 +117,27 @@ Build the static GitHub Pages version:
 npm run build:static
 ```
 
-`build:static` generates `public/export/manifest.json`, copies exported run assets, runs the Astro build, and writes a static publish artifact to:
+`build:static` generates `public/export/manifest.json`, copies exported run assets, runs the Astro build, and writes the publish artifact to:
 
 ```text
 dist-static/
 ```
 
-Publish `dist-static/` to GitHub Pages. The static build does not need LM Studio or the local runner API. If the browser cannot reach `/api/*`, the UI falls back to `/export/manifest.json`.
+Publish `dist-static/` to GitHub Pages. The static build does not need LM Studio or the local API. Static mode can browse exported runs, but it cannot prepare new run slots.
 
 ## Verification
 
 ```bash
 npm test
+npm run check
 npm run build
 npm run build:static
-npm run check
 npm run test:e2e
 ```
 
 ## Notes
 
-- The local queue runs sequentially for predictable resource use.
-- `Stop after current` lets the active run finish and skips the rest.
-- `Cancel now` aborts the active run when possible and marks it cancelled.
-- System stats are best-effort. GPU telemetry may be unavailable, especially on macOS or non-NVIDIA systems.
+- `runs/` is ignored by default so local experiments do not get committed accidentally.
+- `metadata.json` is the viewer's index record for a run.
+- `index.html` is the minimum artifact for a completed visual output.
+- System stats are best-effort and informational only.

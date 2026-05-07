@@ -85,6 +85,7 @@ async function exportRunAssets(
   await mkdir(outputDirectory, { recursive: true });
   await Promise.all([
     writePrettyJson(join(outputDirectory, assets.metadata), exportedRun),
+    copyAssetIfPresent(run, outputDirectory, assets.prompt),
     copyAssetIfPresent(run, outputDirectory, assets.rawResponse),
     copyAssetIfPresent(run, outputDirectory, assets.html),
     copyAssetIfPresent(run, outputDirectory, assets.preview),

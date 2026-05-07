@@ -5,22 +5,10 @@ import {
   listLmStudioModels as defaultListLmStudioModels,
   normalizeLmStudioBaseUrl
 } from "../runner/lmstudio";
+import { prepareRun as defaultPrepareRun, type PromptTool } from "../runner/prompt-prep";
 import { listRunMetadata as defaultListRunMetadata } from "../runner/runs";
 import { getSystemStats as defaultGetSystemStats } from "../runner/system-stats";
-import {
-  BenchmarkQueue,
-  expandQueueMatrix,
-  type BenchmarkQueueDependencies,
-  type QueueLogEvent,
-  type QueueState
-} from "../runner/queue";
-import type { PartialCaptureSettings } from "../runner/capture";
-import type {
-  BenchmarkRecord,
-  LMStudioModel,
-  QueueJob,
-  RunMetadata
-} from "../runner/types";
+import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../runner/types";
 
 const STATUS_TIMEOUT_MS = 2000;
 const MODEL_LIST_TIMEOUT_MS = 10000;
@@ -33,12 +21,10 @@ export interface ModelsRequest {
   baseUrl?: string;
 }
 
-export interface StartQueueRequest {
-  benchmarkIds: string[];
-  modelIds: string[];
-  repeatCount?: number;
-  capture?: PartialCaptureSettings;
-  baseUrl?: string;
+export interface PrepareRunRequest {
+  benchmarkId?: string;
+  modelId?: string;
+  tool?: PromptTool;
 }
 
 export interface LocalApiDependencies {
@@ -49,19 +35,7 @@ export interface LocalApiDependencies {
   listLmStudioModels?: typeof defaultListLmStudioModels;
   listRunMetadata?: (runsRoot?: string) => Promise<RunMetadata[]>;
   getSystemStats?: typeof defaultGetSystemStats;
-  queueFactory?: QueueFactory;
-}
-
-export type QueueFactory = (
-  jobs: QueueJob[],
-  dependencies: BenchmarkQueueDependencies
-) => QueueLike;
-
-export interface QueueLike {
-  getState(): QueueState;
-  start(): Promise<QueueState>;
-  stopAfterCurrent(): void;
-  cancelNow(reason?: string): void;
+  prepareRun?: typeof defaultPrepareRun;
 }
 
 export interface LocalApi {
@@ -70,16 +44,13 @@ export interface LocalApi {
   getLmStudioModels(request?: ModelsRequest): Promise<ModelsResponse>;
   getSystemStats(): Promise<SystemStatsResponse>;
   getSavedRuns(): Promise<SavedRunsResponse>;
-  startQueue(request: StartQueueRequest): Promise<QueueResponse>;
-  stopAfterCurrent(): Promise<QueueResponse>;
-  cancelNow(): Promise<QueueResponse>;
+  prepareRun(request: PrepareRunRequest): Promise<PrepareRunResponse>;
 }
 
 export interface StatusResponse {
   app: {
     status: "ok";
   };
-  queue: QueueState;
   lmStudio: {
     baseUrl: string;
     connection: Awaited<ReturnType<typeof defaultCheckLmStudioConnection>>;
@@ -103,8 +74,8 @@ export interface SavedRunsResponse {
   runs: RunMetadata[];
 }
 
-export interface QueueResponse {
-  queue: QueueState;
+export interface PrepareRunResponse {
+  preparedRun: PreparedRun;
 }
 
 export class ApiRequestError extends Error {
@@ -114,55 +85,6 @@ export class ApiRequestError extends Error {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
-  }
-}
-
-class LocalQueueController {
-  private activeQueue?: QueueLike;
-  private activeRun?: Promise<QueueState>;
-
-  constructor(
-    private readonly options: {
-      runsRoot?: string;
-      queueFactory: QueueFactory;
-    }
-  ) {}
-
-  getState(): QueueState {
-    return this.activeQueue?.getState() ?? idleQueueState();
-  }
-
-  start(input: {
-    jobs: QueueJob[];
-    baseUrl?: string;
-  }): QueueState {
-    if (isQueueActive(this.activeQueue?.getState())) {
-      throw new ApiRequestError(409, "A benchmark queue is already running.");
-    }
-
-    const queue = this.options.queueFactory(input.jobs, {
-      runsRoot: this.options.runsRoot,
-      lmStudioBaseUrl: normalizeLmStudioBaseUrl(input.baseUrl),
-      logger: logQueueEvent
-    });
-    this.activeQueue = queue;
-    this.activeRun = queue.start().catch(() => {
-      // Keep route handlers responsive; job-level errors are persisted by the queue.
-      return queue.getState();
-    });
-    void this.activeRun;
-
-    return queue.getState();
-  }
-
-  stopAfterCurrent(): QueueState {
-    this.activeQueue?.stopAfterCurrent();
-    return this.getState();
-  }
-
-  cancelNow(): QueueState {
-    this.activeQueue?.cancelNow();
-    return this.getState();
   }
 }
 
@@ -179,13 +101,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
     dependencies.listLmStudioModels ?? defaultListLmStudioModels;
   const listRunMetadata = dependencies.listRunMetadata ?? defaultListRunMetadata;
   const getSystemStats = dependencies.getSystemStats ?? defaultGetSystemStats;
-  const queueController = new LocalQueueController({
-    runsRoot,
-    queueFactory:
-      dependencies.queueFactory ??
-      ((jobs, queueDependencies) =>
-        new BenchmarkQueue(jobs, queueDependencies))
-  });
+  const prepareRun = dependencies.prepareRun ?? defaultPrepareRun;
 
   return {
     async getStatus(request = {}) {
@@ -197,7 +113,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
         app: {
           status: "ok"
         },
-        queue: queueController.getState(),
         lmStudio: {
           baseUrl: connection.baseUrl,
           connection
@@ -232,41 +147,22 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       };
     },
 
-    async startQueue(request) {
-      const benchmarkIds = readStringArray(request.benchmarkIds, "benchmarkIds");
-      const modelIds = readStringArray(request.modelIds, "modelIds");
-      const benchmarks = selectBenchmarks(
+    async prepareRun(request) {
+      const benchmarkId = readRequiredString(request.benchmarkId, "benchmarkId");
+      const modelId = readRequiredString(request.modelId, "modelId");
+      const tool = readTool(request.tool);
+      const benchmark = selectBenchmark(
         await loadBenchmarks(benchmarkDirectory),
-        benchmarkIds
-      );
-      const models = modelIds.map((id) => ({ id }));
-      const jobs = expandQueueMatrix({
-        benchmarks,
-        models,
-        repeatCount: request.repeatCount ?? 1,
-        settings: request.capture
-      });
-      console.info(
-        `[benchmark] starting queue: ${jobs.length} jobs, ${benchmarks.length} benchmarks, ${models.length} models, repeat ${request.repeatCount ?? 1}`
+        benchmarkId
       );
 
       return {
-        queue: queueController.start({
-          jobs,
-          baseUrl: request.baseUrl
+        preparedRun: await prepareRun({
+          benchmark,
+          modelId,
+          tool,
+          runsRoot
         })
-      };
-    },
-
-    async stopAfterCurrent() {
-      return {
-        queue: queueController.stopAfterCurrent()
-      };
-    },
-
-    async cancelNow() {
-      return {
-        queue: queueController.cancelNow()
       };
     }
   };
@@ -322,60 +218,36 @@ export function getDefaultLocalApi(): LocalApi {
   return defaultApi;
 }
 
-function selectBenchmarks(
+function selectBenchmark(
   benchmarks: BenchmarkRecord[],
-  requestedIds: string[]
-): BenchmarkRecord[] {
+  requestedId: string
+): BenchmarkRecord {
   const byId = new Map(benchmarks.map((benchmark) => [benchmark.id, benchmark]));
-  const selected = requestedIds.map((id) => byId.get(id));
-  const missingIds = requestedIds.filter(
-    (_id, index) => selected[index] === undefined
-  );
+  const selected = byId.get(requestedId);
 
-  if (missingIds.length > 0) {
-    throw new ApiRequestError(
-      400,
-      `Unknown benchmark IDs: ${missingIds.join(", ")}.`
-    );
+  if (!selected) {
+    throw new ApiRequestError(400, `Unknown benchmark ID: ${requestedId}.`);
   }
 
-  return selected as BenchmarkRecord[];
+  return selected;
 }
 
-function readStringArray(value: unknown, field: string): string[] {
-  if (!Array.isArray(value) || value.length === 0) {
-    throw new ApiRequestError(400, `${field} must be a non-empty string array.`);
+function readRequiredString(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ApiRequestError(400, `${field} must be a non-empty string.`);
   }
 
-  const strings = value.map((item) => {
-    if (typeof item !== "string" || item.trim().length === 0) {
-      throw new ApiRequestError(400, `${field} must be a non-empty string array.`);
-    }
-
-    return item.trim();
-  });
-
-  return Array.from(new Set(strings));
+  return value.trim();
 }
 
-function idleQueueState(): QueueState {
-  return {
-    status: "idle",
-    pendingJobs: [],
-    completedJobs: [],
-    failedJobs: [],
-    skippedJobs: [],
-    totalJobs: 0
-  };
-}
+function readTool(value: unknown): PromptTool {
+  if (value === undefined || value === null || value === "") {
+    return "generic";
+  }
 
-function isQueueActive(state?: QueueState): boolean {
-  return state?.status === "running" || state?.status === "stopping";
-}
+  if (value === "opencode" || value === "pi" || value === "generic") {
+    return value;
+  }
 
-function logQueueEvent(
-  event: QueueLogEvent,
-  details: Record<string, unknown>
-): void {
-  console.info(`[benchmark] ${event}`, details);
+  throw new ApiRequestError(400, "tool must be opencode, pi, or generic.");
 }

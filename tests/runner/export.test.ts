@@ -67,6 +67,7 @@ async function writeRun(runsRoot: string) {
     },
     assets: {
       metadata: "metadata.json",
+      prompt: "prompt.md",
       rawResponse: "response.raw.txt",
       html: "index.html",
       preview: "preview.png"
@@ -81,6 +82,7 @@ async function writeRun(runsRoot: string) {
   };
 
   await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(metadata), "utf8");
+  await writeFile(join(runDirectory, "prompt.md"), "prepared prompt", "utf8");
   await writeFile(join(runDirectory, "response.raw.txt"), "raw response", "utf8");
   await writeFile(join(runDirectory, "index.html"), "<!doctype html><html></html>", "utf8");
   await writeFile(join(runDirectory, "preview.png"), "png bytes", "utf8");
@@ -120,6 +122,7 @@ describe("generateStaticExport", () => {
             "export/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z",
           assets: {
             metadata: "metadata.json",
+            prompt: "prompt.md",
             rawResponse: "response.raw.txt",
             html: "index.html",
             preview: "preview.png"

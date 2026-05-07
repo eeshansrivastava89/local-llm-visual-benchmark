@@ -3,8 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { createLocalApi } from "../../src/server/api";
-import type { BenchmarkQueueDependencies, QueueState } from "../../src/runner/queue";
-import type { BenchmarkRecord, LMStudioModel, QueueJob } from "../../src/runner/types";
+import type { BenchmarkRecord, LMStudioModel, PreparedRun } from "../../src/runner/types";
 
 const benchmarks: BenchmarkRecord[] = [
   {
@@ -23,50 +22,8 @@ const benchmarks: BenchmarkRecord[] = [
 
 const models: LMStudioModel[] = [{ id: "model-a" }, { id: "model-b" }];
 
-function idleQueueState(): QueueState {
-  return {
-    status: "idle",
-    pendingJobs: [],
-    completedJobs: [],
-    failedJobs: [],
-    skippedJobs: [],
-    totalJobs: 0
-  };
-}
-
-class StubQueue {
-  readonly jobs: QueueJob[];
-  readonly dependencies: BenchmarkQueueDependencies;
-  private state: QueueState;
-  start = vi.fn(async () => this.state);
-  stopAfterCurrent = vi.fn(() => {
-    this.state = { ...this.state, status: "stopping" };
-  });
-  cancelNow = vi.fn(() => {
-    this.state = { ...this.state, status: "cancelled" };
-  });
-
-  constructor(jobs: QueueJob[], dependencies: BenchmarkQueueDependencies) {
-    this.jobs = jobs;
-    this.dependencies = dependencies;
-    this.state = {
-      status: "running",
-      activeJob: jobs[0],
-      pendingJobs: jobs.slice(1),
-      completedJobs: [],
-      failedJobs: [],
-      skippedJobs: [],
-      totalJobs: jobs.length
-    };
-  }
-
-  getState() {
-    return this.state;
-  }
-}
-
 describe("createLocalApi", () => {
-  it("returns status with queue state and LM Studio connection shape", async () => {
+  it("returns status with passive LM Studio connection shape", async () => {
     const checkLmStudioConnection = vi.fn(async () => ({
       ok: true,
       baseUrl: "http://example.test/v1"
@@ -79,7 +36,6 @@ describe("createLocalApi", () => {
       app: {
         status: "ok"
       },
-      queue: idleQueueState(),
       lmStudio: {
         baseUrl: "http://example.test/v1",
         connection: {
@@ -93,7 +49,7 @@ describe("createLocalApi", () => {
     });
   });
 
-  it("loads benchmark definitions through the runner loader", async () => {
+  it("loads benchmark definitions through the benchmark loader", async () => {
     const loadBenchmarks = vi.fn(async () => benchmarks);
     const api = createLocalApi({
       benchmarkDirectory: "/benchmarks",
@@ -106,7 +62,7 @@ describe("createLocalApi", () => {
     expect(loadBenchmarks).toHaveBeenCalledWith("/benchmarks");
   });
 
-  it("lists LM Studio models through the existing client", async () => {
+  it("lists LM Studio models through the passive client", async () => {
     const listLmStudioModels = vi.fn(async () => models);
     const api = createLocalApi({
       listLmStudioModels
@@ -162,86 +118,71 @@ describe("createLocalApi", () => {
     expect(response.runs.map((run) => run.runId)).toEqual(["run-new", "run-old"]);
   });
 
-  it("starts a singleton queue from requested benchmark IDs and model IDs", async () => {
-    const queues: StubQueue[] = [];
+  it("prepares a run slot from a benchmark and model ID", async () => {
+    const preparedRun: PreparedRun = {
+      run: {
+        runId: "run-1",
+        benchmark: benchmarks[0],
+        model: {
+          id: "model-a",
+          slug: "model-a"
+        },
+        status: "prepared",
+        createdAt: "2026-05-07T00:00:00.000Z",
+        updatedAt: "2026-05-07T00:00:00.000Z",
+        preparedAt: "2026-05-07T00:00:00.000Z",
+        runDirectory: "/runs/sakura/model-a/run-1",
+        assets: {
+          metadata: "metadata.json",
+          prompt: "prompt.md",
+          html: "index.html",
+          preview: "preview.png"
+        }
+      },
+      prompt: "prompt",
+      paths: {
+        runDirectory: "/runs/sakura/model-a/run-1",
+        promptPath: "/runs/sakura/model-a/run-1/prompt.md",
+        htmlPath: "/runs/sakura/model-a/run-1/index.html",
+        metadataPath: "/runs/sakura/model-a/run-1/metadata.json",
+        previewPath: "/runs/sakura/model-a/run-1/preview.png"
+      }
+    };
+    const prepareRun = vi.fn(async () => preparedRun);
     const api = createLocalApi({
       runsRoot: "/runs",
       loadBenchmarks: vi.fn(async () => benchmarks),
-      queueFactory: (jobs, dependencies) => {
-        const queue = new StubQueue(jobs, dependencies);
-        queues.push(queue);
-        return queue;
-      }
+      prepareRun
     });
 
-    const response = await api.startQueue({
-      benchmarkIds: ["sakura"],
-      modelIds: ["model-a", "model-b"],
-      repeatCount: 2,
-      capture: {
-        preview: {
-          captureAtMs: 1500,
-          viewport: {
-            width: 800,
-            height: 600
-          },
-          video: true
-        }
-      },
-      baseUrl: "http://localhost:1234"
+    await expect(
+      api.prepareRun({
+        benchmarkId: "sakura",
+        modelId: "model-a",
+        tool: "opencode"
+      })
+    ).resolves.toEqual({
+      preparedRun
     });
-
-    expect(response.queue.status).toBe("running");
-    expect(response.queue.totalJobs).toBe(4);
-    expect(queues).toHaveLength(1);
-    expect(queues[0].start).toHaveBeenCalledTimes(1);
-    expect(queues[0].dependencies).toMatchObject({
-      runsRoot: "/runs",
-      lmStudioBaseUrl: "http://localhost:1234/v1"
-    });
-    expect(queues[0].jobs.map((job) => job.id)).toEqual([
-      "sakura__model-a__repeat-1-of-2",
-      "sakura__model-a__repeat-2-of-2",
-      "sakura__model-b__repeat-1-of-2",
-      "sakura__model-b__repeat-2-of-2"
-    ]);
-    expect(queues[0].jobs[0].settings.preview).toEqual({
-      captureAtMs: 1500,
-      viewport: {
-        width: 800,
-        height: 600
-      },
-      video: true
+    expect(prepareRun).toHaveBeenCalledWith({
+      benchmark: benchmarks[0],
+      modelId: "model-a",
+      tool: "opencode",
+      runsRoot: "/runs"
     });
   });
 
-  it("delegates stop and cancel controls to the active singleton queue", async () => {
-    const queues: StubQueue[] = [];
+  it("rejects unknown benchmark IDs while preparing a run", async () => {
     const api = createLocalApi({
-      loadBenchmarks: vi.fn(async () => benchmarks.slice(0, 1)),
-      queueFactory: (jobs, dependencies) => {
-        const queue = new StubQueue(jobs, dependencies);
-        queues.push(queue);
-        return queue;
-      }
-    });
-    await api.startQueue({
-      benchmarkIds: ["sakura"],
-      modelIds: ["model-a"],
-      repeatCount: 1
+      loadBenchmarks: vi.fn(async () => benchmarks)
     });
 
-    await expect(api.stopAfterCurrent()).resolves.toMatchObject({
-      queue: {
-        status: "stopping"
-      }
-    });
-    await expect(api.cancelNow()).resolves.toMatchObject({
-      queue: {
-        status: "cancelled"
-      }
-    });
-    expect(queues[0].stopAfterCurrent).toHaveBeenCalledTimes(1);
-    expect(queues[0].cancelNow).toHaveBeenCalledTimes(1);
+    await expect(
+      api.prepareRun({
+        benchmarkId: "missing",
+        modelId: "model-a",
+        tool: "generic"
+      })
+    ).rejects.toThrow(/Unknown benchmark ID: missing/);
   });
 });
