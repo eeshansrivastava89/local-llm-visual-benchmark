@@ -142,26 +142,26 @@
 ## Phase 10: Documentation And Prototype Cleanup
 
 - [x] Remove old untracked prototype artifacts that are not part of the current Astro/runner plan.
-- [ ] Do not add an import script in v1; document the manual path for adding benchmark prompts and generated run outputs.
-- [ ] Confirm generated app can display current copied prompt definitions.
-- [ ] Update `README.md` with local run, LM Studio setup, prompt editing, static export, and publish instructions.
-- [ ] Verify end-to-end with at least one mocked or real LM Studio run.
-- [ ] Commit migration/docs.
+- [x] Do not add an import script in v1; document the manual path for adding benchmark prompts and generated run outputs.
+- [x] Confirm generated app can display current copied prompt definitions.
+- [x] Update `README.md` with local run, LM Studio setup, prompt editing, static export, and publish instructions.
+- [x] Verify end-to-end with at least one mocked or real LM Studio run.
+- [x] Commit migration/docs.
 
 ## Verification Checklist
 
-- [ ] `npm test`
-- [ ] `npm run build`
-- [ ] Local UI can test LM Studio base URL and handle unreachable server gracefully.
-- [ ] Local UI lists models from LM Studio when available.
-- [ ] Queue can run multiple benchmarks x multiple models x repeat count.
-- [ ] Stop after current saves the active run and stops before the next.
-- [ ] Cancel now marks active run cancelled and stops the queue.
-- [ ] Failed/malformed model output is saved and visible.
-- [ ] PNG preview is generated for successful renderable runs.
-- [ ] Video generation is off by default and optional.
-- [ ] Static build can browse exported run data without local runner server.
-- [ ] Existing prototype/output files are not deleted or rewritten unless explicitly planned.
+- [x] `npm test`
+- [x] `npm run build`
+- [x] Local UI can test LM Studio base URL and handle unreachable server gracefully.
+- [x] Local UI lists models from LM Studio when available.
+- [x] Queue can run multiple benchmarks x multiple models x repeat count.
+- [x] Stop after current saves the active run and stops before the next.
+- [x] Cancel now marks active run cancelled and stops the queue.
+- [x] Failed/malformed model output is saved and visible.
+- [x] PNG preview is generated for successful renderable runs.
+- [x] Video generation is off by default and optional.
+- [x] Static build can browse exported run data without local runner server.
+- [x] Existing prototype/output files are not deleted or rewritten unless explicitly planned.
 
 ## Execution Notes
 
