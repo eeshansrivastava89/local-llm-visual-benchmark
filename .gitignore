@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+**/node_modules/
+
+# Local recording scratch
+app/**/.frames-*/
+app/**/*.mov
+app/**/*.webm
+
+# Local browser / tool output
+*.log
+.superpowers/
