@@ -131,13 +131,13 @@
 
 ## Phase 9: Static Export And GitHub Pages Build
 
-- [ ] Generate a static export manifest from saved runs and benchmark definitions.
-- [ ] Add a pure static publish build path separate from the local API/server build.
-- [ ] Ensure static build does not require LM Studio or local runner API.
-- [ ] Make static result browsing use exported data/assets only.
-- [ ] Add GitHub Pages-friendly build output and path handling.
-- [ ] Add a build test that simulates exported runs and verifies `npm run build` succeeds.
-- [ ] Commit static export path.
+- [x] Generate a static export manifest from saved runs and benchmark definitions.
+- [x] Add a pure static publish build path separate from the local API/server build.
+- [x] Ensure static build does not require LM Studio or local runner API.
+- [x] Make static result browsing use exported data/assets only.
+- [x] Add GitHub Pages-friendly build output and path handling.
+- [x] Add a build test that simulates exported runs and verifies `npm run build` succeeds.
+- [x] Commit static export path.
 
 ## Phase 10: Documentation And Prototype Cleanup
 

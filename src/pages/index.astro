@@ -781,7 +781,8 @@ const title = "Local LLM Visual Benchmark";
         selectedBenchmarks: new Set(),
         selectedModels: new Set(),
         media: "image",
-        queueStartedAt: null
+        queueStartedAt: null,
+        staticMode: false
       };
 
       const els = {
@@ -867,7 +868,17 @@ const title = "Local LLM Visual Benchmark";
       }
 
       async function refreshAll() {
-        await Promise.all([loadBenchmarks(), loadStats(), loadRuns(), testConnection(false)]);
+        const [benchmarksResult, runsResult, statusResult] = await Promise.allSettled([
+          loadBenchmarks(),
+          loadRuns(),
+          testConnection(false)
+        ]);
+        void loadStats();
+
+        if ([benchmarksResult, runsResult, statusResult].some((result) => result.status === "rejected")) {
+          const reason = [benchmarksResult, runsResult, statusResult].find((result) => result.status === "rejected")?.reason;
+          await enterStaticMode(reason);
+        }
       }
 
       async function loadBenchmarks() {
@@ -880,6 +891,7 @@ const title = "Local LLM Visual Benchmark";
           els.benchmarkList.innerHTML = `<div class="empty">Benchmarks unavailable</div>`;
           els.benchmarkCount.textContent = "Benchmarks unavailable";
           setMessage(els.queueMessage, error.message, "error");
+          throw error;
         }
       }
 
@@ -907,6 +919,7 @@ const title = "Local LLM Visual Benchmark";
           state.selectedModels = new Set();
           renderModels();
           setConnection("error", "Offline", "Connection unavailable. " + error.message);
+          throw error;
         }
       }
 
@@ -939,13 +952,42 @@ const title = "Local LLM Visual Benchmark";
           const data = await fetchJson("/api/runs");
           state.runs = data.runs ?? [];
           renderRuns();
-        } catch {
+        } catch (error) {
           state.runs = [];
           renderRuns();
+          throw error;
+        }
+      }
+
+      async function enterStaticMode(reason) {
+        try {
+          const manifest = await fetchStaticManifest();
+          state.staticMode = true;
+          state.benchmarks = manifest.benchmarks ?? [];
+          state.runs = manifest.runs ?? [];
+          state.models = [];
+          state.selectedBenchmarks = new Set(state.benchmarks.map((benchmark) => benchmark.id));
+          state.selectedModels = new Set();
+          renderBenchmarks();
+          renderModels();
+          renderRuns();
+          renderQueue(idleQueue());
+          setConnection("offline", "Static mode", "Local API unavailable. Browsing exported runs.");
+          setMessage(els.queueMessage, "Static mode: local runner controls are unavailable.", "warn");
+          els.statsTimestamp.textContent = "Static mode";
+          els.statsMessage.textContent = "System stats require the local API.";
+        } catch (error) {
+          setConnection("error", "API unavailable", "Local API unavailable and no static export manifest was found.");
+          setMessage(els.queueMessage, `${reason?.message ?? "Local API unavailable."} ${error.message}`, "error");
         }
       }
 
       async function startQueue() {
+        if (state.staticMode) {
+          setMessage(els.queueMessage, "Static mode cannot start local benchmark runs.", "warn");
+          return;
+        }
+
         const benchmarkIds = [...state.selectedBenchmarks];
         const modelIds = [...state.selectedModels];
 
@@ -979,6 +1021,11 @@ const title = "Local LLM Visual Benchmark";
       }
 
       async function queueCommand(url, message) {
+        if (state.staticMode) {
+          setMessage(els.queueMessage, "Static mode cannot control the local queue.", "warn");
+          return;
+        }
+
         try {
           const data = await postJson(url, {});
           renderQueue(data.queue);
@@ -1021,11 +1068,13 @@ const title = "Local LLM Visual Benchmark";
       }
 
       function renderModels() {
-        els.modelCount.textContent = `${state.models.length} models`;
+        els.modelCount.textContent = state.staticMode ? "API unavailable" : `${state.models.length} models`;
         els.modelListCount.textContent = String(state.models.length);
 
         if (state.models.length === 0) {
-          els.modelList.innerHTML = `<div class="empty">No models discovered</div>`;
+          els.modelList.innerHTML = state.staticMode
+            ? `<div class="empty">Local API unavailable</div>`
+            : `<div class="empty">No models discovered</div>`;
           renderMatrixSize();
           return;
         }
@@ -1056,6 +1105,12 @@ const title = "Local LLM Visual Benchmark";
         const repeats = readPositiveInteger(els.repeatCount.value, 1);
         const count = state.selectedBenchmarks.size * state.selectedModels.size * repeats;
         els.matrixSize.textContent = `${count} ${count === 1 ? "job" : "jobs"}`;
+        els.startQueue.disabled = state.staticMode || count === 0;
+        els.testConnection.disabled = state.staticMode;
+        els.baseUrl.disabled = state.staticMode;
+        els.repeatCount.disabled = state.staticMode;
+        els.captureAtMs.disabled = state.staticMode;
+        els.videoGeneration.disabled = state.staticMode;
       }
 
       function renderQueue(queue) {
@@ -1192,6 +1247,14 @@ const title = "Local LLM Visual Benchmark";
         return readJsonResponse(response);
       }
 
+      async function fetchStaticManifest() {
+        try {
+          return await fetchJson("export/manifest.json");
+        } catch {
+          return fetchJson("/export/manifest.json");
+        }
+      }
+
       async function postJson(url, body) {
         const response = await fetch(url, {
           method: "POST",
@@ -1249,6 +1312,9 @@ const title = "Local LLM Visual Benchmark";
         }
         if (/^[a-z][a-z0-9+.-]*:/iu.test(path)) {
           return path;
+        }
+        if (state.staticMode) {
+          return path.replace(/^\/+/u, "");
         }
         return `file://${path.split("/").map(encodeURIComponent).join("/")}`;
       }

@@ -152,6 +152,57 @@ test("keeps the control center usable on mobile widths", async ({ page }) => {
   expect(overflow).toBe(false);
 });
 
+test("falls back to exported static data when local API is unavailable", async ({
+  page
+}) => {
+  await page.route("**/api/**", async (route) => {
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          message: "API unavailable in static publish"
+        }
+      })
+    });
+  });
+  await page.route("**/export/manifest.json", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        version: 1,
+        generatedAt: "2026-05-06T20:00:00.000Z",
+        benchmarks,
+        runs: [
+          {
+            ...sampleRun,
+            runDirectory:
+              "export/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z"
+          }
+        ]
+      })
+    });
+  });
+
+  await page.goto("/");
+
+  await expect(
+    page.getByLabel("Connection").getByText("Static mode", { exact: true })
+  ).toBeVisible();
+  await expect(page.getByText("2 benchmarks")).toBeVisible();
+  await expect(page.getByText("1 run")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Sakura Particle Field/ })
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start" })).toBeDisabled();
+
+  await page.getByRole("button", { name: /Sakura Particle Field/ }).click();
+  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveAttribute(
+    "href",
+    /export\/runs\/sakura\/local-qwen2-5-vl\/2026-05-06T19-12-00-000Z\/index\.html$/
+  );
+});
+
 async function mockApi(
   page: Page,
   options: {

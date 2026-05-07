@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "export:static": "node src/runner/export.ts",
+    "build:static": "node scripts/build-static.mjs",
     "preview": "astro preview",
     "check": "astro check && tsc --noEmit",
     "test": "vitest run",
