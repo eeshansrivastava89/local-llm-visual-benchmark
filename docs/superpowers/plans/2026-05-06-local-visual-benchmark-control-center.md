@@ -45,13 +45,13 @@
 
 ## Phase 1: File-Backed Benchmark Definitions
 
-- [ ] Move or copy Sakura and Solar System prompt text into repo Markdown benchmark files.
-- [ ] Define minimal benchmark frontmatter: `id`, `title`, `description`.
-- [ ] Implement `src/runner/benchmarks.ts` to load benchmark Markdown from disk.
-- [ ] Append the shared HTML output contract in runner code, not in each prompt.
-- [ ] Add tests for benchmark loading, missing frontmatter, duplicate IDs, and prompt contract assembly.
-- [ ] Verify tests and build.
-- [ ] Commit benchmark definition layer.
+- [x] Move or copy Sakura and Solar System prompt text into repo Markdown benchmark files.
+- [x] Define minimal benchmark frontmatter: `id`, `title`, `description`.
+- [x] Implement `src/runner/benchmarks.ts` to load benchmark Markdown from disk.
+- [x] Append the shared HTML output contract in runner code, not in each prompt.
+- [x] Add tests for benchmark loading, missing frontmatter, duplicate IDs, and prompt contract assembly.
+- [x] Verify tests and build.
+- [x] Commit benchmark definition layer.
 
 ## Phase 2: Runner Types, Paths, And Run Metadata
 
