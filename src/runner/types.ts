@@ -74,6 +74,21 @@ export interface RunError {
   stack?: string;
 }
 
+export type CaptureAssetStatus = "ready" | "failed" | "skipped";
+
+export interface RunCaptureAsset {
+  status: CaptureAssetStatus;
+  path?: string;
+  capturedAt?: string;
+  reason?: string;
+  error?: RunError;
+}
+
+export interface RunCaptureMetadata {
+  preview?: RunCaptureAsset;
+  video?: RunCaptureAsset;
+}
+
 export interface RunMetadata {
   runId: string;
   benchmark: BenchmarkRecord;
@@ -91,4 +106,5 @@ export interface RunMetadata {
   cancelledAt?: string;
   skippedAt?: string;
   error?: RunError;
+  capture?: RunCaptureMetadata;
 }

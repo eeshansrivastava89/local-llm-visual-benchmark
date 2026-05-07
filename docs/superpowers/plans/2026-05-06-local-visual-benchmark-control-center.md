@@ -87,13 +87,13 @@
 
 ## Phase 5: Preview Capture
 
-- [ ] Implement Playwright capture for `preview.png` at configurable timestamp, default `5s`.
-- [ ] Store capture status and errors in metadata.
-- [ ] Add optional video capture support behind a runner setting, off by default.
-- [ ] Ensure missing video is a normal state, not a run failure.
-- [ ] Add tests around capture option plumbing and one lightweight Playwright integration smoke test.
-- [ ] Verify tests and build.
-- [ ] Commit preview capture.
+- [x] Implement Playwright capture for `preview.png` at configurable timestamp, default `5s`.
+- [x] Store capture status and errors in metadata.
+- [x] Add optional video capture support behind a runner setting, off by default.
+- [x] Ensure missing video is a normal state, not a run failure.
+- [x] Add tests around capture option plumbing and one lightweight Playwright integration smoke test.
+- [x] Verify tests and build.
+- [x] Commit preview capture.
 
 ## Phase 6: Queue Engine And Stop Controls
 
