@@ -97,15 +97,15 @@
 
 ## Phase 6: Queue Engine And Stop Controls
 
-- [ ] Implement matrix expansion from selected benchmarks x selected LM Studio models x repeat count.
-- [ ] Execute jobs sequentially.
-- [ ] Track active job, completed jobs, failed jobs, cancelled job, and remaining queue.
-- [ ] Implement `Stop after current`: finish active job, then stop before the next job.
-- [ ] Implement `Cancel now`: abort active request/capture where possible and mark the active run cancelled.
-- [ ] Save failed, malformed, and cancelled runs visibly.
-- [ ] Add tests for matrix expansion, sequential ordering, graceful stop, cancel now, and failed job continuation policy.
-- [ ] Verify tests and build.
-- [ ] Commit queue engine.
+- [x] Implement matrix expansion from selected benchmarks x selected LM Studio models x repeat count.
+- [x] Execute jobs sequentially.
+- [x] Track active job, completed jobs, failed jobs, cancelled job, and remaining queue.
+- [x] Implement `Stop after current`: finish active job, then stop before the next job.
+- [x] Implement `Cancel now`: abort active request/capture where possible and mark the active run cancelled.
+- [x] Save failed, malformed, and cancelled runs visibly.
+- [x] Add tests for matrix expansion, sequential ordering, graceful stop, cancel now, and failed job continuation policy.
+- [x] Verify tests and build.
+- [x] Commit queue engine.
 
 ## Phase 7: Local API Layer
 

@@ -58,6 +58,21 @@ export async function markRunFailed(
   });
 }
 
+export async function markRunCancelled(
+  paths: RunPaths,
+  error: unknown,
+  now = new Date()
+): Promise<RunMetadata> {
+  const timestamp = now.toISOString();
+
+  return updateRunMetadata(paths, {
+    status: "cancelled",
+    updatedAt: timestamp,
+    cancelledAt: timestamp,
+    error: toRunError(error)
+  });
+}
+
 function toRunError(error: unknown): RunError {
   if (error instanceof Error) {
     return {
