@@ -1,4 +1,6 @@
 ---
+import "../styles/global.css";
+
 const title = "Local LLM Visual Benchmark";
 ---
 
@@ -8,633 +10,288 @@ const title = "Local LLM Visual Benchmark";
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --surface: oklch(0.985 0.006 95);
-        --panel: oklch(0.958 0.008 95);
-        --panel-strong: oklch(0.925 0.01 95);
-        --ink: oklch(0.19 0.012 250);
-        --muted: oklch(0.48 0.018 250);
-        --line: oklch(0.82 0.012 95);
-        --accent: oklch(0.56 0.105 155);
-        --accent-soft: oklch(0.9 0.045 155);
-        --amber: oklch(0.67 0.13 72);
-        --amber-soft: oklch(0.91 0.07 72);
-        --danger: oklch(0.56 0.14 28);
-        --danger-soft: oklch(0.91 0.05 28);
-        --shadow: 0 18px 45px oklch(0.22 0.012 250 / 0.12);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        background: var(--surface);
-        color: var(--ink);
-      }
-
-      a {
-        color: inherit;
-      }
-
-      button,
-      input,
-      select,
-      textarea {
-        font: inherit;
-      }
-
-      button,
-      select,
-      input,
-      textarea {
-        border: 1px solid var(--line);
-        border-radius: 7px;
-      }
-
-      button {
-        min-height: 34px;
-        padding: 0 12px;
-        background: var(--surface);
-        color: var(--ink);
-        cursor: pointer;
-        transition: background 160ms ease, border-color 160ms ease;
-      }
-
-      button:hover {
-        background: var(--panel);
-        border-color: oklch(0.72 0.018 95);
-      }
-
-      button:focus-visible,
-      input:focus-visible,
-      select:focus-visible,
-      textarea:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-      }
-
-      button.primary {
-        border-color: var(--accent);
-        background: var(--accent);
-        color: oklch(0.985 0.006 155);
-      }
-
-      button[aria-pressed="true"] {
-        border-color: var(--accent);
-        background: var(--accent-soft);
-      }
-
-      button:disabled {
-        color: oklch(0.65 0.012 250);
-        cursor: not-allowed;
-      }
-
-      input,
-      select,
-      textarea {
-        width: 100%;
-        min-height: 36px;
-        padding: 8px 10px;
-        background: oklch(0.995 0.004 95);
-        color: var(--ink);
-      }
-
-      textarea {
-        min-height: 240px;
-        resize: vertical;
-        line-height: 1.45;
-      }
-
-      .app {
-        min-height: 100vh;
-        display: grid;
-        grid-template-columns: 320px minmax(0, 1fr);
-      }
-
-      .sidebar {
-        min-height: 100vh;
-        padding: 18px;
-        border-right: 1px solid var(--line);
-        background: var(--panel);
-        position: sticky;
-        top: 0;
-        align-self: start;
-      }
-
-      .brand,
-      .stack,
-      .section,
-      .copy-panel,
-      .content-grid,
-      .group,
-      .run-body,
-      .run-title {
-        display: grid;
-      }
-
-      .brand {
-        gap: 4px;
-        margin-bottom: 20px;
-      }
-
-      .stack,
-      .content-grid {
-        gap: 14px;
-      }
-
-      .section,
-      .copy-panel,
-      .group,
-      .run-body {
-        gap: 10px;
-      }
-
-      .run-title {
-        gap: 3px;
-      }
-
-      h1,
-      h2,
-      h3,
-      p {
-        margin: 0;
-      }
-
-      h1 {
-        font-size: 1.05rem;
-      }
-
-      h2 {
-        font-size: 0.86rem;
-      }
-
-      h3 {
-        font-size: 0.95rem;
-      }
-
-      .muted,
-      .small {
-        color: var(--muted);
-      }
-
-      .small {
-        font-size: 0.78rem;
-        line-height: 1.35;
-      }
-
-      .section-head,
-      .row,
-      .topbar,
-      .card-foot,
-      .detail-actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .section-head,
-      .topbar {
-        justify-content: space-between;
-      }
-
-      .field {
-        display: grid;
-        gap: 6px;
-      }
-
-      label,
-      .label {
-        font-size: 0.74rem;
-        font-weight: 700;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-      }
-
-      .pill,
-      .count,
-      .status {
-        display: inline-flex;
-        align-items: center;
-        min-height: 24px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 2px 9px;
-        font-size: 0.76rem;
-        font-weight: 700;
-        white-space: nowrap;
-      }
-
-      .status[data-state="online"],
-      .status[data-status="completed"] {
-        border-color: var(--accent);
-        background: var(--accent-soft);
-      }
-
-      .status[data-state="offline"],
-      .status[data-status="failed"],
-      .status[data-status="cancelled"] {
-        border-color: var(--danger);
-        background: var(--danger-soft);
-      }
-
-      .status[data-status="prepared"],
-      .status[data-state="static"] {
-        border-color: var(--amber);
-        background: var(--amber-soft);
-      }
-
-      .choice-list {
-        display: grid;
-        gap: 6px;
-      }
-
-      .choice {
-        display: grid;
-        grid-template-columns: 16px minmax(0, 1fr);
-        gap: 8px;
-        align-items: start;
-        padding: 8px;
-        border: 1px solid transparent;
-        border-radius: 7px;
-      }
-
-      .choice:has(input:checked) {
-        border-color: var(--accent);
-        background: var(--accent-soft);
-      }
-
-      .choice input {
-        width: 16px;
-        min-height: 16px;
-        margin: 2px 0 0;
-      }
-
-      .main {
-        min-width: 0;
-        padding: 18px 22px 28px;
-      }
-
-      .topbar {
-        min-height: 54px;
-        border-bottom: 1px solid var(--line);
-        margin: -18px -22px 18px;
-        padding: 10px 22px;
-        background: oklch(0.99 0.004 95 / 0.88);
-        backdrop-filter: blur(10px);
-        position: sticky;
-        top: 0;
-        z-index: 4;
-      }
-
-      .toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .guide,
-      .prep,
-      .empty {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--panel);
-        padding: 14px;
-      }
-
-      .guide[hidden],
-      .prep[hidden] {
-        display: none;
-      }
-
-      .guide-grid,
-      .prep-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      .prep-grid {
-        grid-template-columns: 220px 1fr;
-      }
-
-      .run-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 14px;
-      }
-
-      .group + .group {
-        margin-top: 18px;
-      }
-
-      .group-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: end;
-        border-bottom: 1px solid var(--line);
-        padding-bottom: 8px;
-      }
-
-      .run-card {
-        display: grid;
-        gap: 10px;
-        min-width: 0;
-        padding: 0;
-        overflow: hidden;
-        text-align: left;
-        border-radius: 8px;
-        background: oklch(0.995 0.004 95);
-        box-shadow: 0 1px 0 oklch(0.2 0.012 250 / 0.04);
-      }
-
-      .preview {
-        display: grid;
-        place-items: center;
-        aspect-ratio: 16 / 10;
-        background: linear-gradient(135deg, oklch(0.93 0.012 95), oklch(0.88 0.015 155));
-        color: var(--muted);
-        overflow: hidden;
-      }
-
-      .preview img,
-      .preview video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      .preview-placeholder {
-        display: grid;
-        gap: 5px;
-        justify-items: center;
-        padding: 16px;
-        text-align: center;
-      }
-
-      .run-body {
-        padding: 0 12px 12px;
-      }
-
-      .run-title strong,
-      .truncate {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .card-foot {
-        justify-content: space-between;
-      }
-
-      .detail-backdrop {
-        position: fixed;
-        inset: 0;
-        display: none;
-        place-items: center;
-        padding: 24px;
-        background: oklch(0.18 0.012 250 / 0.42);
-        z-index: 10;
-      }
-
-      .detail-backdrop[open] {
-        display: grid;
-      }
-
-      .detail {
-        width: min(1060px, 100%);
-        max-height: min(860px, calc(100vh - 48px));
-        overflow: auto;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--surface);
-        box-shadow: var(--shadow);
-      }
-
-      .detail-head,
-      .detail-body {
-        padding: 16px;
-      }
-
-      .detail-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .detail-body {
-        display: grid;
-        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
-        gap: 16px;
-      }
-
-      .meta-grid {
-        display: grid;
-        grid-template-columns: 110px minmax(0, 1fr);
-        gap: 8px 10px;
-        font-size: 0.86rem;
-      }
-
-      pre {
-        max-height: 260px;
-        overflow: auto;
-        margin: 0;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        background: var(--panel);
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      @media (max-width: 860px) {
-        .app {
-          grid-template-columns: 1fr;
-        }
-
-        .sidebar {
-          position: static;
-          min-height: auto;
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
-        }
-
-        .guide-grid,
-        .prep-grid,
-        .detail-body {
-          grid-template-columns: 1fr;
-        }
-
-        .topbar {
-          position: static;
-        }
-      }
-    </style>
   </head>
   <body>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <h1>Local LLM Visual Benchmark</h1>
-          <p class="small">Viewer and prompt prep for local visual artifacts.</p>
-        </div>
-
-        <div class="stack">
-          <section class="section" aria-labelledby="connectionTitle">
-            <div class="section-head">
-              <h2 id="connectionTitle">LM Studio</h2>
-              <span class="status" id="connectionPill" data-state="offline">Checking</span>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="mx-auto flex min-h-14 w-full max-w-[1600px] items-center gap-4 px-4 md:px-5">
+          <div class="flex min-w-0 flex-1 items-center gap-3">
+            <div class="grid size-8 place-items-center rounded-lg border bg-card text-xs font-semibold shadow-sm">
+              LV
             </div>
-            <div class="field">
-              <label for="baseUrl">Base URL</label>
-              <div class="row">
-                <input id="baseUrl" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
-                <button type="button" id="refreshConnection">Test</button>
-              </div>
+            <div class="min-w-0">
+              <h1 class="truncate-line text-sm font-semibold tracking-[-0.01em]">
+                Local LLM Visual Benchmark
+              </h1>
+              <p class="muted-copy truncate-line text-xs">
+                Browse and collect visual benchmark outputs.
+              </p>
             </div>
-            <p class="small" id="connectionMessage">Waiting for local API.</p>
-          </section>
-
-          <section class="section" aria-labelledby="modelsTitle">
-            <div class="section-head">
-              <h2 id="modelsTitle">Models</h2>
-              <span class="count" id="modelCount">0</span>
-            </div>
-            <div class="choice-list" id="modelChoices"></div>
-          </section>
-
-          <section class="section" aria-labelledby="benchmarksTitle">
-            <div class="section-head">
-              <h2 id="benchmarksTitle">Prompts</h2>
-              <span class="count" id="benchmarkCount">0</span>
-            </div>
-            <div class="choice-list" id="benchmarkChoices"></div>
-          </section>
-
-          <section class="section" aria-labelledby="systemTitle">
-            <div class="section-head">
-              <h2 id="systemTitle">System</h2>
-              <span class="count" id="statsTime">Local</span>
-            </div>
-            <p class="small" id="systemSummary">Stats load when the local API is available.</p>
-          </section>
-        </div>
-      </aside>
-
-      <main class="main">
-        <div class="topbar">
-          <div>
-            <strong id="viewTitle">Run gallery</strong>
-            <p class="small" id="viewSubtitle">Browse saved visual outputs.</p>
           </div>
-          <div class="toolbar" aria-label="View controls">
-            <button type="button" id="setupToggle">How to set up</button>
-            <button type="button" id="runToggle">Prepare run</button>
-            <button type="button" data-mode="gallery" aria-pressed="true">Gallery</button>
-            <button type="button" data-mode="model">By model</button>
-            <button type="button" data-mode="benchmark">By prompt</button>
-            <button type="button" id="refreshRuns">Refresh</button>
+
+          <div class="flex shrink-0 items-center gap-2">
+            <span class="badge-outline gap-1.5 text-xs" id="statsPill" title="System stats">
+              <span id="statsDot" class="status-dot" data-state="offline"></span>
+              <span id="statsCompact">Loading…</span>
+            </span>
+            <button type="button" class="btn-sm-outline" id="setupToggle">How it works</button>
+            <button type="button" class="btn-sm-outline" id="lmStudioToggle">LM Studio</button>
+            <button type="button" class="btn" id="runToggle">Prepare run</button>
           </div>
         </div>
+      </header>
 
-        <div class="content-grid">
-          <section class="guide" id="setupPanel" hidden>
-            <div class="guide-grid">
-              <div>
-                <h3>1. Keep outputs local</h3>
-                <p class="small">The viewer reads runs by benchmark, model, and run ID. It does not run models.</p>
-              </div>
-              <div>
-                <h3>2. Prepare a slot</h3>
-                <p class="small">Pick a prompt and model, then copy the generated OpenCode, Pi, or generic instructions.</p>
-              </div>
-              <div>
-                <h3>3. Save index.html</h3>
-                <p class="small">Paste the prompt into your tool. Refresh this viewer after the tool writes files.</p>
-              </div>
+      <main class="mx-auto w-full max-w-[1600px] px-4 py-4 md:px-5 md:py-5">
+        <div class="grid gap-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="dropdown-wrap">
+              <select id="modelFilter" class="input text-sm" aria-label="Filter by model">
+                <option value="all">All run models</option>
+              </select>
             </div>
-          </section>
+            <div class="dropdown-wrap">
+              <select id="benchmarkFilter" class="input text-sm" aria-label="Filter by prompt">
+                <option value="all">All prompts</option>
+              </select>
+            </div>
+            <div class="inline-flex rounded-lg border bg-muted p-0.5">
+              <button type="button" class="btn-sm-ghost" data-mode="gallery" aria-pressed="true">Gallery</button>
+              <button type="button" class="btn-sm-ghost" data-mode="model">By model</button>
+              <button type="button" class="btn-sm-ghost" data-mode="benchmark">By prompt</button>
+            </div>
+            <button type="button" class="btn-sm-outline ml-auto" id="refreshRuns">Refresh</button>
+          </div>
 
-          <section class="prep" id="prepPanel" hidden>
-            <div class="prep-grid">
-              <div class="stack">
-                <div class="field">
-                  <label for="prepBenchmark">Prompt</label>
-                  <select id="prepBenchmark"></select>
-                </div>
-                <div class="field">
-                  <label for="prepModelSelect">Discovered model</label>
-                  <select id="prepModelSelect"></select>
-                </div>
-                <div class="field">
-                  <label for="prepModel">Model ID</label>
-                  <input id="prepModel" placeholder="google/gemma-4-e4b" />
-                </div>
-                <div class="field">
-                  <label for="prepTool">Tool prompt</label>
-                  <select id="prepTool">
-                    <option value="opencode">OpenCode</option>
-                    <option value="pi">Pi</option>
-                    <option value="generic">Generic</option>
-                  </select>
-                </div>
-                <button class="primary" type="button" id="prepareRun">Prepare run slot</button>
-                <p class="small" id="prepMessage">The app will create the folder, metadata.json, and prompt.md.</p>
+          <div class="gallery-summary">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <h2 id="viewTitle" class="text-lg font-semibold tracking-[-0.01em]">Run gallery</h2>
+                <span class="badge-outline" id="runCount">0</span>
               </div>
-              <div class="copy-panel">
-                <div class="section-head">
-                  <h3>Generated prompt</h3>
-                  <button type="button" id="copyPrompt">Copy</button>
-                </div>
-                <textarea id="preparedPrompt" readonly placeholder="Prepare a run slot to generate a paste-ready prompt."></textarea>
-                <p class="small" id="preparedPaths"></p>
-              </div>
+              <p class="muted-copy mt-0.5 text-sm" id="viewSubtitle">Browse saved visual outputs.</p>
+              <p class="muted-copy text-sm" id="runSummary">Loading saved runs.</p>
             </div>
-          </section>
+          </div>
 
-          <section class="section" aria-labelledby="runsTitle">
-            <div class="section-head">
-              <div>
-                <h2 id="runsTitle">Runs</h2>
-                <p class="small" id="runSummary">Loading saved runs.</p>
-              </div>
-              <span class="count" id="runCount">0</span>
-            </div>
-            <div id="runsSurface"></div>
-          </section>
+          <div id="runsSurface"></div>
         </div>
       </main>
     </div>
 
+    <!-- Detail Modal -->
     <div class="detail-backdrop" id="detailBackdrop">
-      <article class="detail" role="dialog" aria-modal="true" aria-label="Run detail">
-        <div class="detail-head">
-          <div>
-            <h2 id="detailTitle">Run detail</h2>
-            <p class="small" id="detailSubtitle"></p>
+      <article class="detail-shell" role="dialog" aria-modal="true" aria-label="Run detail">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 id="detailTitle" class="truncate-line text-lg font-semibold">Run detail</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm" id="detailSubtitle"></p>
           </div>
-          <button type="button" id="closeDetail">Close</button>
-        </div>
-        <div class="detail-body">
-          <div class="stack">
+          <button type="button" class="btn-sm-outline" id="closeDetail">Close</button>
+        </header>
+        <div class="detail-body p-5">
+          <div class="grid min-w-0 gap-4">
             <div id="detailPreview"></div>
-            <div class="detail-actions">
-              <a class="pill" id="htmlLink" href="#" target="_blank" rel="noreferrer">Open HTML</a>
-              <a class="pill" id="promptLink" href="#" target="_blank" rel="noreferrer">Prompt file</a>
-              <a class="pill" id="rawLink" href="#" target="_blank" rel="noreferrer">Raw response</a>
+            <div class="detail-actions" id="detailActions">
+              <a class="btn-sm-outline" id="htmlLink" href="#" target="_blank" rel="noreferrer">Open HTML</a>
+              <a class="btn-sm-outline" id="promptLink" href="#" target="_blank" rel="noreferrer">Prompt file</a>
+              <a class="btn-sm-outline" id="rawLink" href="#" target="_blank" rel="noreferrer">Raw response</a>
             </div>
-            <pre id="detailPrompt"></pre>
           </div>
-          <div class="stack">
-            <div class="meta-grid" id="detailMeta"></div>
-            <pre id="detailPaths"></pre>
+          <aside class="detail-inspector">
+            <div class="run-identity">
+              <div class="meta-grid" id="detailMeta"></div>
+            </div>
+            <section class="inspector-section">
+              <div class="section-row">
+                <h3>Prompt</h3>
+                <span class="badge-outline" id="promptLength">0 chars</span>
+              </div>
+              <pre class="code-block prompt-block" id="detailPrompt"></pre>
+            </section>
+            <section class="inspector-section compact-section">
+              <div class="section-row">
+                <h3>Filesystem</h3>
+              </div>
+              <pre class="code-block paths-block" id="detailPaths"></pre>
+            </section>
+          </aside>
+        </div>
+      </article>
+    </div>
+
+    <!-- Prepare Run Modal -->
+    <div class="detail-backdrop" id="prepBackdrop">
+      <article class="prep-shell" role="dialog" aria-modal="true" aria-label="Prepare run">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 class="truncate-line text-lg font-semibold">Prepare run slot</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm">Choose a prompt and model to generate a run folder.</p>
+          </div>
+          <button type="button" class="btn-sm-outline" id="closePrep">Close</button>
+        </header>
+        <div class="prep-body p-5">
+          <div class="grid gap-4">
+            <div class="grid gap-2">
+              <label for="prepBenchmark">Prompt</label>
+              <select id="prepBenchmark" class="input"></select>
+            </div>
+            <div class="grid gap-2">
+              <label for="prepModelSelect">Discovered model</label>
+              <select id="prepModelSelect" class="input"></select>
+            </div>
+            <div class="grid gap-2">
+              <label for="prepModel">Model ID</label>
+              <input id="prepModel" class="input" placeholder="google/gemma-4-e4b" />
+            </div>
+            <button class="btn w-full" type="button" id="prepareRun">Prepare slot</button>
+            <p class="muted-copy text-sm leading-5" id="prepMessage">The app will create the folder, metadata.json, and prompt.md.</p>
+
+            <div id="prepResult" class="grid gap-3" hidden>
+              <div class="next-step-panel">
+                <div class="flex items-center justify-between gap-3">
+                  <h3 class="text-sm font-medium">Generated prompt</h3>
+                  <button type="button" class="btn-sm-outline" id="copyPrompt">Copy</button>
+                </div>
+                <textarea
+                  id="preparedPrompt"
+                  class="input min-h-48 resize-y font-mono text-[0.82rem] leading-5"
+                  readonly
+                ></textarea>
+                <p class="muted-copy text-sm" id="preparedPaths"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Setup / How it works Modal -->
+    <div class="detail-backdrop" id="setupBackdrop">
+      <article class="prep-shell" role="dialog" aria-modal="true" aria-label="How it works">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 class="truncate-line text-lg font-semibold">How it works</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm">Three steps from prompt to saved artifact.</p>
+          </div>
+          <button type="button" class="btn-sm-outline" id="closeSetup">Close</button>
+        </header>
+        <div class="prep-body p-5">
+          <div class="grid gap-6">
+            <!-- 1-2-3 Steps -->
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div class="rounded-xl bg-muted p-4">
+                <span class="badge-outline mb-3">1</span>
+                <h3 class="font-medium">Create a slot</h3>
+                <p class="muted-copy mt-1 text-sm leading-5">Pick a prompt and model. The app writes a run folder with metadata and a paste-ready prompt.</p>
+              </div>
+              <div class="rounded-xl bg-muted p-4">
+                <span class="badge-outline mb-3">2</span>
+                <h3 class="font-medium">Run externally</h3>
+                <p class="muted-copy mt-1 text-sm leading-5">Paste the prompt into OpenCode, Pi, or another tool. Save the HTML to the exact path in the folder.</p>
+              </div>
+              <div class="rounded-xl bg-muted p-4">
+                <span class="badge-outline mb-3">3</span>
+                <h3 class="font-medium">Refresh and inspect</h3>
+                <p class="muted-copy mt-1 text-sm leading-5">Refresh the gallery when files land. Open any run card to inspect the artifact, prompt, and paths.</p>
+              </div>
+            </div>
+
+            <!-- OpenCode Setup -->
+            <div class="grid gap-3">
+              <div class="flex items-center gap-2">
+                <h3 class="text-base font-semibold">OpenCode Setup</h3>
+                <a href="https://opencode.ai" target="_blank" rel="noreferrer" class="btn-sm-outline text-xs">Install OpenCode</a>
+              </div>
+              <p class="muted-copy text-sm leading-5">Add LM Studio as a provider in <code class="text-xs bg-muted px-1.5 py-0.5 rounded">~/.config/opencode/opencode.json</code>:</p>
+              <pre class="code-block">{'{'}
+  "provider": {'{'}
+    "lmstudio": {'{'}
+      "name": "LM Studio",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {'{'}
+        "apiKey": "lm-studio",
+        "baseURL": "http://127.0.0.1:1234/v1"
+      {'}'},
+      "models": {'{'}
+        "model-id": {'{'}
+          "name": "display-name"
+        {'}'}
+      {'}'}
+    {'}'}
+  {'}'}
+{'}'}</pre>
+            </div>
+
+            <!-- Pi Setup -->
+            <div class="grid gap-3">
+              <div class="flex items-center gap-2">
+                <h3 class="text-base font-semibold">Pi Setup</h3>
+                <a href="https://pi.dev" target="_blank" rel="noreferrer" class="btn-sm-outline text-xs">Install Pi</a>
+              </div>
+              <p class="muted-copy text-sm leading-5">Add LM Studio as a provider in <code class="text-xs bg-muted px-1.5 py-0.5 rounded">~/.pi/agent/models.json</code>:</p>
+              <pre class="code-block">{'{'}
+  "providers": {'{'}
+    "lmstudio": {'{'}
+      "baseUrl": "http://127.0.0.1:1234/v1",
+      "api": "openai-completions",
+      "apiKey": "lm-studio",
+      "compat": {'{'}
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      {'}'},
+      "models": [
+        {'{'}
+          "id": "model-id",
+          "name": "display-name",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 262144,
+          "maxTokens": 32768
+        {'}'}
+      ]
+    {'}'}
+  {'}'}
+{'}'}</pre>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- LM Studio Modal -->
+    <div class="detail-backdrop" id="lmStudioBackdrop">
+      <article class="prep-shell" role="dialog" aria-modal="true" aria-label="LM Studio">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 class="truncate-line text-lg font-semibold">LM Studio</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm">Passive discovery of local models.</p>
+          </div>
+          <button type="button" class="btn-sm-outline" id="closeLmStudio">Close</button>
+        </header>
+        <div class="prep-body p-5">
+          <div class="grid gap-4">
+            <div class="grid gap-2">
+              <label for="baseUrl" class="section-label">Base URL</label>
+              <div class="flex gap-2">
+                <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
+                <button type="button" class="btn-sm-outline" id="refreshConnection">Test</button>
+              </div>
+            </div>
+            <p class="muted-copy text-sm leading-5" id="connectionMessage">Waiting for local API.</p>
+            <div class="grid gap-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-medium">Current LM Studio models</h3>
+                <span class="badge-outline" id="availableModelCount">0</span>
+              </div>
+              <div class="available-model-list" id="availableModelChoices"></div>
+            </div>
+            <div class="grid gap-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-medium">Run models from filesystem</h3>
+                <span class="badge-outline" id="runModelCount">0</span>
+              </div>
+              <div class="available-model-list" id="runModelChoices"></div>
+            </div>
           </div>
         </div>
       </article>

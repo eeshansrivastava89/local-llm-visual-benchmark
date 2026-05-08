@@ -158,8 +158,7 @@ describe("createLocalApi", () => {
     await expect(
       api.prepareRun({
         benchmarkId: "sakura",
-        modelId: "model-a",
-        tool: "opencode"
+        modelId: "model-a"
       })
     ).resolves.toEqual({
       preparedRun
@@ -167,7 +166,6 @@ describe("createLocalApi", () => {
     expect(prepareRun).toHaveBeenCalledWith({
       benchmark: benchmarks[0],
       modelId: "model-a",
-      tool: "opencode",
       runsRoot: "/runs"
     });
   });
@@ -180,8 +178,7 @@ describe("createLocalApi", () => {
     await expect(
       api.prepareRun({
         benchmarkId: "missing",
-        modelId: "model-a",
-        tool: "generic"
+        modelId: "model-a"
       })
     ).rejects.toThrow(/Unknown benchmark ID: missing/);
   });

@@ -2,19 +2,20 @@
 
 ## Visual Theme
 
-Restrained product UI for a local visual lab. The app uses a quiet warm-neutral canvas, dark ink text, soft green connection states, and a small amber accent for prepared or incomplete artifacts.
+Restrained product UI for a local visual lab. The app uses a neutral canvas, dark ink text, crisp dividers, and small semantic color only for connection and run states. The reference feel is calm, exacting, and native to a serious developer tool.
 
 ## Color Palette
 
-- `--surface`: `oklch(0.985 0.006 95)`
-- `--panel`: `oklch(0.958 0.008 95)`
-- `--panel-strong`: `oklch(0.925 0.01 95)`
-- `--ink`: `oklch(0.19 0.012 250)`
-- `--muted`: `oklch(0.48 0.018 250)`
-- `--line`: `oklch(0.82 0.012 95)`
-- `--accent`: `oklch(0.56 0.105 155)`
-- `--amber`: `oklch(0.67 0.13 72)`
-- `--danger`: `oklch(0.56 0.14 28)`
+- `--background`: `oklch(0.985 0.004 255)`
+- `--card`: `oklch(0.995 0.002 255)`
+- `--muted`: `oklch(0.955 0.004 255)`
+- `--foreground`: `oklch(0.165 0.008 255)`
+- `--muted-foreground`: `oklch(0.49 0.012 255)`
+- `--border`: `oklch(0.89 0.006 255)`
+- `--primary`: `oklch(0.205 0.006 255)`
+- `--success`: `oklch(0.58 0.1 158)`
+- `--warning`: `oklch(0.7 0.13 78)`
+- `--destructive`: `oklch(0.57 0.14 28)`
 
 ## Typography
 
@@ -22,11 +23,13 @@ Use the native system UI stack. Keep labels compact, metadata readable, and run 
 
 ## Layout
 
-Desktop uses a persistent left rail for model and prompt selection with a wide artifact gallery on the right. Mobile collapses to a single column with filters before the run grid. Cards are only used for run artifacts and compact guidance panels.
+Desktop and tablet use a compact toolbar for saved-run model and prompt filters, leaving the viewport for the artifact gallery. The run grid should fit normal result sets in the first viewport and scroll internally only when there are more cards than the visible surface can hold. Passive LM Studio discovery lives in a modal that separates current LM Studio inventory from historical run models discovered from the filesystem.
+
+Run details are artifact-first. Completed runs show the saved `index.html` as the main surface inside the modal. Prompt text, filesystem paths, and a small status/model summary live in a narrow inspector. Optional actions appear only when the corresponding file exists.
 
 ## Components
 
-Core components are custom Astro markup and vanilla client scripts: sidebar filters, status pills, toolbar buttons, run cards, detail dialog, compare grouping, and prompt-prep panel. Buttons and inputs share one vocabulary for hover, focus, disabled, and selected states.
+Core components use Astro markup, Tailwind utilities, Basecoat CSS, and vanilla client scripts. The shared vocabulary covers saved-run filters, utility details, status pills, toolbar buttons, inputs, run cards, detail dialog, compare grouping, empty states, and three-step prompt preparation. Buttons and inputs must have consistent default, hover, focus, disabled, and selected states.
 
 ## Motion
 

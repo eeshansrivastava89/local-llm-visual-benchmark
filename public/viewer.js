@@ -1,7 +1,7 @@
 const state = {
   staticMode: false,
   benchmarks: [],
-  models: [],
+  discoveredModels: [],
   runs: [],
   stats: null,
   selectedModel: "all",
@@ -11,44 +11,61 @@ const state = {
 };
 
 const els = {
-  baseUrl: document.querySelector("#baseUrl"),
-  refreshConnection: document.querySelector("#refreshConnection"),
-  connectionPill: document.querySelector("#connectionPill"),
-  connectionMessage: document.querySelector("#connectionMessage"),
-  modelChoices: document.querySelector("#modelChoices"),
-  modelCount: document.querySelector("#modelCount"),
-  benchmarkChoices: document.querySelector("#benchmarkChoices"),
-  benchmarkCount: document.querySelector("#benchmarkCount"),
-  statsTime: document.querySelector("#statsTime"),
-  systemSummary: document.querySelector("#systemSummary"),
+  // Header / system
+  statsPill: document.querySelector("#statsPill"),
+  statsDot: document.querySelector("#statsDot"),
+  statsCompact: document.querySelector("#statsCompact"),
+  // Toggles
   setupToggle: document.querySelector("#setupToggle"),
   runToggle: document.querySelector("#runToggle"),
-  setupPanel: document.querySelector("#setupPanel"),
-  prepPanel: document.querySelector("#prepPanel"),
-  refreshRuns: document.querySelector("#refreshRuns"),
+  lmStudioToggle: document.querySelector("#lmStudioToggle"),
+  // Modals
+  detailBackdrop: document.querySelector("#detailBackdrop"),
+  closeDetail: document.querySelector("#closeDetail"),
+  prepBackdrop: document.querySelector("#prepBackdrop"),
+  closePrep: document.querySelector("#closePrep"),
+  setupBackdrop: document.querySelector("#setupBackdrop"),
+  closeSetup: document.querySelector("#closeSetup"),
+  lmStudioBackdrop: document.querySelector("#lmStudioBackdrop"),
+  closeLmStudio: document.querySelector("#closeLmStudio"),
+  // LM Studio inside modal
+  baseUrl: document.querySelector("#baseUrl"),
+  refreshConnection: document.querySelector("#refreshConnection"),
+  connectionMessage: document.querySelector("#connectionMessage"),
+  availableModelChoices: document.querySelector("#availableModelChoices"),
+  availableModelCount: document.querySelector("#availableModelCount"),
+  runModelChoices: document.querySelector("#runModelChoices"),
+  runModelCount: document.querySelector("#runModelCount"),
+  // Filters
+  modelFilter: document.querySelector("#modelFilter"),
+  benchmarkFilter: document.querySelector("#benchmarkFilter"),
+  // Prepare run
   prepBenchmark: document.querySelector("#prepBenchmark"),
   prepModelSelect: document.querySelector("#prepModelSelect"),
   prepModel: document.querySelector("#prepModel"),
-  prepTool: document.querySelector("#prepTool"),
   prepareRun: document.querySelector("#prepareRun"),
   prepMessage: document.querySelector("#prepMessage"),
+  prepResult: document.querySelector("#prepResult"),
   preparedPrompt: document.querySelector("#preparedPrompt"),
   preparedPaths: document.querySelector("#preparedPaths"),
   copyPrompt: document.querySelector("#copyPrompt"),
+  // Gallery
   viewTitle: document.querySelector("#viewTitle"),
   viewSubtitle: document.querySelector("#viewSubtitle"),
   runSummary: document.querySelector("#runSummary"),
   runCount: document.querySelector("#runCount"),
   runsSurface: document.querySelector("#runsSurface"),
-  detailBackdrop: document.querySelector("#detailBackdrop"),
-  closeDetail: document.querySelector("#closeDetail"),
+  refreshRuns: document.querySelector("#refreshRuns"),
+  // Detail
   detailTitle: document.querySelector("#detailTitle"),
   detailSubtitle: document.querySelector("#detailSubtitle"),
   detailPreview: document.querySelector("#detailPreview"),
+  detailActions: document.querySelector("#detailActions"),
   htmlLink: document.querySelector("#htmlLink"),
   promptLink: document.querySelector("#promptLink"),
   rawLink: document.querySelector("#rawLink"),
   detailPrompt: document.querySelector("#detailPrompt"),
+  promptLength: document.querySelector("#promptLength"),
   detailMeta: document.querySelector("#detailMeta"),
   detailPaths: document.querySelector("#detailPaths")
 };
@@ -63,26 +80,57 @@ function init() {
       void loadStats();
     }
   }, 5000);
+  setInterval(() => {
+    if (!state.staticMode) {
+      void loadModels();
+    }
+  }, 60000);
 }
 
 function wireEvents() {
   els.refreshConnection.addEventListener("click", () => loadConnection());
   els.refreshRuns.addEventListener("click", () => refreshRuns());
-  els.setupToggle.addEventListener("click", () => togglePanel("setup"));
-  els.runToggle.addEventListener("click", () => togglePanel("prep"));
+
+  els.setupToggle.addEventListener("click", () => openModal("setup"));
+  els.runToggle.addEventListener("click", () => openModal("prep"));
+  els.lmStudioToggle.addEventListener("click", () => openModal("lmStudio"));
+
+  els.closeDetail.addEventListener("click", () => closeModal("detail"));
+  els.closePrep.addEventListener("click", () => closeModal("prep"));
+  els.closeSetup.addEventListener("click", () => closeModal("setup"));
+  els.closeLmStudio.addEventListener("click", () => closeModal("lmStudio"));
+
+  els.detailBackdrop.addEventListener("click", (event) => {
+    if (event.target === els.detailBackdrop) closeModal("detail");
+  });
+  els.prepBackdrop.addEventListener("click", (event) => {
+    if (event.target === els.prepBackdrop) closeModal("prep");
+  });
+  els.setupBackdrop.addEventListener("click", (event) => {
+    if (event.target === els.setupBackdrop) closeModal("setup");
+  });
+  els.lmStudioBackdrop.addEventListener("click", (event) => {
+    if (event.target === els.lmStudioBackdrop) closeModal("lmStudio");
+  });
+
   els.prepModelSelect.addEventListener("change", () => {
     if (els.prepModelSelect.value) {
       els.prepModel.value = els.prepModelSelect.value;
     }
   });
+
+  els.modelFilter.addEventListener("change", () => {
+    state.selectedModel = els.modelFilter.value;
+    renderRuns();
+  });
+  els.benchmarkFilter.addEventListener("change", () => {
+    state.selectedBenchmark = els.benchmarkFilter.value;
+    renderRuns();
+  });
+
   els.prepareRun.addEventListener("click", () => prepareRunSlot());
   els.copyPrompt.addEventListener("click", () => copyPreparedPrompt());
-  els.closeDetail.addEventListener("click", closeDetail);
-  els.detailBackdrop.addEventListener("click", (event) => {
-    if (event.target === els.detailBackdrop) {
-      closeDetail();
-    }
-  });
+
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       state.mode = button.dataset.mode;
@@ -90,6 +138,41 @@ function wireEvents() {
       renderRuns();
     });
   });
+}
+
+function openModal(name) {
+  const map = {
+    detail: els.detailBackdrop,
+    prep: els.prepBackdrop,
+    setup: els.setupBackdrop,
+    lmStudio: els.lmStudioBackdrop
+  };
+  const el = map[name];
+  if (el) {
+    el.setAttribute("open", "");
+    document.body.style.overflow = "hidden";
+  }
+  if (name === "prep" && state.staticMode) {
+    els.prepareRun.disabled = true;
+    els.prepMessage.textContent = "Static mode cannot create local folders.";
+  } else if (name === "prep") {
+    els.prepareRun.disabled = false;
+    els.prepMessage.textContent = "The app will create the folder, metadata.json, and prompt.md.";
+  }
+}
+
+function closeModal(name) {
+  const map = {
+    detail: els.detailBackdrop,
+    prep: els.prepBackdrop,
+    setup: els.setupBackdrop,
+    lmStudio: els.lmStudioBackdrop
+  };
+  const el = map[name];
+  if (el) {
+    el.removeAttribute("open");
+    document.body.style.overflow = "";
+  }
 }
 
 async function loadLocalData() {
@@ -102,6 +185,8 @@ async function loadLocalData() {
     state.benchmarks = benchmarks.benchmarks ?? [];
     state.runs = runs.runs ?? [];
     renderBenchmarks();
+    renderModels();
+    renderModelSources();
     renderRuns();
     renderPrepOptions();
     await Promise.allSettled([loadConnection(), loadStats()]);
@@ -116,21 +201,19 @@ async function enterStaticMode(reason) {
     state.staticMode = true;
     state.benchmarks = manifest.benchmarks ?? [];
     state.runs = manifest.runs ?? [];
-    state.models = modelsFromRuns(state.runs);
+    state.discoveredModels = [];
     setConnection("static", "Static", "Browsing exported runs. Prepare-run needs the local API.");
-    els.prepareRun.disabled = true;
-    els.statsTime.textContent = "Static";
-    els.systemSummary.textContent = "System stats require the local API.";
+    els.statsDot.dataset.state = "static";
+    els.statsCompact.textContent = "Static";
     renderBenchmarks();
     renderModels();
+    renderModelSources();
     renderPrepOptions();
     renderRuns();
   } catch (staticError) {
-    setConnection(
-      "offline",
-      "Unavailable",
-      (reason?.message ?? "Local API unavailable.") + " " + staticError.message
-    );
+    setConnection("offline", "Unavailable", (reason?.message ?? "Local API unavailable.") + " " + staticError.message);
+    els.statsDot.dataset.state = "offline";
+    els.statsCompact.textContent = "Unavailable";
     els.runsSurface.innerHTML = '<div class="empty">No local API or static export was found.</div>';
   }
 }
@@ -150,8 +233,8 @@ async function loadConnection() {
     await loadModels();
   } catch (error) {
     setConnection("offline", "Offline", error.message);
-    state.models = modelsFromRuns(state.runs);
-    renderModels();
+    state.discoveredModels = [];
+    renderModelSources();
     renderPrepOptions();
   }
 }
@@ -160,12 +243,12 @@ async function loadModels() {
   try {
     const data = await fetchJson("/api/lmstudio/models?baseUrl=" + encodeURIComponent(els.baseUrl.value));
     const discovered = data.models ?? [];
-    state.models = mergeModels(discovered, modelsFromRuns(state.runs));
-    renderModels();
+    state.discoveredModels = discovered;
+    renderModelSources();
     renderPrepOptions();
   } catch {
-    state.models = modelsFromRuns(state.runs);
-    renderModels();
+    state.discoveredModels = [];
+    renderModelSources();
     renderPrepOptions();
   }
 }
@@ -179,10 +262,11 @@ async function loadStats() {
       : (state.stats?.cpu?.cores ?? "-") + " cores";
     const memory = formatBytes(state.stats?.memory?.usedBytes) + " / " + formatBytes(state.stats?.memory?.totalBytes);
     const gpu = state.stats?.gpu?.devices?.[0]?.name ?? "GPU unavailable";
-    els.statsTime.textContent = new Date().toLocaleTimeString();
-    els.systemSummary.textContent = cpu + ". " + memory + ". " + gpu + ".";
+    els.statsDot.dataset.state = "online";
+    els.statsCompact.textContent = cpu + " · " + memory;
   } catch (error) {
-    els.systemSummary.textContent = error.message;
+    els.statsDot.dataset.state = "offline";
+    els.statsCompact.textContent = error.message;
   }
 }
 
@@ -193,8 +277,8 @@ async function refreshRuns() {
   }
   const data = await fetchJson("/api/runs");
   state.runs = data.runs ?? [];
-  state.models = mergeModels(state.models, modelsFromRuns(state.runs));
   renderModels();
+  renderModelSources();
   renderPrepOptions();
   renderRuns();
 }
@@ -213,20 +297,22 @@ async function prepareRunSlot() {
   try {
     const data = await postJson("/api/prepare-run", {
       benchmarkId,
-      modelId,
-      tool: els.prepTool.value
+      modelId
     });
     const prepared = data.preparedRun;
     state.preparedPrompt = prepared.prompt;
     els.preparedPrompt.value = prepared.prompt;
     els.preparedPaths.textContent = "Run folder: " + prepared.paths.runDirectory;
-    els.prepMessage.textContent = "Run slot prepared. Paste the prompt into your external tool.";
-    state.runs = [prepared.run, ...state.runs.filter((run) => run.runId !== prepared.run.runId)];
-    state.models = mergeModels(state.models, [{ id: modelId }]);
+    els.prepMessage.textContent = "Run slot prepared. Copy the prompt into your external tool.";
+    els.prepResult.hidden = false;
+    state.runs = [availablePreparedRun(prepared.run), ...state.runs.filter((run) => run.runId !== prepared.run.runId)];
     renderModels();
+    renderModelSources();
+    renderPrepOptions();
     renderRuns();
   } catch (error) {
     els.prepMessage.textContent = error.message;
+    els.prepResult.hidden = true;
   }
 }
 
@@ -239,61 +325,88 @@ async function copyPreparedPrompt() {
 }
 
 function renderBenchmarks() {
-  els.benchmarkCount.textContent = String(state.benchmarks.length);
-  const options = [
-    choiceMarkup("benchmark", "all", "All prompts", state.runs.length + " runs", state.selectedBenchmark === "all"),
+  els.benchmarkFilter.innerHTML = [
+    '<option value="all">All prompts</option>',
     ...state.benchmarks.map((benchmark) =>
-      choiceMarkup(
-        "benchmark",
-        benchmark.id,
-        benchmark.title,
-        benchmark.description,
-        state.selectedBenchmark === benchmark.id
-      )
+      '<option value="' + escapeAttribute(benchmark.id) + '">' + escapeHtml(benchmark.title) + "</option>"
     )
-  ];
-  els.benchmarkChoices.innerHTML = options.join("");
-  els.benchmarkChoices.querySelectorAll("input").forEach((input) => {
-    input.addEventListener("change", () => {
-      state.selectedBenchmark = input.value;
-      renderRuns();
-    });
-  });
+  ].join("");
 }
 
 function renderModels() {
-  els.modelCount.textContent = String(state.models.length);
-  const options = [
-    choiceMarkup("model", "all", "All models", "Compare every saved run", state.selectedModel === "all"),
-    ...state.models.map((model) =>
-      choiceMarkup(
-        "model",
-        model.id,
-        model.id,
-        runsForModel(model.id).length + " runs",
-        state.selectedModel === model.id
-      )
+  const runModels = modelsFromRuns(state.runs);
+  if (state.selectedModel !== "all" && !runModels.some((model) => model.id === state.selectedModel)) {
+    state.selectedModel = "all";
+    els.modelFilter.value = "all";
+  }
+  els.modelFilter.innerHTML = [
+    '<option value="all">All run models</option>',
+    ...runModels.map((model) =>
+      '<option value="' + escapeAttribute(model.id) + '">' + escapeHtml(model.id) + "</option>"
     )
-  ];
-  els.modelChoices.innerHTML = options.join("");
-  els.modelChoices.querySelectorAll("input").forEach((input) => {
-    input.addEventListener("change", () => {
-      state.selectedModel = input.value;
-      renderRuns();
-    });
-  });
+  ].join("");
+}
+
+function renderModelSources() {
+  renderAvailableModels();
+  renderRunModels();
+}
+
+function renderAvailableModels() {
+  els.availableModelCount.textContent = String(state.discoveredModels.length);
+  if (state.discoveredModels.length === 0) {
+    els.availableModelChoices.innerHTML = '<p class="muted-copy text-sm leading-5">LM Studio did not return models. Preparing a slot still allows a typed model ID.</p>';
+    return;
+  }
+
+  els.availableModelChoices.innerHTML = state.discoveredModels
+    .map((model) =>
+      '<span class="available-model">' +
+        '<span class="model-row-title truncate-line">' + escapeHtml(model.id) + "</span>" +
+        '<span class="model-row-meta">' +
+          '<span class="source-chip current">current</span>' +
+          '<span class="muted-copy">' + runsForModel(model.id).length + " saved runs</span>" +
+        "</span>" +
+      "</span>"
+    )
+    .join("");
+}
+
+function renderRunModels() {
+  const runModels = modelsFromRuns(state.runs);
+  const currentIds = new Set(state.discoveredModels.map((model) => model.id));
+  els.runModelCount.textContent = String(runModels.length);
+  if (runModels.length === 0) {
+    els.runModelChoices.innerHTML = '<p class="muted-copy text-sm leading-5">No run folders are indexed yet.</p>';
+    return;
+  }
+
+  els.runModelChoices.innerHTML = runModels
+    .map((model) => {
+      const isCurrent = currentIds.has(model.id);
+      return (
+        '<span class="available-model">' +
+          '<span class="model-row-title truncate-line">' + escapeHtml(model.id) + "</span>" +
+          '<span class="model-row-meta">' +
+            '<span class="source-chip ' + (isCurrent ? "current" : "historical") + '">' + (isCurrent ? "also current" : "filesystem only") + "</span>" +
+            '<span class="muted-copy">' + runsForModel(model.id).length + " saved runs</span>" +
+          "</span>" +
+        "</span>"
+      );
+    })
+    .join("");
 }
 
 function renderPrepOptions() {
   els.prepBenchmark.innerHTML = state.benchmarks
-    .map((benchmark) => '<option value="' + escapeAttribute(benchmark.id) + '">' + escapeHtml(benchmark.title) + "</option>")
+    .map((benchmark) => '<option value="' + escapeAttribute(benchmark.id) + '"\u003e' + escapeHtml(benchmark.title) + "</option\u003e")
     .join("");
   els.prepModelSelect.innerHTML = [
     '<option value="">Choose discovered model</option>',
-    ...state.models.map((model) => '<option value="' + escapeAttribute(model.id) + '">' + escapeHtml(model.id) + "</option>")
+    ...state.discoveredModels.map((model) => '<option value="' + escapeAttribute(model.id) + '"\u003e' + escapeHtml(model.id) + "</option>")
   ].join("");
-  if (!els.prepModel.value && state.models[0]) {
-    els.prepModel.value = state.models[0].id;
+  if (!els.prepModel.value && state.discoveredModels[0]) {
+    els.prepModel.value = state.discoveredModels[0].id;
   }
 }
 
@@ -319,7 +432,11 @@ function renderRuns() {
       : "Browse saved local artifacts.";
 
   if (runs.length === 0) {
-    els.runsSurface.innerHTML = '<div class="empty">No runs match the current filters. Prepare a slot or refresh after your external tool writes files.</div>';
+    els.runsSurface.innerHTML = '<div class="empty">No runs match the current filters. <button type="button" class="btn-sm-ghost" id="emptyPrepRun">Prepare a run</button> or refresh after your external tool writes files.</div>';
+    const emptyPrep = document.querySelector("#emptyPrepRun");
+    if (emptyPrep) {
+      emptyPrep.addEventListener("click", () => openModal("prep"));
+    }
     return;
   }
 
@@ -342,10 +459,10 @@ function renderGroupedRuns(groups) {
     '<section class="group">' +
       '<div class="group-head">' +
         "<div>" +
-          "<h3>" + escapeHtml(group.title) + "</h3>" +
-          '<p class="small">' + escapeHtml(group.subtitle) + "</p>" +
+          '<h3 class="text-base font-semibold tracking-[-0.01em]">' + escapeHtml(group.title) + "</h3>" +
+          '<p class="muted-copy mt-1 text-sm">' + escapeHtml(group.subtitle) + "</p>" +
         "</div>" +
-        '<span class="count">' + group.runs.length + "</span>" +
+        '<span class="badge-outline">' + group.runs.length + "</span>" +
       "</div>" +
       '<div class="run-grid">' + group.runs.map(renderRunCard).join("") + "</div>" +
     "</section>"
@@ -354,22 +471,25 @@ function renderGroupedRuns(groups) {
 }
 
 function renderRunCard(run) {
-  const index = state.runs.indexOf(run);
   const htmlHref = assetHref(run, run.assets?.html);
+  const stateLabel = runCardState(run);
   return (
-    '<button class="run-card" type="button" data-run-index="' + index + '" aria-label="' +
+    '<button class="run-card" type="button" data-run-id="' + escapeAttribute(run.runId) + '" aria-label="' +
     escapeAttribute(run.benchmark?.title ?? "Run") + " " + escapeAttribute(run.model?.id ?? "") + '">' +
       renderPreview(run) +
-      '<span class="run-body">' +
-        '<span class="run-title">' +
-          "<strong>" + escapeHtml(run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run") + "</strong>" +
-          '<span class="small truncate">' + escapeHtml(run.model?.id ?? "Unknown model") + "</span>" +
+      '<span class="run-card-body">' +
+        '<span class="grid min-w-0 gap-1">' +
+          '<strong class="truncate-line text-sm font-semibold">' + escapeHtml(run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run") + "</strong>" +
+          '<span class="muted-copy truncate-line text-sm">' + escapeHtml(run.model?.id ?? "Unknown model") + "</span>" +
         "</span>" +
-        '<span class="card-foot">' +
-          '<span class="status" data-status="' + escapeAttribute(run.status ?? "prepared") + '">' + escapeHtml(run.status ?? "unknown") + "</span>" +
-          '<span class="small">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</span>" +
+        '<span class="flex items-center justify-between gap-3">' +
+          '<span class="inline-flex items-center gap-2 rounded-full border px-2 py-1 text-[0.72rem] font-medium text-muted-foreground">' +
+            '<span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' +
+            escapeHtml(stateLabel.label) +
+          "</span>" +
+          '<span class="muted-copy truncate-line text-xs">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</span>" +
         "</span>" +
-        '<span class="small">' + (htmlHref ? "HTML ready" : "Waiting for index.html") + "</span>" +
+        '<span class="muted-copy text-sm">' + escapeHtml(htmlHref ? "Artifact ready" : "Waiting for index.html") + "</span>" +
       "</span>" +
     "</button>"
   );
@@ -385,72 +505,82 @@ function renderPreview(run) {
     '<span class="preview">' +
       '<span class="preview-placeholder">' +
         "<strong>" + escapeHtml(run.assets?.html ? "HTML artifact" : "No preview yet") + "</strong>" +
-        '<span class="small">' + escapeHtml(run.status === "prepared" ? "Paste the prompt into your tool." : run.error?.message ?? "Add preview.png for gallery thumbnails.") + "</span>" +
+        '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(run.status === "prepared" ? "Paste the prompt into your tool." : displayRunError(run) ?? "Add preview.png for gallery thumbnails.") + "</span>" +
       "</span>" +
     "</span>"
   );
 }
 
 function wireRunCards() {
-  els.runsSurface.querySelectorAll("[data-run-index]").forEach((button) => {
+  els.runsSurface.querySelectorAll("[data-run-id]").forEach((button) => {
     button.addEventListener("click", () => {
-      openDetail(state.runs[Number(button.dataset.runIndex)]);
+      const runId = button.dataset.runId;
+      const run = state.runs.find((r) => r.runId === runId);
+      if (run) {
+        openDetail(run);
+      }
     });
   });
 }
 
 function openDetail(run) {
   els.detailTitle.textContent = run.benchmark?.title ?? "Run detail";
-  els.detailSubtitle.textContent = (run.model?.id ?? "Unknown model") + " · " + (run.runId ?? "");
-  els.detailPreview.innerHTML = renderPreview(run);
-  setLink(els.htmlLink, assetHref(run, run.assets?.html));
-  setLink(els.promptLink, assetHref(run, run.assets?.prompt));
-  setLink(els.rawLink, assetHref(run, run.assets?.rawResponse));
-  els.detailPrompt.textContent = run.benchmark?.prompt ?? "Prompt unavailable in metadata.";
+  els.detailSubtitle.textContent = (run.model?.id ?? "Unknown model") + " \u00b7 " + (run.runId ?? "");
+  els.detailPreview.innerHTML = renderDetailArtifact(run);
+  const hasHtml = setLink(els.htmlLink, assetHref(run, run.assets?.html));
+  const hasPrompt = setLink(els.promptLink, assetHref(run, run.assets?.prompt));
+  const hasRaw = setLink(els.rawLink, assetHref(run, run.assets?.rawResponse));
+  els.detailActions.hidden = !(hasHtml || hasPrompt || hasRaw);
+  const prompt = run.benchmark?.prompt ?? "Prompt unavailable in metadata.";
+  els.detailPrompt.textContent = prompt;
+  els.promptLength.textContent = prompt.length.toLocaleString() + " chars";
+  const stateLabel = runCardState(run);
   els.detailMeta.innerHTML =
-    '<span class="label">Status</span><strong>' + escapeHtml(run.status ?? "-") + "</strong>" +
-    '<span class="label">Model</span><strong>' + escapeHtml(run.model?.id ?? "-") + "</strong>" +
-    '<span class="label">Prompt</span><strong>' + escapeHtml(run.benchmark?.id ?? "-") + "</strong>" +
-    '<span class="label">Created</span><strong>' + escapeHtml(formatDate(run.createdAt)) + "</strong>" +
-    '<span class="label">Updated</span><strong>' + escapeHtml(formatDate(run.updatedAt)) + "</strong>" +
-    '<span class="label">Tool</span><strong>' + escapeHtml(run.tool ?? "-") + "</strong>" +
-    '<span class="label">Error</span><strong>' + escapeHtml(run.error?.message ?? "-") + "</strong>";
+    '<span class="meta-label">State</span><strong>' + escapeHtml(stateLabel.label) + "</strong>" +
+    '<span class="meta-label">Model</span><strong>' + escapeHtml(run.model?.id ?? "-") + "</strong>" +
+    '<span class="meta-label">Prompt</span><strong>' + escapeHtml(run.benchmark?.id ?? "-") + "</strong>" +
+    '<span class="meta-label">Updated</span><strong>' + escapeHtml(formatDate(run.updatedAt)) + "</strong>";
   els.detailPaths.textContent = [
     "Run folder: " + (run.runDirectory ?? "-"),
     "HTML: " + (assetPath(run, run.assets?.html) || "waiting for index.html"),
     "Prompt: " + (assetPath(run, run.assets?.prompt) || "prompt.md missing"),
     "Preview: " + (assetPath(run, run.assets?.preview) || "preview.png missing")
   ].join("\n");
-  els.detailBackdrop.setAttribute("open", "");
+  openModal("detail");
 }
 
-function closeDetail() {
-  els.detailBackdrop.removeAttribute("open");
-}
-
-function togglePanel(panel) {
-  const target = panel === "setup" ? els.setupPanel : els.prepPanel;
-  const other = panel === "setup" ? els.prepPanel : els.setupPanel;
-  const nextHidden = !target.hidden;
-  target.hidden = nextHidden;
-  if (!nextHidden) {
-    other.hidden = true;
+function renderDetailArtifact(run) {
+  const htmlHref = assetHref(run, run.assets?.html);
+  if (htmlHref) {
+    return '<iframe class="artifact-frame" src="' + escapeAttribute(htmlHref) + '" title="' + escapeAttribute(run.benchmark?.title ?? "Run artifact") + '" loading="lazy"></iframe>';
   }
+
+  const previewHref = assetHref(run, run.assets?.preview);
+  if (previewHref) {
+    return '<span class="artifact-image"><img src="' + escapeAttribute(previewHref) + '" alt="" /></span>';
+  }
+
+  return '<span class="artifact-empty">' +
+    '<strong>' + escapeHtml(run.status === "prepared" ? "Run slot prepared" : "Artifact unavailable") + "</strong>" +
+    '<span>' + escapeHtml(run.status === "prepared" ? "Save index.html into the run folder, then refresh." : displayRunError(run) ?? "No index.html or preview.png found in this run folder.") + "</span>" +
+    "</span>";
 }
 
 function setConnection(stateName, label, message) {
-  els.connectionPill.dataset.state = stateName;
-  els.connectionPill.textContent = label;
   els.connectionMessage.textContent = message;
 }
 
 function setLink(link, href) {
   if (href) {
     link.href = href;
+    link.hidden = false;
     link.removeAttribute("aria-disabled");
+    return true;
   } else {
     link.href = "#";
+    link.hidden = true;
     link.setAttribute("aria-disabled", "true");
+    return false;
   }
 }
 
@@ -473,7 +603,7 @@ function groupRuns(runs, titleForRun, subtitleForRun) {
   }
   return Array.from(groups.values()).map((group) => ({
     title: group.title,
-    subtitle: Array.from(group.subtitles).slice(0, 3).join(" · "),
+    subtitle: Array.from(group.subtitles).slice(0, 3).join(" \u00b7 "),
     runs: group.runs
   }));
 }
@@ -488,24 +618,8 @@ function modelsFromRuns(runs) {
   );
 }
 
-function mergeModels(left, right) {
-  return uniqueBy([...left, ...right], (model) => model.id).sort((a, b) => a.id.localeCompare(b.id));
-}
-
 function runsForModel(modelId) {
   return state.runs.filter((run) => run.model?.id === modelId);
-}
-
-function choiceMarkup(name, value, title, description, checked) {
-  return (
-    '<label class="choice">' +
-      '<input type="radio" name="' + name + '" value="' + escapeAttribute(value) + '" ' + (checked ? "checked" : "") + " />" +
-      "<span>" +
-        '<strong class="truncate">' + escapeHtml(title) + "</strong>" +
-        '<span class="small">' + escapeHtml(description ?? "") + "</span>" +
-      "</span>" +
-    "</label>"
-  );
 }
 
 function runSummaryText(runs) {
@@ -513,6 +627,37 @@ function runSummaryText(runs) {
   const completed = runs.filter((run) => run.assets?.html).length;
   const failed = runs.filter((run) => run.status === "failed").length;
   return completed + " with HTML, " + prepared + " prepared, " + failed + " failed";
+}
+
+function runCardState(run) {
+  if (run.assets?.html) {
+    return { status: "completed", label: "ready" };
+  }
+  if (run.status === "failed" || run.status === "cancelled") {
+    return { status: run.status, label: run.status };
+  }
+  return { status: "prepared", label: "slot" };
+}
+
+function displayRunError(run) {
+  const message = run.error?.message;
+  if (!message) {
+    return null;
+  }
+
+  if (/chat completion timed out/iu.test(message)) {
+    return "External tool timed out before writing an artifact.";
+  }
+
+  if (/LM Studio.*chat completion/iu.test(message)) {
+    return "External tool failed to produce an artifact.";
+  }
+
+  if (/LM Studio/iu.test(message)) {
+    return "External tool error. Open details for the original message.";
+  }
+
+  return message;
 }
 
 async function fetchJson(url) {
@@ -565,7 +710,20 @@ function assetHref(run, asset) {
   if (state.staticMode || path.startsWith("export/")) {
     return path.replace(/^\/+/u, "");
   }
-  return "file://" + path.split("/").map(encodeURIComponent).join("/");
+  return "/api/run-asset?runDirectory=" +
+    encodeURIComponent(run.runDirectory) +
+    "&asset=" +
+    encodeURIComponent(asset);
+}
+
+function availablePreparedRun(run) {
+  return {
+    ...run,
+    assets: {
+      metadata: run.assets?.metadata ?? "metadata.json",
+      ...(run.assets?.prompt ? { prompt: run.assets.prompt } : {})
+    }
+  };
 }
 
 function uniqueBy(items, keyForItem) {
@@ -609,9 +767,10 @@ function escapeHtml(value) {
     .replace(/&/gu, "&amp;")
     .replace(/</gu, "&lt;")
     .replace(/>/gu, "&gt;")
-    .replace(/"/gu, "&quot;");
+    .replace(/"/gu, "&quot;")
+    .replace(/'/gu, "&#39;");
 }
 
 function escapeAttribute(value) {
-  return escapeHtml(value).replace(/'/gu, "&#39;");
+  return escapeHtml(value);
 }

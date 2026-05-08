@@ -159,14 +159,24 @@ async function readMetadataIfPresent(path: string): Promise<RunMetadata | undefi
 }
 
 async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetadata> {
-  const assets = {
-    metadata: metadata.assets?.metadata ?? "metadata.json",
-    ...(await assetExists(metadata, metadata.assets?.prompt) ? { prompt: metadata.assets?.prompt } : {}),
-    ...(await assetExists(metadata, metadata.assets?.rawResponse) ? { rawResponse: metadata.assets?.rawResponse } : {}),
-    ...(await assetExists(metadata, metadata.assets?.html) ? { html: metadata.assets?.html } : {}),
-    ...(await assetExists(metadata, metadata.assets?.preview) ? { preview: metadata.assets?.preview } : {}),
-    ...(await assetExists(metadata, metadata.assets?.video) ? { video: metadata.assets?.video } : {})
+  const declared = metadata.assets ?? {};
+  const checks = await Promise.all([
+    assetExists(metadata, declared.prompt),
+    assetExists(metadata, declared.rawResponse),
+    assetExists(metadata, declared.html),
+    assetExists(metadata, declared.preview),
+    assetExists(metadata, declared.video)
+  ]);
+
+  const assets: RunMetadata["assets"] = {
+    metadata: declared.metadata ?? "metadata.json"
   };
+
+  if (checks[0]) assets.prompt = declared.prompt;
+  if (checks[1]) assets.rawResponse = declared.rawResponse;
+  if (checks[2]) assets.html = declared.html;
+  if (checks[3]) assets.preview = declared.preview;
+  if (checks[4]) assets.video = declared.video;
 
   return {
     ...metadata,

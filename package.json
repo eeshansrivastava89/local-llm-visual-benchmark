@@ -14,15 +14,18 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@astrojs/check": "latest",
+    "@astrojs/check": "^0.9.9",
     "@astrojs/node": "^10.0.6",
-    "astro": "latest",
-    "gray-matter": "latest",
-    "typescript": "latest"
+    "@tailwindcss/vite": "^4.2.4",
+    "astro": "^6.2.2",
+    "basecoat-css": "^0.3.11",
+    "gray-matter": "^4.0.3",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@playwright/test": "latest",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^25.6.0",
-    "vitest": "latest"
+    "vitest": "^4.1.5"
   }
 }

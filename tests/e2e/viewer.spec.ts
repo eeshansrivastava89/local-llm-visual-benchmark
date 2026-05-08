@@ -34,30 +34,38 @@ const sampleRun = {
   assets: {
     metadata: "metadata.json",
     prompt: "prompt.md",
-    rawResponse: "response.raw.txt",
     html: "index.html",
     preview: "preview.png"
   }
 };
 
-test("renders viewer with passive LM Studio discovery", async ({ page }) => {
+test("renders viewer with compact header and dropdown filters", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: false });
 
   await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
 
   await expect(
     page.getByRole("heading", { name: "Local LLM Visual Benchmark" })
   ).toBeVisible();
-  await expect(page.getByLabel("LM Studio base URL")).toHaveValue(
-    "http://localhost:1234/v1"
-  );
-  await expect(page.getByText("Offline", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Prompts", { exact: true }).getByText("Sakura Particle Field")).toBeVisible();
+  await expect(page.getByText("Browse and collect visual benchmark outputs.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Prepare run" })).toBeVisible();
+  await expect(page.locator("#setupToggle")).toBeVisible();
+  await expect(page.getByRole("button", { name: "LM Studio" })).toBeVisible();
+  await expect(page.getByLabel("Filter by model")).toBeVisible();
+  await expect(page.getByLabel("Filter by prompt")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Gallery" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "By model" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "By prompt" })).toBeVisible();
   await expect(page.getByText("1 with HTML, 0 prepared, 0 failed")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Sakura Particle Field/ })).toBeVisible();
+  await expect(page.locator("[data-run-id]").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "LM Studio" }).click();
+  await expect(page.getByText("Current LM Studio models")).toBeVisible();
+  await expect(page.getByText("Run models from filesystem")).toBeVisible();
 });
 
-test("prepares a run slot and shows the generated prompt", async ({ page }) => {
+test("prepares a run slot via modal and shows the generated prompt", async ({ page }) => {
   let preparePayload: unknown;
   await mockApi(page, {
     lmStudioOnline: true,
@@ -68,25 +76,26 @@ test("prepares a run slot and shows the generated prompt", async ({ page }) => {
 
   await page.goto("/");
   await page.getByRole("button", { name: "Prepare run" }).click();
-  await page.getByLabel("Prompt", { exact: true }).selectOption("solar-system");
-  await page.getByLabel("Discovered model").selectOption("google/gemma-4-e4b");
-  await page.getByLabel("Tool prompt").selectOption("opencode");
-  await page.getByRole("button", { name: "Prepare run slot" }).click();
+
+  await expect(page.locator("#prepBackdrop[open]")).toBeVisible();
+  await page.locator("#prepBackdrop").locator("#prepBenchmark").selectOption("solar-system");
+  await page.locator("#prepBackdrop").locator("#prepModelSelect").selectOption("google/gemma-4-e4b");
+  await page.locator("#prepBackdrop").getByRole("button", { name: "Prepare slot" }).click();
 
   await expect.poll(() => preparePayload).toMatchObject({
     benchmarkId: "solar-system",
-    modelId: "google/gemma-4-e4b",
-    tool: "opencode"
+    modelId: "google/gemma-4-e4b"
   });
-  await expect(page.getByLabel("Tool prompt")).toHaveValue("opencode");
-  await expect(page.getByPlaceholder("Prepare a run slot")).toHaveValue(
+  await expect(page.locator("#prepBackdrop").locator("#preparedPrompt")).toHaveValue(
     /Save one complete self-contained HTML document/
   );
   await expect(page.getByText("Run slot prepared")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Solar System Orrery/ })).toBeVisible();
+
+  await page.locator("#closePrep").click();
+  await expect(page.locator("[data-run-id]").first()).toBeVisible();
 });
 
-test("supports prompt comparison and run details", async ({ page }) => {
+test("supports prompt comparison and run details via modal", async ({ page }) => {
   await mockApi(page, {
     lmStudioOnline: true,
     runs: [
@@ -104,13 +113,17 @@ test("supports prompt comparison and run details", async ({ page }) => {
   });
 
   await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
   await page.getByRole("button", { name: "By prompt" }).click();
 
-  await expect(page.getByRole("heading", { name: "Sakura Particle Field" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Sakura Particle Field google\/gemma-4-e4b/ })).toBeVisible();
+  await expect(page.locator("[data-run-id]")).toHaveCount(2);
 
-  await page.getByRole("button", { name: /Sakura Particle Field local\/qwen2.5-vl/ }).click();
-  await expect(page.getByRole("dialog", { name: "Run detail" })).toBeVisible();
+  await page.locator("[data-run-id]").first().click();
+  await expect(page.locator("#detailBackdrop[open]")).toBeVisible();
+  await expect(page.locator("#detailPreview iframe")).toHaveAttribute(
+    "src",
+    /asset=index\.html$/
+  );
   await expect(page.getByText("Create a sakura animation")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open HTML" })).toHaveAttribute(
     "href",
@@ -120,6 +133,9 @@ test("supports prompt comparison and run details", async ({ page }) => {
     "href",
     /prompt\.md$/
   );
+  await expect(page.getByRole("link", { name: "Raw response" })).toBeHidden();
+  await expect(page.locator("#detailMeta")).not.toContainText("Tool");
+  await expect(page.locator("#detailMeta")).not.toContainText("Error");
 });
 
 test("keeps the viewer usable on mobile widths", async ({ page }) => {
@@ -127,9 +143,10 @@ test("keeps the viewer usable on mobile widths", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
 
   await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000, state: "detached" });
 
   await expect(page.getByRole("button", { name: "Prepare run" })).toBeVisible();
-  await expect(page.getByText("No runs match the current filters")).toBeVisible();
+  await expect(page.getByRole("button", { name: "How it works" })).toBeVisible();
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -170,9 +187,10 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await page.goto("/");
   await page.getByRole("button", { name: "Prepare run" }).click();
 
-  await expect(page.getByLabel("LM Studio", { exact: true }).getByText("Static", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Prepare run slot" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: /Sakura Particle Field/ })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Prepare run" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Prepare slot" })).toBeDisabled();
+  await page.getByRole("button", { name: "Close" }).first().click();
+  await expect(page.locator("[data-run-id]").first()).toBeVisible();
 });
 
 async function mockApi(
@@ -276,7 +294,6 @@ async function mockApi(
               slug: "google-gemma-4-e4b"
             },
             status: "prepared",
-            tool: payload.tool,
             createdAt: "2026-05-07T04:00:32.122Z",
             updatedAt: "2026-05-07T04:00:32.122Z",
             runDirectory:
@@ -287,7 +304,7 @@ async function mockApi(
             }
           },
           prompt:
-            "OpenCode\nSave one complete self-contained HTML document to: /tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/index.html",
+            "Save one complete self-contained HTML document to: /tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/index.html",
           paths: {
             runDirectory:
               "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z",

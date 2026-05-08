@@ -13,12 +13,11 @@ const benchmark: BenchmarkRecord = {
 };
 
 describe("prepareRun", () => {
-  it("creates a prepared run folder with metadata and a tool prompt", async () => {
+  it("creates a prepared run folder with metadata and a tool-agnostic prompt", async () => {
     const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-runs-"));
     const prepared = await prepareRun({
       benchmark,
       modelId: "google/gemma-4-e4b",
-      tool: "opencode",
       runsRoot,
       now: new Date("2026-05-07T04:00:32.122Z")
     });
@@ -26,7 +25,6 @@ describe("prepareRun", () => {
     expect(prepared.run).toMatchObject({
       runId: "2026-05-07T04-00-32-122Z",
       status: "prepared",
-      tool: "opencode",
       model: {
         id: "google/gemma-4-e4b"
       },
@@ -37,7 +35,8 @@ describe("prepareRun", () => {
         preview: "preview.png"
       }
     });
-    expect(prepared.prompt).toContain("OpenCode");
+    expect(prepared.prompt).not.toContain("OpenCode");
+    expect(prepared.prompt).not.toContain("Pi");
     expect(prepared.prompt).toContain(prepared.paths.htmlPath);
     expect(prepared.prompt).toContain("one complete HTML document");
     await expect(stat(prepared.paths.runDirectory)).resolves.toBeTruthy();

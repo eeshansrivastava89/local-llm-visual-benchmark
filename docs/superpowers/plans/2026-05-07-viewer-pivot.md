@@ -6,7 +6,7 @@
 
 **Architecture:** Keep Astro, benchmark loading, run discovery, static export, LM Studio passive status, and system stats. Remove model-execution and preview-capture paths. Add a small prompt-prep module that creates run folders, metadata, and copyable tool prompts.
 
-**Tech Stack:** Astro, TypeScript, Vitest, Playwright, custom CSS, vanilla client script.
+**Tech Stack:** Astro, TypeScript, Tailwind CSS, Basecoat CSS, Vitest, Playwright, vanilla client script.
 
 ---
 
@@ -43,3 +43,27 @@
 - [x] Remove ignored build artifacts from the workspace.
 - [x] Run `npm test`, `npm run check`, `npm run build`, `npm run build:static`, and `npm run test:e2e`.
 - [x] Commit the pivot.
+
+## Phase 6: UX Polish
+
+- [x] Add Tailwind CSS and Basecoat CSS for a stronger shared UI vocabulary.
+- [x] Replace the rough custom viewer shell with a restrained product UI.
+- [x] Preserve passive LM Studio discovery, prompt prep, static fallback, and compare modes.
+- [x] Verify desktop/mobile behavior with Playwright E2E.
+
+## Phase 7: Product Flow Hardening
+
+- [x] Add `/api/run-asset` so local previews, HTML, prompts, and raw files load through the local web app instead of blocked `file://` URLs.
+- [x] Reorder the sidebar around saved run filters first; move passive LM Studio details and discovered models into a utility panel.
+- [x] Turn prepare-run into a three-step slot workflow: choose slot, copy prompt, save artifact and refresh.
+- [x] Disable the Astro dev toolbar for this project.
+- [x] Fix tablet spacing, mobile detail overflow, and legacy runner error wording.
+- [x] Verify no horizontal overflow, no broken preview images, and no dev toolbar with Playwright screenshots.
+
+## Phase 8: Detail And Model Source UX
+
+- [x] Make run details artifact-first: completed runs open the saved `index.html` inside the modal instead of treating it as a secondary link.
+- [x] Remove stale tool/error fields from the primary run inspector.
+- [x] Hide optional artifact actions, including raw response, unless the filesystem reports the file exists.
+- [x] Keep the run gallery within the viewport with denser cards and internal run-surface scrolling for larger result sets.
+- [x] Separate current LM Studio models from historical filesystem run models in the LM Studio modal.

@@ -5,7 +5,7 @@ import {
   listLmStudioModels as defaultListLmStudioModels,
   normalizeLmStudioBaseUrl
 } from "../lib/lmstudio";
-import { prepareRun as defaultPrepareRun, type PromptTool } from "../lib/prompt-prep";
+import { prepareRun as defaultPrepareRun } from "../lib/prompt-prep";
 import { listRunMetadata as defaultListRunMetadata } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
 import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../lib/types";
@@ -24,7 +24,6 @@ export interface ModelsRequest {
 export interface PrepareRunRequest {
   benchmarkId?: string;
   modelId?: string;
-  tool?: PromptTool;
 }
 
 export interface LocalApiDependencies {
@@ -150,7 +149,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
     async prepareRun(request) {
       const benchmarkId = readRequiredString(request.benchmarkId, "benchmarkId");
       const modelId = readRequiredString(request.modelId, "modelId");
-      const tool = readTool(request.tool);
       const benchmark = selectBenchmark(
         await loadBenchmarks(benchmarkDirectory),
         benchmarkId
@@ -160,13 +158,18 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
         preparedRun: await prepareRun({
           benchmark,
           modelId,
-          tool,
           runsRoot
         })
       };
     }
   };
 }
+
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "content-type"
+};
 
 export async function apiJsonResponse<T>(
   operation: Promise<T> | T
@@ -177,7 +180,8 @@ export async function apiJsonResponse<T>(
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: {
-        "content-type": "application/json"
+        "content-type": "application/json",
+        ...CORS_HEADERS
       }
     });
   } catch (error) {
@@ -193,7 +197,8 @@ export async function apiJsonResponse<T>(
       {
         status,
         headers: {
-          "content-type": "application/json"
+          "content-type": "application/json",
+          ...CORS_HEADERS
         }
       }
     );
@@ -238,16 +243,4 @@ function readRequiredString(value: unknown, field: string): string {
   }
 
   return value.trim();
-}
-
-function readTool(value: unknown): PromptTool {
-  if (value === undefined || value === null || value === "") {
-    return "generic";
-  }
-
-  if (value === "opencode" || value === "pi" || value === "generic") {
-    return value;
-  }
-
-  throw new ApiRequestError(400, "tool must be opencode, pi, or generic.");
 }

@@ -8,8 +8,9 @@ Local-first viewer for visual benchmark outputs. The app helps you prepare run f
 - Lists models from LM Studio's `/v1/models` endpoint when available.
 - Loads benchmark prompt definitions from `benchmarks/`.
 - Creates prepared run slots under `runs/`.
-- Generates copyable OpenCode, Pi, or generic prompts with exact output paths.
+- Generates copyable, tool-agnostic prompts with exact output paths.
 - Displays saved runs as a gallery and comparison viewer.
+- Serves local run assets through the local web app so previews and artifact links work in the browser.
 - Exports saved results as a static GitHub Pages-ready site.
 
 It does not run models, send chat-completion requests, load models, change LM Studio settings, rank outputs, or use a hosted backend.
@@ -47,9 +48,8 @@ In the UI:
 1. Click `Prepare run`.
 2. Choose a benchmark prompt.
 3. Choose a discovered model or type a model ID.
-4. Pick `OpenCode`, `Pi`, or `Generic`.
-5. Click `Prepare run slot`.
-6. Copy the generated prompt into your external tool.
+4. Click `Prepare run slot`.
+5. Copy the generated prompt into your external tool.
 
 The app creates:
 
@@ -95,13 +95,13 @@ Edit prompts in your normal editor. The app reads them from disk; it does not ed
 
 ## Viewing And Comparing
 
-The left sidebar filters by model and benchmark prompt. The main area supports:
+The toolbar filters by saved-run model and benchmark prompt. The LM Studio panel separates current LM Studio inventory from historical run models discovered from the filesystem, so removed models still appear for old runs without being treated as currently available. The main area supports:
 
 - `Gallery`: all filtered runs.
 - `By model`: model attempts grouped by prompt.
 - `By prompt`: prompt outputs compared across models.
 
-Run cards open a detail view with metadata, prompt text, file paths, and artifact links.
+Run cards open a detail view with the saved HTML artifact as the primary surface, plus prompt text, filesystem paths, and artifact links when those files exist.
 
 ## Static Publishing
 
