@@ -12,7 +12,10 @@ import {
   type ModelSyncTarget
 } from "../lib/model-sync";
 import { prepareRun as defaultPrepareRun } from "../lib/prompt-prep";
-import { listRunMetadata as defaultListRunMetadata } from "../lib/runs";
+import {
+  deleteRunDirectory as defaultDeleteRunDirectory,
+  listRunMetadata as defaultListRunMetadata
+} from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
 import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../lib/types";
 
@@ -38,16 +41,22 @@ export interface MirrorModelsRequest {
   targets?: unknown;
 }
 
+export interface DeleteRunRequest {
+  runDirectory?: string;
+}
+
 export interface LocalApiDependencies {
   benchmarkDirectory?: string;
   runsRoot?: string;
   enableModelSync?: boolean;
+  enableWrites?: boolean;
   opencodePath?: string;
   piModelsPath?: string;
   loadBenchmarks?: (benchmarkDirectory: string) => Promise<BenchmarkRecord[]>;
   checkLmStudioConnection?: typeof defaultCheckLmStudioConnection;
   listLmStudioModels?: typeof defaultListLmStudioModels;
   listRunMetadata?: (runsRoot?: string) => Promise<RunMetadata[]>;
+  deleteRunDirectory?: typeof defaultDeleteRunDirectory;
   getSystemStats?: typeof defaultGetSystemStats;
   prepareRun?: typeof defaultPrepareRun;
   getModelSyncState?: typeof defaultGetModelSyncState;
@@ -60,6 +69,7 @@ export interface LocalApi {
   getLmStudioModels(request?: ModelsRequest): Promise<ModelsResponse>;
   getSystemStats(): Promise<SystemStatsResponse>;
   getSavedRuns(): Promise<SavedRunsResponse>;
+  deleteSavedRun(request: DeleteRunRequest): Promise<DeleteRunResponse>;
   prepareRun(request: PrepareRunRequest): Promise<PrepareRunResponse>;
   getModelSyncState(): Promise<ModelSyncStateResponse>;
   mirrorModels(request: MirrorModelsRequest): Promise<MirrorModelsResponse>;
@@ -68,6 +78,7 @@ export interface LocalApi {
 export interface StatusResponse {
   app: {
     status: "ok";
+    writesEnabled: boolean;
   };
   lmStudio: {
     baseUrl: string;
@@ -96,6 +107,11 @@ export interface PrepareRunResponse {
   preparedRun: PreparedRun;
 }
 
+export interface DeleteRunResponse {
+  deleted: true;
+  runDirectory: string;
+}
+
 export interface ModelSyncStateResponse {
   sync: ModelSyncState;
 }
@@ -122,7 +138,9 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   const benchmarkDirectory =
     dependencies.benchmarkDirectory ?? join(process.cwd(), "benchmarks");
   const runsRoot = dependencies.runsRoot ?? join(process.cwd(), "runs");
-  const enableModelSync = dependencies.enableModelSync ?? process.env.NODE_ENV !== "production";
+  const isDevMode = process.env.NODE_ENV !== "production";
+  const enableModelSync = dependencies.enableModelSync ?? isDevMode;
+  const enableWrites = dependencies.enableWrites ?? isDevMode;
   const opencodePath = dependencies.opencodePath;
   const piModelsPath = dependencies.piModelsPath;
   const loadBenchmarks = dependencies.loadBenchmarks ?? defaultLoadBenchmarks;
@@ -131,6 +149,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   const listLmStudioModels =
     dependencies.listLmStudioModels ?? defaultListLmStudioModels;
   const listRunMetadata = dependencies.listRunMetadata ?? defaultListRunMetadata;
+  const deleteRunDirectory = dependencies.deleteRunDirectory ?? defaultDeleteRunDirectory;
   const getSystemStats = dependencies.getSystemStats ?? defaultGetSystemStats;
   const prepareRun = dependencies.prepareRun ?? defaultPrepareRun;
   const getModelSyncState = dependencies.getModelSyncState ?? defaultGetModelSyncState;
@@ -145,7 +164,8 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
 
       return {
         app: {
-          status: "ok"
+          status: "ok",
+          writesEnabled: enableWrites
         },
         lmStudio: {
           baseUrl: connection.baseUrl,
@@ -181,7 +201,19 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       };
     },
 
+    async deleteSavedRun(request) {
+      assertWritesEnabled(enableWrites);
+      const runDirectory = readRequiredString(request.runDirectory, "runDirectory");
+      await deleteRunDirectory({ runsRoot, runDirectory });
+
+      return {
+        deleted: true,
+        runDirectory
+      };
+    },
+
     async prepareRun(request) {
+      assertWritesEnabled(enableWrites);
       const benchmarkId = readRequiredString(request.benchmarkId, "benchmarkId");
       const modelId = readRequiredString(request.modelId, "modelId");
       const benchmark = selectBenchmark(
@@ -236,7 +268,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
   "access-control-allow-headers": "content-type"
 };
 
@@ -290,6 +322,12 @@ export async function readJsonRequest(request: Request): Promise<unknown> {
 
 export function getDefaultLocalApi(): LocalApi {
   return defaultApi;
+}
+
+function assertWritesEnabled(enableWrites: boolean): void {
+  if (!enableWrites) {
+    throw new ApiRequestError(403, "Write actions are only available in dev server mode.");
+  }
 }
 
 function selectBenchmark(

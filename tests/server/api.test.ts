@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -35,7 +35,8 @@ describe("createLocalApi", () => {
 
     await expect(api.getStatus({ baseUrl: "http://example.test" })).resolves.toEqual({
       app: {
-        status: "ok"
+        status: "ok",
+        writesEnabled: true
       },
       lmStudio: {
         baseUrl: "http://example.test/v1",
@@ -169,6 +170,42 @@ describe("createLocalApi", () => {
       modelId: "model-a",
       runsRoot: "/runs"
     });
+  });
+
+  it("deletes a saved run folder from the configured runs root", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "local-visual-runs-delete-"));
+    const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(join(runDirectory, "metadata.json"), "{}", "utf8");
+    const api = createLocalApi({ runsRoot });
+
+    await expect(api.deleteSavedRun({ runDirectory })).resolves.toEqual({
+      deleted: true,
+      runDirectory
+    });
+    await expect(stat(runDirectory)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("rejects preparing run slots when writes are disabled", async () => {
+    const api = createLocalApi({
+      enableWrites: false,
+      loadBenchmarks: vi.fn(async () => benchmarks)
+    });
+
+    await expect(
+      api.prepareRun({
+        benchmarkId: "sakura",
+        modelId: "model-a"
+      })
+    ).rejects.toThrow(/Write actions are only available in dev server mode/);
+  });
+
+  it("rejects deleting saved runs when writes are disabled", async () => {
+    const api = createLocalApi({ enableWrites: false });
+
+    await expect(
+      api.deleteSavedRun({ runDirectory: "/runs/sakura/model-a/run-1" })
+    ).rejects.toThrow(/Write actions are only available in dev server mode/);
   });
 
   it("rejects unknown benchmark IDs while preparing a run", async () => {

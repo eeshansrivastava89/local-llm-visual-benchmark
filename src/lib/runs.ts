@@ -1,5 +1,5 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
 import type { RunPaths } from "./paths";
 import type { RunError, RunMetadata } from "./types";
 
@@ -36,6 +36,22 @@ export async function writeRunHtml(paths: RunPaths, html: string): Promise<void>
 
 export async function readRunMetadata(paths: RunPaths): Promise<RunMetadata> {
   return JSON.parse(await readFile(paths.metadataPath, "utf8")) as RunMetadata;
+}
+
+export interface DeleteRunDirectoryInput {
+  runsRoot?: string;
+  runDirectory: string;
+}
+
+export async function deleteRunDirectory(input: DeleteRunDirectoryInput): Promise<void> {
+  const runsRoot = resolve(input.runsRoot ?? join(process.cwd(), "runs"));
+  const runDirectory = resolve(input.runDirectory);
+
+  if (runDirectory === runsRoot || !isPathInside(runDirectory, runsRoot)) {
+    throw new Error("Run directory is outside the configured runs folder.");
+  }
+
+  await rm(runDirectory, { recursive: true, force: false });
 }
 
 export async function listRunMetadata(
@@ -178,10 +194,30 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
   if (checks[3]) assets.preview = declared.preview;
   if (checks[4]) assets.video = declared.video;
 
+  const promptText = assets.prompt
+    ? await readAssetTextIfPresent(metadata, assets.prompt)
+    : undefined;
+
   return {
     ...metadata,
-    assets
+    assets,
+    ...(promptText !== undefined ? { promptText } : {})
   };
+}
+
+async function readAssetTextIfPresent(
+  metadata: RunMetadata,
+  asset: string
+): Promise<string | undefined> {
+  try {
+    return await readFile(join(metadata.runDirectory, asset), "utf8");
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return undefined;
+    }
+
+    throw error;
+  }
 }
 
 async function assetExists(metadata: RunMetadata, asset?: string): Promise<boolean> {
@@ -203,6 +239,10 @@ async function assetExists(metadata: RunMetadata, asset?: string): Promise<boole
 
 function sortTimestamp(metadata: RunMetadata): string {
   return metadata.updatedAt || metadata.createdAt || metadata.runId;
+}
+
+function isPathInside(path: string, root: string): boolean {
+  return path === root || path.startsWith(`${root}${sep}`);
 }
 
 function isMissingPathError(error: unknown): boolean {

@@ -88,6 +88,7 @@ export interface RunMetadata {
   runDirectory: string;
   settings?: CaptureSettings;
   assets: RunAssets;
+  promptText?: string;
   preparedAt?: string;
   tool?: "opencode" | "pi" | "generic";
   completedAt?: string;

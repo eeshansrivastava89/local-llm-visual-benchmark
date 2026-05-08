@@ -1,11 +1,13 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildRunPaths } from "../../src/lib/paths";
 import {
+  deleteRunDirectory,
   markRunFailed,
   updateRunMetadata,
+  listRunMetadata,
   writePromptMarkdown,
   writeRawResponse,
   writeRunHtml,
@@ -151,6 +153,46 @@ describe("run metadata helpers", () => {
     await writeRunHtml(paths, html);
 
     await expect(readFile(paths.htmlPath, "utf8")).resolves.toBe(html);
+  });
+
+  it("hydrates prompt text from the run folder prompt file", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "sakura",
+      modelId: "lmstudio-community/Qwen2.5 Coder:7B Instruct",
+      runId: "2026-05-06T01-02-03-004Z"
+    });
+    const metadata = createMetadata(paths.runDirectory);
+
+    await writeRunMetadata(paths, metadata);
+    await writePromptMarkdown(paths, "filesystem prompt text");
+
+    const [run] = await listRunMetadata(runsRoot);
+
+    expect(run.promptText).toBe("filesystem prompt text");
+  });
+
+  it("deletes a run directory inside the configured runs root", async () => {
+    const runsRoot = await createRunsRoot();
+    const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(join(runDirectory, "metadata.json"), "{}", "utf8");
+
+    await deleteRunDirectory({ runsRoot, runDirectory });
+
+    await expect(stat(runDirectory)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("rejects deleting outside the configured runs root", async () => {
+    const runsRoot = await createRunsRoot();
+    const outsideRoot = await createRunsRoot();
+    const runDirectory = join(outsideRoot, "sakura", "model-a", "run-1");
+    await mkdir(runDirectory, { recursive: true });
+
+    await expect(deleteRunDirectory({ runsRoot, runDirectory })).rejects.toThrow(
+      /outside the configured runs folder/
+    );
   });
 
   it("marks failed metadata with error details while preserving model identity", async () => {

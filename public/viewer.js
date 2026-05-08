@@ -19,13 +19,16 @@ const state = {
       }
     }
   },
+  lmConnected: false,
+  writesEnabled: true,
   syncBusy: false,
   runs: [],
   stats: null,
   selectedModel: "all",
   selectedBenchmark: "all",
   mode: "gallery",
-  preparedPrompt: ""
+  preparedPrompt: "",
+  selectedRun: null
 };
 
 const els = {
@@ -36,7 +39,6 @@ const els = {
   // Toggles
   setupToggle: document.querySelector("#setupToggle"),
   runToggle: document.querySelector("#runToggle"),
-  lmStudioToggle: document.querySelector("#lmStudioToggle"),
   // Modals
   detailBackdrop: document.querySelector("#detailBackdrop"),
   closeDetail: document.querySelector("#closeDetail"),
@@ -44,27 +46,39 @@ const els = {
   closePrep: document.querySelector("#closePrep"),
   setupBackdrop: document.querySelector("#setupBackdrop"),
   closeSetup: document.querySelector("#closeSetup"),
-  lmStudioBackdrop: document.querySelector("#lmStudioBackdrop"),
-  closeLmStudio: document.querySelector("#closeLmStudio"),
-  // LM Studio inside modal
+  deleteConfirmBackdrop: document.querySelector("#deleteConfirmBackdrop"),
+  closeDeleteConfirm: document.querySelector("#closeDeleteConfirm"),
+  cancelDeleteRun: document.querySelector("#cancelDeleteRun"),
+  confirmDeleteRun: document.querySelector("#confirmDeleteRun"),
+  deleteRunPath: document.querySelector("#deleteRunPath"),
+  // LM Studio step sections
+  lmStep1: document.querySelector("#lmStep1"),
+  lmStep2: document.querySelector("#lmStep2"),
+  lmStep3: document.querySelector("#lmStep3"),
+  // LM Studio step 1: Connect
   baseUrl: document.querySelector("#baseUrl"),
   refreshConnection: document.querySelector("#refreshConnection"),
   connectionMessage: document.querySelector("#connectionMessage"),
+  // LM Studio step 2: Discover
   availableModelChoices: document.querySelector("#availableModelChoices"),
   availableModelCount: document.querySelector("#availableModelCount"),
-  syncPanel: document.querySelector("#syncPanel"),
-  syncModeBadge: document.querySelector("#syncModeBadge"),
+  lmModelHeader: document.querySelector("#lmModelHeader"),
+  // LM Studio step 3: Sync
+  lmConfigPi: document.querySelector("#lmConfigPi"),
+  lmConfigPiPath: document.querySelector("#lmConfigPiPath"),
+  lmConfigPiStatus: document.querySelector("#lmConfigPiStatus"),
+  lmConfigOpenCode: document.querySelector("#lmConfigOpenCode"),
+  lmConfigOpenCodePath: document.querySelector("#lmConfigOpenCodePath"),
+  lmConfigOpenCodeStatus: document.querySelector("#lmConfigOpenCodeStatus"),
+  syncPiBtn: document.querySelector("#syncPiBtn"),
+  syncOpenCodeBtn: document.querySelector("#syncOpenCodeBtn"),
   syncMessage: document.querySelector("#syncMessage"),
-  mirrorPi: document.querySelector("#mirrorPi"),
-  mirrorOpenCode: document.querySelector("#mirrorOpenCode"),
-  mirrorBoth: document.querySelector("#mirrorBoth"),
   // Filters
   modelFilter: document.querySelector("#modelFilter"),
   benchmarkFilter: document.querySelector("#benchmarkFilter"),
   // Prepare run
   prepBenchmark: document.querySelector("#prepBenchmark"),
   prepModelSelect: document.querySelector("#prepModelSelect"),
-  prepModel: document.querySelector("#prepModel"),
   prepareRun: document.querySelector("#prepareRun"),
   prepMessage: document.querySelector("#prepMessage"),
   prepResult: document.querySelector("#prepResult"),
@@ -84,8 +98,8 @@ const els = {
   detailPreview: document.querySelector("#detailPreview"),
   detailActions: document.querySelector("#detailActions"),
   htmlLink: document.querySelector("#htmlLink"),
-  promptLink: document.querySelector("#promptLink"),
   rawLink: document.querySelector("#rawLink"),
+  deleteRun: document.querySelector("#deleteRun"),
   detailPrompt: document.querySelector("#detailPrompt"),
   promptLength: document.querySelector("#promptLength"),
   detailMeta: document.querySelector("#detailMeta"),
@@ -117,18 +131,18 @@ function init() {
 function wireEvents() {
   els.refreshConnection.addEventListener("click", () => loadConnection({ manual: true }));
   els.refreshRuns.addEventListener("click", () => refreshRuns());
-  els.mirrorPi.addEventListener("click", () => mirrorModels(["pi"]));
-  els.mirrorOpenCode.addEventListener("click", () => mirrorModels(["opencode"]));
-  els.mirrorBoth.addEventListener("click", () => mirrorModels(["opencode", "pi"]));
+  els.syncPiBtn.addEventListener("click", () => syncModels(["pi"]));
+  els.syncOpenCodeBtn.addEventListener("click", () => syncModels(["opencode"]));
 
   els.setupToggle.addEventListener("click", () => openModal("setup"));
   els.runToggle.addEventListener("click", () => openModal("prep"));
-  els.lmStudioToggle.addEventListener("click", () => openModal("lmStudio"));
 
   els.closeDetail.addEventListener("click", () => closeModal("detail"));
   els.closePrep.addEventListener("click", () => closeModal("prep"));
   els.closeSetup.addEventListener("click", () => closeModal("setup"));
-  els.closeLmStudio.addEventListener("click", () => closeModal("lmStudio"));
+  els.closeDeleteConfirm.addEventListener("click", () => closeModal("deleteConfirm"));
+  els.cancelDeleteRun.addEventListener("click", () => closeModal("deleteConfirm"));
+  els.confirmDeleteRun.addEventListener("click", () => confirmDeleteSelectedRun());
 
   els.detailBackdrop.addEventListener("click", (event) => {
     if (event.target === els.detailBackdrop) closeModal("detail");
@@ -139,15 +153,11 @@ function wireEvents() {
   els.setupBackdrop.addEventListener("click", (event) => {
     if (event.target === els.setupBackdrop) closeModal("setup");
   });
-  els.lmStudioBackdrop.addEventListener("click", (event) => {
-    if (event.target === els.lmStudioBackdrop) closeModal("lmStudio");
+  els.deleteConfirmBackdrop.addEventListener("click", (event) => {
+    if (event.target === els.deleteConfirmBackdrop) closeModal("deleteConfirm");
   });
 
-  els.prepModelSelect.addEventListener("change", () => {
-    if (els.prepModelSelect.value) {
-      els.prepModel.value = els.prepModelSelect.value;
-    }
-  });
+  els.deleteRun.addEventListener("click", () => requestDeleteSelectedRun());
 
   els.modelFilter.addEventListener("change", () => {
     state.selectedModel = els.modelFilter.value;
@@ -170,27 +180,203 @@ function wireEvents() {
   });
 }
 
+/* ── Setup panel state ──────────────────────────────────────── */
+
+function updateLmStepStates() {
+  showSection(els.lmStep1, true);
+  showSection(els.lmStep2, true);
+  showSection(els.lmStep3, !state.staticMode && state.modelSync.enabled);
+}
+
+function showSection(section, visible) {
+  if (section) {
+    section.hidden = !visible;
+  }
+}
+
+/* ── Config presence indicators ──────────────────────────────── */
+
+function updateConfigPresence() {
+  const piExists = state.modelSync.files?.pi?.exists ?? false;
+  const opencodeExists = state.modelSync.files?.opencode?.exists ?? false;
+  const piPath = state.modelSync.paths?.pi || "~/.pi/agent/models.json";
+  const ocPath = state.modelSync.paths?.opencode || "~/.config/opencode/opencode.json";
+
+  els.lmConfigPiPath.textContent = piPath;
+  els.lmConfigOpenCodePath.textContent = ocPath;
+
+  if (piExists) {
+    els.lmConfigPiStatus.textContent = "✓ Found";
+    els.lmConfigPiStatus.dataset.state = "found";
+  } else {
+    els.lmConfigPiStatus.textContent = "✗ Not found";
+    els.lmConfigPiStatus.dataset.state = "missing";
+  }
+
+  if (opencodeExists) {
+    els.lmConfigOpenCodeStatus.textContent = "✓ Found";
+    els.lmConfigOpenCodeStatus.dataset.state = "found";
+  } else {
+    els.lmConfigOpenCodeStatus.textContent = "✗ Not found";
+    els.lmConfigOpenCodeStatus.dataset.state = "missing";
+  }
+}
+
+function updateSyncButtons() {
+  const canSync =
+    !state.staticMode &&
+    state.modelSync.enabled &&
+    state.discoveredModels.length > 0 &&
+    !state.syncBusy;
+
+  els.syncPiBtn.disabled = !canSync;
+  els.syncOpenCodeBtn.disabled = !canSync;
+}
+
+/* ── Model inventory rendering ──────────────────────────────── */
+
+function renderModelInventory() {
+  const runModels = modelsFromRuns(state.runs);
+  const currentIds = new Set(state.discoveredModels.map((m) => m.id));
+  const runIds = new Set(runModels.map((m) => m.id));
+  const opencodeModelIds = new Set(state.modelSync.files?.opencode?.modelIds ?? []);
+  const piModelIds = new Set(state.modelSync.files?.pi?.modelIds ?? []);
+  const piExists = state.modelSync.files?.pi?.exists ?? false;
+  const ocExists = state.modelSync.files?.opencode?.exists ?? false;
+
+  const models = uniqueBy(
+    [...state.discoveredModels, ...runModels],
+    (m) => m.id
+  );
+
+  els.availableModelCount.textContent = String(models.length);
+
+  if (models.length === 0) {
+    els.availableModelChoices.innerHTML =
+      '<p class="muted-copy text-sm leading-5">' +
+      (state.lmConnected
+        ? "LM Studio returned no models. Load a model in LM Studio first."
+        : "LM Studio did not return models and no run folders are indexed yet.") +
+      "</p>";
+    return;
+  }
+
+  els.availableModelChoices.innerHTML = models
+    .map((model) => {
+      const isCurrent = currentIds.has(model.id);
+      const inPi = piModelIds.has(model.id);
+      const inOc = opencodeModelIds.has(model.id);
+      const liveTag = isCurrent ? '<span class="inline-flex items-center rounded-full bg-[oklch(0.92_0.038_158)] px-1.5 py-px text-[0.65rem] font-semibold text-[oklch(0.31_0.07_158)]">live</span>' : "";
+
+      return (
+        '<div class="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-sm">' +
+          '<span class="min-w-0 flex items-center gap-1.5 truncate font-semibold">' +
+            escapeHtml(model.id) +
+            liveTag +
+          "</span>" +
+          '<span class="flex shrink-0 items-center gap-2">' +
+            renderStatusCheck("Pi", inPi, piExists) +
+            renderStatusCheck("OC", inOc, ocExists) +
+          "</span>" +
+        "</div>"
+      );
+    })
+    .join("");
+}
+
+function renderStatusCheck(label, isPresent, configExists) {
+  if (!configExists) {
+    // Config file doesn't exist — show dimmed/unavailable
+    return (
+      '<span class="inline-flex items-center gap-1 rounded border border-[oklch(0.82_0.01_255)] bg-muted px-1.5 py-0.5 text-[0.68rem] font-semibold text-muted-foreground opacity-50">' +
+        "— " + label +
+      "</span>"
+    );
+  }
+  if (isPresent) {
+    return (
+      '<span class="inline-flex items-center gap-1 rounded bg-[oklch(0.93_0.04_158)] px-1.5 py-0.5 text-[0.68rem] font-semibold text-[oklch(0.31_0.07_158)]">' +
+        "✓ " + label +
+      "</span>"
+    );
+  }
+  return (
+    '<span class="inline-flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-[0.68rem] font-semibold text-muted-foreground">' +
+      "○ " + label +
+    "</span>"
+  );
+}
+
+/* ── Sync action ──────────────────────────────────────────── */
+
+async function syncModels(targets) {
+  if (state.staticMode) {
+    els.syncMessage.textContent = "Sync requires the local dev server.";
+    return;
+  }
+
+  const discoveredIds = state.discoveredModels
+    .map((m) => m.id)
+    .filter((id) => typeof id === "string" && id.length > 0);
+
+  if (discoveredIds.length === 0) {
+    els.syncMessage.textContent = "No discovered models to sync.";
+    return;
+  }
+
+  state.syncBusy = true;
+  updateSyncButtons();
+
+  const targetLabels = { pi: "Pi", opencode: "OpenCode" };
+  const label = targets.map((t) => targetLabels[t] ?? t).join(" + ");
+  els.syncMessage.textContent = "Syncing to " + label + "…";
+
+  try {
+    const data = await postJson("/api/model-sync", {
+      baseUrl: els.baseUrl.value,
+      modelIds: discoveredIds,
+      targets
+    });
+    state.modelSync = data.sync ?? state.modelSync;
+    updateConfigPresence();
+    renderModelInventory();
+    els.syncMessage.textContent =
+      "Synced " + String(data.mirroredModelCount ?? discoveredIds.length) +
+      " model" + (discoveredIds.length === 1 ? "" : "s") +
+      " to " + label + ".";
+  } catch (error) {
+    els.syncMessage.textContent = "Sync failed: " + error.message;
+  } finally {
+    state.syncBusy = false;
+    updateSyncButtons();
+  }
+}
+
+/* ── Modal open/close ────────────────────────────────────── */
+
 function openModal(name) {
   const map = {
     detail: els.detailBackdrop,
     prep: els.prepBackdrop,
     setup: els.setupBackdrop,
-    lmStudio: els.lmStudioBackdrop
+    deleteConfirm: els.deleteConfirmBackdrop
   };
   const el = map[name];
   if (el) {
     el.setAttribute("open", "");
     document.body.style.overflow = "hidden";
   }
-  if (name === "prep" && state.staticMode) {
+  if (name === "prep" && (state.staticMode || !state.writesEnabled)) {
     els.prepareRun.disabled = true;
-    els.prepMessage.textContent = "Static mode cannot create local folders.";
+    els.prepMessage.textContent = "Preparing runs requires the local dev server.";
   } else if (name === "prep") {
     els.prepareRun.disabled = false;
     els.prepMessage.textContent = "The app will create the folder, metadata.json, and prompt.md.";
   }
-  if (name === "lmStudio") {
-    updateMirrorControls();
+  if (name === "setup") {
+    updateLmStepStates();
+    updateConfigPresence();
+    updateSyncButtons();
   }
 }
 
@@ -199,7 +385,7 @@ function closeModal(name) {
     detail: els.detailBackdrop,
     prep: els.prepBackdrop,
     setup: els.setupBackdrop,
-    lmStudio: els.lmStudioBackdrop
+    deleteConfirm: els.deleteConfirmBackdrop
   };
   const el = map[name];
   if (el) {
@@ -207,6 +393,8 @@ function closeModal(name) {
     document.body.style.overflow = "";
   }
 }
+
+/* ── Data loading ────────────────────────────────────────── */
 
 async function loadLocalData() {
   try {
@@ -235,7 +423,9 @@ async function enterStaticMode(reason) {
     state.benchmarks = manifest.benchmarks ?? [];
     state.runs = manifest.runs ?? [];
     state.discoveredModels = [];
-    setConnection("static", "Static", "Browsing exported runs. Prepare-run needs the local API.");
+    state.lmConnected = false;
+    state.writesEnabled = false;
+    setConnection("static", "Static", "Browsing exported runs. Sync requires the local dev server.");
     els.statsDot.dataset.state = "static";
     els.statsCompact.textContent = "Static";
     renderBenchmarks();
@@ -243,7 +433,7 @@ async function enterStaticMode(reason) {
     renderModelSources();
     renderPrepOptions();
     renderRuns();
-    updateMirrorControls();
+    updateLmStepStates();
   } catch (staticError) {
     setConnection("offline", "Unavailable", (reason?.message ?? "Local API unavailable.") + " " + staticError.message);
     els.statsDot.dataset.state = "offline";
@@ -255,8 +445,8 @@ async function enterStaticMode(reason) {
 async function loadConnection(options = {}) {
   if (options.manual) {
     els.refreshConnection.disabled = true;
-    els.refreshConnection.textContent = "Testing...";
-    setConnection("checking", "Checking", "Checking LM Studio and refreshing the model inventory...");
+    els.refreshConnection.textContent = "Testing…";
+    setConnection("checking", "Checking", "Checking LM Studio and refreshing models…");
   }
 
   try {
@@ -264,27 +454,35 @@ async function loadConnection(options = {}) {
     if (status.lmStudio?.baseUrl) {
       els.baseUrl.value = status.lmStudio.baseUrl;
     }
+    if (typeof status.app?.writesEnabled === "boolean") {
+      state.writesEnabled = status.app.writesEnabled;
+    }
     const connection = status.lmStudio?.connection;
     if (connection?.ok) {
+      state.lmConnected = true;
       const modelCount = await loadModels();
       await loadModelSyncState();
       setConnection(
         "online",
         "Online",
-        "LM Studio is reachable. Refreshed " + modelCount + " current " + (modelCount === 1 ? "model" : "models") + ". Model execution still stays outside this app."
+        "LM Studio is reachable. " + modelCount + " " + (modelCount === 1 ? "model" : "models") + " discovered."
       );
     } else {
+      state.lmConnected = false;
       setConnection("offline", "Offline", connection?.error ?? "LM Studio is not reachable.");
       await loadModels();
       await loadModelSyncState();
     }
   } catch (error) {
+    state.lmConnected = false;
     setConnection("offline", "Offline", error.message);
     state.discoveredModels = [];
     renderModelSources();
     renderPrepOptions();
-    updateMirrorControls();
   } finally {
+    updateLmStepStates();
+    updateConfigPresence();
+    updateSyncButtons();
     if (options.manual) {
       els.refreshConnection.disabled = false;
       els.refreshConnection.textContent = "Test";
@@ -299,13 +497,15 @@ async function loadModels() {
     state.discoveredModels = discovered;
     renderModelSources();
     renderPrepOptions();
-    updateMirrorControls();
+    updateLmStepStates();
+    updateSyncButtons();
     return discovered.length;
   } catch {
     state.discoveredModels = [];
     renderModelSources();
     renderPrepOptions();
-    updateMirrorControls();
+    updateLmStepStates();
+    updateSyncButtons();
     return 0;
   }
 }
@@ -313,29 +513,25 @@ async function loadModels() {
 async function loadModelSyncState() {
   if (state.staticMode) {
     state.modelSync.enabled = false;
-    els.syncPanel.hidden = true;
-    updateMirrorControls();
+    updateLmStepStates();
+    updateConfigPresence();
+    updateSyncButtons();
     return;
   }
 
   try {
     const data = await fetchJson("/api/model-sync");
     state.modelSync = data.sync ?? state.modelSync;
-    els.syncPanel.hidden = !state.modelSync.enabled;
-    els.syncModeBadge.textContent = state.modelSync.enabled ? "Enabled" : "Disabled";
-    if (!state.modelSync.enabled) {
-      els.syncMessage.textContent = "Mirror mode is only enabled in local dev server mode.";
-    } else {
-      els.syncMessage.textContent = "Mirror uses current LM Studio model IDs and rewrites only the LM Studio sections in Pi/OpenCode.";
-    }
+    updateLmStepStates();
+    updateConfigPresence();
+    updateSyncButtons();
     renderModelSources();
   } catch (error) {
     state.modelSync.enabled = false;
-    els.syncPanel.hidden = true;
-    els.syncModeBadge.textContent = "Unavailable";
-    els.syncMessage.textContent = "Mirror mode unavailable: " + error.message;
-  } finally {
-    updateMirrorControls();
+    updateLmStepStates();
+    updateConfigPresence();
+    els.syncMessage.textContent = "Sync unavailable: " + error.message;
+    updateSyncButtons();
   }
 }
 
@@ -347,7 +543,6 @@ async function loadStats() {
       ? state.stats.cpu.usagePercent.toFixed(1) + "% CPU"
       : (state.stats?.cpu?.cores ?? "-") + " cores";
     const memory = formatBytes(state.stats?.memory?.usedBytes) + " / " + formatBytes(state.stats?.memory?.totalBytes);
-    const gpu = state.stats?.gpu?.devices?.[0]?.name ?? "GPU unavailable";
     els.statsDot.dataset.state = "online";
     els.statsCompact.textContent = cpu + " · " + memory;
   } catch (error) {
@@ -361,8 +556,13 @@ async function refreshRuns() {
     await enterStaticMode(new Error("Static refresh"));
     return;
   }
-  const data = await fetchJson("/api/runs");
-  state.runs = data.runs ?? [];
+  const [benchmarks, runs] = await Promise.all([
+    fetchJson("/api/benchmarks"),
+    fetchJson("/api/runs")
+  ]);
+  state.benchmarks = benchmarks.benchmarks ?? [];
+  state.runs = runs.runs ?? [];
+  renderBenchmarks();
   renderModels();
   renderModelSources();
   renderPrepOptions();
@@ -370,14 +570,14 @@ async function refreshRuns() {
 }
 
 async function prepareRunSlot() {
-  if (state.staticMode) {
-    els.prepMessage.textContent = "Static mode cannot create local folders.";
+  if (state.staticMode || !state.writesEnabled) {
+    els.prepMessage.textContent = "Preparing runs requires the local dev server.";
     return;
   }
   const benchmarkId = els.prepBenchmark.value;
-  const modelId = els.prepModel.value.trim();
+  const modelId = els.prepModelSelect.value.trim();
   if (!benchmarkId || !modelId) {
-    els.prepMessage.textContent = "Choose a prompt and enter a model ID.";
+    els.prepMessage.textContent = "Choose a prompt and discovered model.";
     return;
   }
   try {
@@ -390,7 +590,7 @@ async function prepareRunSlot() {
     els.preparedPrompt.value = prepared.prompt;
     els.preparedPaths.textContent = "Run folder: " + prepared.paths.runDirectory;
     els.prepMessage.textContent = "Run slot prepared. Copy the prompt into your external tool.";
-    els.prepResult.hidden = false;
+    els.copyPrompt.disabled = false;
     state.runs = [availablePreparedRun(prepared.run), ...state.runs.filter((run) => run.runId !== prepared.run.runId)];
     renderModels();
     renderModelSources();
@@ -398,7 +598,9 @@ async function prepareRunSlot() {
     renderRuns();
   } catch (error) {
     els.prepMessage.textContent = error.message;
-    els.prepResult.hidden = true;
+    els.preparedPrompt.value = "";
+    els.preparedPaths.textContent = "No run slot prepared yet.";
+    els.copyPrompt.disabled = true;
   }
 }
 
@@ -410,25 +612,64 @@ async function copyPreparedPrompt() {
   els.prepMessage.textContent = "Prompt copied.";
 }
 
+function requestDeleteSelectedRun() {
+  const run = state.selectedRun;
+  if (!run?.runDirectory || state.staticMode || !state.writesEnabled) {
+    return;
+  }
+
+  els.deleteRunPath.textContent = run.runDirectory;
+  openModal("deleteConfirm");
+}
+
+async function confirmDeleteSelectedRun() {
+  const run = state.selectedRun;
+  if (!run?.runDirectory || state.staticMode || !state.writesEnabled) {
+    closeModal("deleteConfirm");
+    return;
+  }
+
+  els.confirmDeleteRun.disabled = true;
+  els.deleteRun.disabled = true;
+  try {
+    await deleteJson("/api/runs", { runDirectory: run.runDirectory });
+    state.runs = state.runs.filter((item) => item.runDirectory !== run.runDirectory);
+    closeModal("deleteConfirm");
+    closeModal("detail");
+    state.selectedRun = null;
+    renderModels();
+    renderModelSources();
+    renderPrepOptions();
+    renderRuns();
+  } catch (error) {
+    window.alert("Delete failed: " + error.message);
+  } finally {
+    els.confirmDeleteRun.disabled = false;
+    els.deleteRun.disabled = false;
+  }
+}
+
+/* ── Rendering ────────────────────────────────────────────── */
+
 function renderBenchmarks() {
   els.benchmarkFilter.innerHTML = [
     '<option value="all">All prompts</option>',
-    ...state.benchmarks.map((benchmark) =>
-      '<option value="' + escapeAttribute(benchmark.id) + '">' + escapeHtml(benchmark.title) + "</option>"
+    ...state.benchmarks.map((b) =>
+      '<option value="' + escapeAttribute(b.id) + '">' + escapeHtml(b.title) + "</option>"
     )
   ].join("");
 }
 
 function renderModels() {
   const runModels = modelsFromRuns(state.runs);
-  if (state.selectedModel !== "all" && !runModels.some((model) => model.id === state.selectedModel)) {
+  if (state.selectedModel !== "all" && !runModels.some((m) => m.id === state.selectedModel)) {
     state.selectedModel = "all";
     els.modelFilter.value = "all";
   }
   els.modelFilter.innerHTML = [
     '<option value="all">All run models</option>',
-    ...runModels.map((model) =>
-      '<option value="' + escapeAttribute(model.id) + '">' + escapeHtml(model.id) + "</option>"
+    ...runModels.map((m) =>
+      '<option value="' + escapeAttribute(m.id) + '">' + escapeHtml(m.id) + "</option>"
     )
   ].join("");
 }
@@ -437,116 +678,16 @@ function renderModelSources() {
   renderModelInventory();
 }
 
-function renderModelInventory() {
-  const runModels = modelsFromRuns(state.runs);
-  const currentIds = new Set(state.discoveredModels.map((model) => model.id));
-  const runIds = new Set(runModels.map((model) => model.id));
-  const models = uniqueBy(
-    [
-      ...state.discoveredModels,
-      ...runModels
-    ],
-    (model) => model.id
-  );
-  const opencodeModelIds = new Set(state.modelSync.files?.opencode?.modelIds ?? []);
-  const piModelIds = new Set(state.modelSync.files?.pi?.modelIds ?? []);
-
-  els.availableModelCount.textContent = String(models.length);
-  if (models.length === 0) {
-    els.availableModelChoices.innerHTML = '<p class="muted-copy text-sm leading-5">LM Studio did not return models and no run folders are indexed yet. Preparing a slot still allows a typed model ID.</p>';
-    return;
-  }
-
-  els.availableModelChoices.innerHTML = models
-    .map((model) => {
-      const isCurrent = currentIds.has(model.id);
-      const hasRuns = runIds.has(model.id);
-      const runCount = runsForModel(model.id).length;
-      const inOpenCode = opencodeModelIds.has(model.id);
-      const inPi = piModelIds.has(model.id);
-      return (
-        '<span class="available-model">' +
-          '<span class="model-row-title truncate-line">' + escapeHtml(model.id) + "</span>" +
-          '<span class="model-row-meta">' +
-            (isCurrent ? '<span class="source-chip current">current</span>' : "") +
-            (hasRuns ? '<span class="source-chip saved">' + escapeHtml(runCount + " saved " + (runCount === 1 ? "run" : "runs")) + "</span>" : "") +
-            (inOpenCode ? '<span class="source-chip synced">opencode</span>' : "") +
-            (inPi ? '<span class="source-chip synced">pi</span>' : "") +
-            (!isCurrent && hasRuns ? '<span class="source-chip historical">filesystem only</span>' : "") +
-            (!hasRuns ? '<span class="muted-copy">No saved runs</span>' : "") +
-          "</span>" +
-        "</span>"
-      );
-    })
-    .join("");
-}
-
-function updateMirrorControls() {
-  const canMirror =
-    !state.staticMode &&
-    state.modelSync.enabled &&
-    state.discoveredModels.length > 0 &&
-    !state.syncBusy;
-
-  els.mirrorPi.disabled = !canMirror;
-  els.mirrorOpenCode.disabled = !canMirror;
-  els.mirrorBoth.disabled = !canMirror;
-}
-
-async function mirrorModels(targets) {
-  if (state.staticMode) {
-    els.syncMessage.textContent = "Mirror mode is unavailable while browsing static exports.";
-    return;
-  }
-
-  const discoveredIds = state.discoveredModels
-    .map((model) => model.id)
-    .filter((id) => typeof id === "string" && id.length > 0);
-
-  if (discoveredIds.length === 0) {
-    els.syncMessage.textContent = "No discovered LM Studio models to mirror.";
-    return;
-  }
-
-  state.syncBusy = true;
-  updateMirrorControls();
-  const originalLabel = els.mirrorBoth.textContent;
-  els.mirrorBoth.textContent = "Mirroring...";
-  els.syncMessage.textContent = "Applying mirror mode to " + targets.join(" + ") + "...";
-
-  try {
-    const data = await postJson("/api/model-sync", {
-      baseUrl: els.baseUrl.value,
-      modelIds: discoveredIds,
-      targets
-    });
-    state.modelSync = data.sync ?? state.modelSync;
-    renderModelSources();
-    els.syncMessage.textContent =
-      "Mirrored " +
-      String(data.mirroredModelCount ?? discoveredIds.length) +
-      " model IDs to " +
-      targets.join(" + ") +
-      ".";
-  } catch (error) {
-    els.syncMessage.textContent = "Mirror failed: " + error.message;
-  } finally {
-    state.syncBusy = false;
-    els.mirrorBoth.textContent = originalLabel;
-    updateMirrorControls();
-  }
-}
-
 function renderPrepOptions() {
   els.prepBenchmark.innerHTML = state.benchmarks
-    .map((benchmark) => '<option value="' + escapeAttribute(benchmark.id) + '"\u003e' + escapeHtml(benchmark.title) + "</option\u003e")
+    .map((b) => '<option value="' + escapeAttribute(b.id) + '">' + escapeHtml(b.title) + "</option>")
     .join("");
   els.prepModelSelect.innerHTML = [
     '<option value="">Choose discovered model</option>',
-    ...state.discoveredModels.map((model) => '<option value="' + escapeAttribute(model.id) + '"\u003e' + escapeHtml(model.id) + "</option>")
+    ...state.discoveredModels.map((m) => '<option value="' + escapeAttribute(m.id) + '">' + escapeHtml(m.id) + "</option>")
   ].join("");
-  if (!els.prepModel.value && state.discoveredModels[0]) {
-    els.prepModel.value = state.discoveredModels[0].id;
+  if (!els.prepModelSelect.value && state.discoveredModels[0]) {
+    els.prepModelSelect.value = state.discoveredModels[0].id;
   }
 }
 
@@ -581,46 +722,53 @@ function renderRuns() {
   }
 
   if (state.mode === "model") {
-    renderGroupedRuns(groupRuns(runs, (run) => run.model?.id ?? "Unknown model", (run) => run.benchmark?.title ?? run.benchmark?.id ?? "Unknown prompt"));
+    renderGroupedRuns(
+      groupRuns(runs, (r) => r.model?.id ?? "Unknown model", (r) => r.benchmark?.title ?? r.benchmark?.id ?? "Unknown prompt"),
+      "model"
+    );
     return;
   }
 
   if (state.mode === "benchmark") {
-    renderGroupedRuns(groupRuns(runs, (run) => run.benchmark?.title ?? run.benchmark?.id ?? "Unknown prompt", (run) => run.model?.id ?? "Unknown model"));
+    renderGroupedRuns(
+      groupRuns(runs, (r) => r.benchmark?.title ?? r.benchmark?.id ?? "Unknown prompt", (r) => r.model?.id ?? "Unknown model"),
+      "benchmark"
+    );
     return;
   }
 
-  els.runsSurface.innerHTML = '<div class="run-grid">' + runs.map(renderRunCard).join("") + "</div>";
+  els.runsSurface.innerHTML = '<div class="run-grid">' + runs.map((run) => renderRunCard(run, "gallery")).join("") + "</div>";
   wireRunCards();
 }
 
-function renderGroupedRuns(groups) {
-  els.runsSurface.innerHTML = groups.map((group) =>
+function renderGroupedRuns(groups, mode) {
+  els.runsSurface.innerHTML = '<div class="grouped-runs">' + groups.map((group) =>
     '<section class="group">' +
       '<div class="group-head">' +
         "<div>" +
           '<h3 class="text-base font-semibold tracking-[-0.01em]">' + escapeHtml(group.title) + "</h3>" +
-          '<p class="muted-copy mt-1 text-sm">' + escapeHtml(group.subtitle) + "</p>" +
+          '<p class="muted-copy mt-1 text-sm">' + escapeHtml(groupSummary(group, mode)) + "</p>" +
         "</div>" +
         '<span class="badge-outline">' + group.runs.length + "</span>" +
       "</div>" +
-      '<div class="run-grid">' + group.runs.map(renderRunCard).join("") + "</div>" +
+      '<div class="run-grid">' + group.runs.map((run) => renderRunCard(run, mode)).join("") + "</div>" +
     "</section>"
-  ).join("");
+  ).join("") + "</div>";
   wireRunCards();
 }
 
-function renderRunCard(run) {
+function renderRunCard(run, mode = "gallery") {
   const htmlHref = assetHref(run, run.assets?.html);
   const stateLabel = runCardState(run);
+  const identity = runCardIdentity(run, mode);
   return (
     '<button class="run-card" type="button" data-run-id="' + escapeAttribute(run.runId) + '" aria-label="' +
     escapeAttribute(run.benchmark?.title ?? "Run") + " " + escapeAttribute(run.model?.id ?? "") + '">' +
       renderPreview(run) +
       '<span class="run-card-body">' +
         '<span class="grid min-w-0 gap-1">' +
-          '<strong class="truncate-line text-sm font-semibold">' + escapeHtml(run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run") + "</strong>" +
-          '<span class="muted-copy truncate-line text-sm">' + escapeHtml(run.model?.id ?? "Unknown model") + "</span>" +
+          '<strong class="truncate-line text-sm font-semibold">' + escapeHtml(identity.primary) + "</strong>" +
+          (identity.secondary ? '<span class="muted-copy truncate-line text-sm">' + escapeHtml(identity.secondary) + "</span>" : "") +
         "</span>" +
         '<span class="flex items-center justify-between gap-3">' +
           '<span class="inline-flex items-center gap-2 rounded-full border px-2 py-1 text-[0.72rem] font-medium text-muted-foreground">' +
@@ -633,6 +781,21 @@ function renderRunCard(run) {
       "</span>" +
     "</button>"
   );
+}
+
+function runCardIdentity(run, mode) {
+  const promptTitle = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
+  const modelId = run.model?.id ?? "Unknown model";
+
+  if (mode === "benchmark") {
+    return { primary: modelId, secondary: "" };
+  }
+
+  if (mode === "model") {
+    return { primary: promptTitle, secondary: "" };
+  }
+
+  return { primary: promptTitle, secondary: modelId };
 }
 
 function renderPreview(run) {
@@ -664,14 +827,15 @@ function wireRunCards() {
 }
 
 function openDetail(run) {
+  state.selectedRun = run;
   els.detailTitle.textContent = run.benchmark?.title ?? "Run detail";
-  els.detailSubtitle.textContent = (run.model?.id ?? "Unknown model") + " \u00b7 " + (run.runId ?? "");
+  els.detailSubtitle.textContent = (run.model?.id ?? "Unknown model") + " · " + (run.runId ?? "");
   els.detailPreview.innerHTML = renderDetailArtifact(run);
   const hasHtml = setLink(els.htmlLink, assetHref(run, run.assets?.html));
-  const hasPrompt = setLink(els.promptLink, assetHref(run, run.assets?.prompt));
   const hasRaw = setLink(els.rawLink, assetHref(run, run.assets?.rawResponse));
-  els.detailActions.hidden = !(hasHtml || hasPrompt || hasRaw);
-  const prompt = run.benchmark?.prompt ?? "Prompt unavailable in metadata.";
+  els.detailActions.hidden = !(hasHtml || hasRaw);
+  els.deleteRun.hidden = state.staticMode || !state.writesEnabled || !run.runDirectory;
+  const prompt = run.promptText ?? run.benchmark?.prompt ?? "Prompt unavailable in run folder.";
   els.detailPrompt.textContent = prompt;
   els.promptLength.textContent = prompt.length.toLocaleString() + " chars";
   const stateLabel = runCardState(run);
@@ -724,6 +888,8 @@ function setLink(link, href) {
   }
 }
 
+/* ── Helpers ──────────────────────────────────────────────── */
+
 function filteredRuns() {
   return state.runs.filter((run) => {
     const modelMatch = state.selectedModel === "all" || run.model?.id === state.selectedModel;
@@ -741,11 +907,17 @@ function groupRuns(runs, titleForRun, subtitleForRun) {
     group.runs.push(run);
     groups.set(title, group);
   }
-  return Array.from(groups.values()).map((group) => ({
-    title: group.title,
-    subtitle: Array.from(group.subtitles).slice(0, 3).join(" \u00b7 "),
-    runs: group.runs
+  return Array.from(groups.values()).map((g) => ({
+    title: g.title,
+    subtitles: Array.from(g.subtitles),
+    runs: g.runs
   }));
+}
+
+function groupSummary(group, mode) {
+  const count = group.subtitles.length;
+  const item = mode === "model" ? "prompt" : "model";
+  return String(count) + " " + item + (count === 1 ? "" : "s");
 }
 
 function modelsFromRuns(runs) {
@@ -754,7 +926,7 @@ function modelsFromRuns(runs) {
       .map((run) => run.model?.id)
       .filter(Boolean)
       .map((id) => ({ id })),
-    (model) => model.id
+    (m) => m.id
   );
 }
 
@@ -763,9 +935,9 @@ function runsForModel(modelId) {
 }
 
 function runSummaryText(runs) {
-  const prepared = runs.filter((run) => run.status === "prepared").length;
-  const completed = runs.filter((run) => run.assets?.html).length;
-  const failed = runs.filter((run) => run.status === "failed").length;
+  const prepared = runs.filter((r) => r.status === "prepared").length;
+  const completed = runs.filter((r) => r.assets?.html).length;
+  const failed = runs.filter((r) => r.status === "failed").length;
   return completed + " with HTML, " + prepared + " prepared, " + failed + " failed";
 }
 
@@ -781,22 +953,10 @@ function runCardState(run) {
 
 function displayRunError(run) {
   const message = run.error?.message;
-  if (!message) {
-    return null;
-  }
-
-  if (/chat completion timed out/iu.test(message)) {
-    return "External tool timed out before writing an artifact.";
-  }
-
-  if (/LM Studio.*chat completion/iu.test(message)) {
-    return "External tool failed to produce an artifact.";
-  }
-
-  if (/LM Studio/iu.test(message)) {
-    return "External tool error. Open details for the original message.";
-  }
-
+  if (!message) return null;
+  if (/chat completion timed out/iu.test(message)) return "External tool timed out before writing an artifact.";
+  if (/LM Studio.*chat completion/iu.test(message)) return "External tool failed to produce an artifact.";
+  if (/LM Studio/iu.test(message)) return "External tool error. Open details for the original message.";
   return message;
 }
 
@@ -814,11 +974,17 @@ async function fetchStaticManifest() {
 }
 
 async function postJson(url, body) {
+  return sendJson(url, "POST", body);
+}
+
+async function deleteJson(url, body) {
+  return sendJson(url, "DELETE", body);
+}
+
+async function sendJson(url, method, body) {
   const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
+    method,
+    headers: { "content-type": "application/json" },
     body: JSON.stringify(body)
   });
   return readJsonResponse(response);
@@ -833,27 +999,16 @@ async function readJsonResponse(response) {
 }
 
 function assetPath(run, asset) {
-  if (!asset || !run.runDirectory) {
-    return "";
-  }
+  if (!asset || !run.runDirectory) return "";
   return String(run.runDirectory).replace(/\/+$/u, "") + "/" + asset;
 }
 
 function assetHref(run, asset) {
   const path = assetPath(run, asset);
-  if (!path) {
-    return null;
-  }
-  if (/^[a-z][a-z0-9+.-]*:/iu.test(path)) {
-    return path;
-  }
-  if (state.staticMode || path.startsWith("export/")) {
-    return path.replace(/^\/+/u, "");
-  }
-  return "/api/run-asset?runDirectory=" +
-    encodeURIComponent(run.runDirectory) +
-    "&asset=" +
-    encodeURIComponent(asset);
+  if (!path) return null;
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(path)) return path;
+  if (state.staticMode || path.startsWith("export/")) return path.replace(/^\/+/u, "");
+  return "/api/run-asset?runDirectory=" + encodeURIComponent(run.runDirectory) + "&asset=" + encodeURIComponent(asset);
 }
 
 function availablePreparedRun(run) {
@@ -870,18 +1025,14 @@ function uniqueBy(items, keyForItem) {
   const seen = new Set();
   return items.filter((item) => {
     const key = keyForItem(item);
-    if (seen.has(key)) {
-      return false;
-    }
+    if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 }
 
 function formatBytes(value) {
-  if (!Number.isFinite(value)) {
-    return "Unavailable";
-  }
+  if (!Number.isFinite(value)) return "Unavailable";
   const units = ["B", "KB", "MB", "GB", "TB"];
   let size = value;
   let unitIndex = 0;

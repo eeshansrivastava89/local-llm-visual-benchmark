@@ -34,8 +34,7 @@ const title = "Local LLM Visual Benchmark";
               <span id="statsDot" class="status-dot" data-state="offline"></span>
               <span id="statsCompact">Loading…</span>
             </span>
-            <button type="button" class="btn-sm-outline" id="setupToggle">How it works</button>
-            <button type="button" class="btn-sm-outline" id="lmStudioToggle">LM Studio</button>
+            <button type="button" class="btn-sm-outline" id="setupToggle">Setup</button>
             <button type="button" class="btn" id="runToggle">Prepare run</button>
           </div>
         </div>
@@ -44,6 +43,11 @@ const title = "Local LLM Visual Benchmark";
       <main class="mx-auto w-full max-w-[1600px] px-4 py-4 md:px-5 md:py-5">
         <div class="grid gap-4">
           <div class="flex flex-wrap items-center gap-2">
+            <div class="inline-flex rounded-lg border bg-muted p-0.5">
+              <button type="button" class="btn-sm-ghost" data-mode="gallery" aria-pressed="true">Gallery</button>
+              <button type="button" class="btn-sm-ghost" data-mode="benchmark">By prompt</button>
+              <button type="button" class="btn-sm-ghost" data-mode="model">By model</button>
+            </div>
             <div class="dropdown-wrap">
               <select id="modelFilter" class="input text-sm" aria-label="Filter by model">
                 <option value="all">All run models</option>
@@ -53,11 +57,6 @@ const title = "Local LLM Visual Benchmark";
               <select id="benchmarkFilter" class="input text-sm" aria-label="Filter by prompt">
                 <option value="all">All prompts</option>
               </select>
-            </div>
-            <div class="inline-flex rounded-lg border bg-muted p-0.5">
-              <button type="button" class="btn-sm-ghost" data-mode="gallery" aria-pressed="true">Gallery</button>
-              <button type="button" class="btn-sm-ghost" data-mode="model">By model</button>
-              <button type="button" class="btn-sm-ghost" data-mode="benchmark">By prompt</button>
             </div>
             <button type="button" class="btn-sm-outline ml-auto" id="refreshRuns">Refresh</button>
           </div>
@@ -86,14 +85,16 @@ const title = "Local LLM Visual Benchmark";
             <h2 id="detailTitle" class="truncate-line text-lg font-semibold">Run detail</h2>
             <p class="muted-copy truncate-line mt-1 text-sm" id="detailSubtitle"></p>
           </div>
-          <button type="button" class="btn-sm-outline" id="closeDetail">Close</button>
+          <div class="flex shrink-0 items-center gap-2">
+            <button type="button" class="btn-sm-danger" id="deleteRun">Delete run</button>
+            <button type="button" class="btn-sm-outline" id="closeDetail">Close</button>
+          </div>
         </header>
         <div class="detail-body p-5">
           <div class="grid min-w-0 gap-4">
             <div id="detailPreview"></div>
             <div class="detail-actions" id="detailActions">
               <a class="btn-sm-outline" id="htmlLink" href="#" target="_blank" rel="noreferrer">Open HTML</a>
-              <a class="btn-sm-outline" id="promptLink" href="#" target="_blank" rel="noreferrer">Prompt file</a>
               <a class="btn-sm-outline" id="rawLink" href="#" target="_blank" rel="noreferrer">Raw response</a>
             </div>
           </div>
@@ -119,6 +120,33 @@ const title = "Local LLM Visual Benchmark";
       </article>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div class="detail-backdrop" id="deleteConfirmBackdrop">
+      <article class="confirm-shell" role="dialog" aria-modal="true" aria-label="Delete run">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 class="truncate-line text-lg font-semibold">Delete run?</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm">This removes the run folder from disk.</p>
+          </div>
+          <button type="button" class="btn-sm-outline" id="closeDeleteConfirm">Close</button>
+        </header>
+        <div class="grid gap-4 p-5">
+          <div class="rounded-lg border border-[oklch(0.78_0.06_28)] bg-[oklch(0.97_0.018_28)] p-3">
+            <p class="text-sm font-medium text-[oklch(0.45_0.12_28)]">This cannot be undone.</p>
+            <p class="muted-copy mt-1 text-sm leading-5">The whole run folder will be deleted, including metadata, prompt, HTML, preview, and raw response files.</p>
+          </div>
+          <div class="grid gap-1">
+            <span class="section-label">Run folder</span>
+            <code class="code-inline-path" id="deleteRunPath"></code>
+          </div>
+          <div class="flex flex-wrap justify-end gap-2">
+            <button type="button" class="btn-sm-outline" id="cancelDeleteRun">Cancel</button>
+            <button type="button" class="btn-sm-danger" id="confirmDeleteRun">Delete folder</button>
+          </div>
+        </div>
+      </article>
+    </div>
+
     <!-- Prepare Run Modal -->
     <div class="detail-backdrop" id="prepBackdrop">
       <article class="prep-shell" role="dialog" aria-modal="true" aria-label="Prepare run">
@@ -130,182 +158,140 @@ const title = "Local LLM Visual Benchmark";
           <button type="button" class="btn-sm-outline" id="closePrep">Close</button>
         </header>
         <div class="prep-body p-5">
-          <div class="grid gap-4">
-            <div class="grid gap-2">
-              <label for="prepBenchmark">Prompt</label>
-              <select id="prepBenchmark" class="input"></select>
-            </div>
-            <div class="grid gap-2">
-              <label for="prepModelSelect">Discovered model</label>
-              <select id="prepModelSelect" class="input"></select>
-            </div>
-            <div class="grid gap-2">
-              <label for="prepModel">Model ID</label>
-              <input id="prepModel" class="input" placeholder="google/gemma-4-e4b" />
-            </div>
-            <button class="btn w-full" type="button" id="prepareRun">Prepare slot</button>
-            <p class="muted-copy text-sm leading-5" id="prepMessage">The app will create the folder, metadata.json, and prompt.md.</p>
-
-            <div id="prepResult" class="grid gap-3" hidden>
-              <div class="next-step-panel">
-                <div class="flex items-center justify-between gap-3">
-                  <h3 class="text-sm font-medium">Generated prompt</h3>
-                  <button type="button" class="btn-sm-outline" id="copyPrompt">Copy</button>
-                </div>
-                <textarea
-                  id="preparedPrompt"
-                  class="input min-h-48 resize-y font-mono text-[0.82rem] leading-5"
-                  readonly
-                ></textarea>
-                <p class="muted-copy text-sm" id="preparedPaths"></p>
+          <div class="prep-layout" id="prepLayout">
+            <section class="prep-form-panel" aria-label="Run slot inputs">
+              <div class="grid gap-2">
+                <label for="prepBenchmark">Prompt</label>
+                <select id="prepBenchmark" class="input"></select>
               </div>
-            </div>
+              <div class="grid gap-2">
+                <label for="prepModelSelect">Discovered model</label>
+                <select id="prepModelSelect" class="input"></select>
+              </div>
+              <button class="btn w-full" type="button" id="prepareRun">Prepare slot</button>
+              <p class="muted-copy text-sm leading-5" id="prepMessage">The app will create the folder, metadata.json, and prompt.md.</p>
+            </section>
+
+            <section id="prepResult" class="next-step-panel prep-prompt-panel" aria-label="Generated prompt">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-medium">Generated prompt</h3>
+                  <p class="muted-copy mt-0.5 text-xs">Copy this into your external tool after preparing the slot.</p>
+                </div>
+                <button type="button" class="btn-sm-outline" id="copyPrompt" disabled>Copy</button>
+              </div>
+              <textarea
+                id="preparedPrompt"
+                class="input font-mono text-[0.82rem] leading-5"
+                placeholder="Prepare a run slot to generate the exact prompt and output path."
+                readonly
+              ></textarea>
+              <p class="muted-copy text-sm" id="preparedPaths">No run slot prepared yet.</p>
+            </section>
           </div>
         </div>
       </article>
     </div>
 
-    <!-- Setup / How it works Modal -->
+    <!-- Setup Modal -->
     <div class="detail-backdrop" id="setupBackdrop">
-      <article class="prep-shell" role="dialog" aria-modal="true" aria-label="How it works">
+      <article class="prep-shell lm-studio-shell" role="dialog" aria-modal="true" aria-label="Setup">
         <header class="detail-header">
           <div class="min-w-0">
-            <h2 class="truncate-line text-lg font-semibold">How it works</h2>
-            <p class="muted-copy truncate-line mt-1 text-sm">Three steps from prompt to saved artifact.</p>
+            <h2 class="truncate-line text-lg font-semibold">Setup</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm">Configure LM Studio, then prepare runs and save generated artifacts.</p>
           </div>
           <button type="button" class="btn-sm-outline" id="closeSetup">Close</button>
         </header>
         <div class="prep-body p-5">
           <div class="grid gap-6">
-            <!-- 1-2-3 Steps -->
-            <div class="grid gap-4 sm:grid-cols-3">
-              <div class="rounded-xl bg-muted p-4">
-                <span class="badge-outline mb-3">1</span>
-                <h3 class="font-medium">Create a slot</h3>
-                <p class="muted-copy mt-1 text-sm leading-5">Pick a prompt and model. The app writes a run folder with metadata and a paste-ready prompt.</p>
+            <section class="grid gap-3" aria-labelledby="workflowHeading">
+              <div>
+                <h3 id="workflowHeading" class="text-base font-semibold">Benchmark workflow</h3>
+                <p class="muted-copy mt-1 text-sm leading-5">This app prepares folders and inspects saved HTML. Your local tool still runs the model.</p>
               </div>
-              <div class="rounded-xl bg-muted p-4">
-                <span class="badge-outline mb-3">2</span>
-                <h3 class="font-medium">Run externally</h3>
-                <p class="muted-copy mt-1 text-sm leading-5">Paste the prompt into OpenCode, Pi, or another tool. Save the HTML to the exact path in the folder.</p>
-              </div>
-              <div class="rounded-xl bg-muted p-4">
-                <span class="badge-outline mb-3">3</span>
-                <h3 class="font-medium">Refresh and inspect</h3>
-                <p class="muted-copy mt-1 text-sm leading-5">Refresh the gallery when files land. Open any run card to inspect the artifact, prompt, and paths.</p>
-              </div>
-            </div>
+              <ol class="setup-flow-list">
+                <li>
+                  <span class="setup-flow-index">1</span>
+                  <div>
+                    <h4>Prepare a run slot</h4>
+                    <p>Pick a prompt and model. The app writes the run folder, metadata, and paste-ready prompt.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="setup-flow-index">2</span>
+                  <div>
+                    <h4>Run in your tool</h4>
+                    <p>Paste the prompt into Pi, OpenCode, LM Studio chat, or another local tool. Save the HTML to the requested path.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="setup-flow-index">3</span>
+                  <div>
+                    <h4>Refresh the gallery</h4>
+                    <p>Refresh when files land. Open a run card to inspect the artifact, prompt, metadata, and filesystem paths.</p>
+                  </div>
+                </li>
+              </ol>
+            </section>
 
-            <!-- OpenCode Setup -->
-            <div class="grid gap-3">
-              <div class="flex items-center gap-2">
-                <h3 class="text-base font-semibold">OpenCode Setup</h3>
-                <a href="https://opencode.ai" target="_blank" rel="noreferrer" class="btn-sm-outline text-xs">Install OpenCode</a>
+            <section class="grid gap-4" aria-labelledby="lmStudioHeading">
+              <div>
+                <h3 id="lmStudioHeading" class="text-base font-semibold">LM Studio</h3>
+                <p class="muted-copy mt-1 text-sm leading-5">Use LM Studio as the local model source for Pi and OpenCode config sync.</p>
               </div>
-              <p class="muted-copy text-sm leading-5">Add LM Studio as a provider in <code class="text-xs bg-muted px-1.5 py-0.5 rounded">~/.config/opencode/opencode.json</code>:</p>
-              <pre class="code-block">{'{'}
-  "provider": {'{'}
-    "lmstudio": {'{'}
-      "name": "LM Studio",
-      "npm": "@ai-sdk/openai-compatible",
-      "options": {'{'}
-        "apiKey": "lm-studio",
-        "baseURL": "http://127.0.0.1:1234/v1"
-      {'}'},
-      "models": {'{'}
-        "model-id": {'{'}
-          "name": "display-name"
-        {'}'}
-      {'}'}
-    {'}'}
-  {'}'}
-{'}'}</pre>
-            </div>
 
-            <!-- Pi Setup -->
-            <div class="grid gap-3">
-              <div class="flex items-center gap-2">
-                <h3 class="text-base font-semibold">Pi Setup</h3>
-                <a href="https://pi.dev" target="_blank" rel="noreferrer" class="btn-sm-outline text-xs">Install Pi</a>
-              </div>
-              <p class="muted-copy text-sm leading-5">Add LM Studio as a provider in <code class="text-xs bg-muted px-1.5 py-0.5 rounded">~/.pi/agent/models.json</code>:</p>
-              <pre class="code-block">{'{'}
-  "providers": {'{'}
-    "lmstudio": {'{'}
-      "baseUrl": "http://127.0.0.1:1234/v1",
-      "api": "openai-completions",
-      "apiKey": "lm-studio",
-      "compat": {'{'}
-        "supportsDeveloperRole": false,
-        "supportsReasoningEffort": false
-      {'}'},
-      "models": [
-        {'{'}
-          "id": "model-id",
-          "name": "display-name",
-          "reasoning": true,
-          "input": ["text", "image"],
-          "contextWindow": 262144,
-          "maxTokens": 32768
-        {'}'}
-      ]
-    {'}'}
-  {'}'}
-{'}'}</pre>
-            </div>
-          </div>
-        </div>
-      </article>
-    </div>
-
-    <!-- LM Studio Modal -->
-    <div class="detail-backdrop" id="lmStudioBackdrop">
-      <article class="prep-shell lm-studio-shell" role="dialog" aria-modal="true" aria-label="LM Studio">
-        <header class="detail-header">
-          <div class="min-w-0">
-            <h2 class="truncate-line text-lg font-semibold">LM Studio</h2>
-            <p class="muted-copy truncate-line mt-1 text-sm">Live model discovery and mirror mode.</p>
-          </div>
-          <button type="button" class="btn-sm-outline" id="closeLmStudio">Close</button>
-        </header>
-        <div class="prep-body p-5">
-          <div class="grid gap-4">
-            <div class="lm-step-row" aria-label="LM Studio flow">
-              <span class="step-chip"><strong>1</strong> Connect</span>
-              <span class="step-chip"><strong>2</strong> Discover</span>
-              <span class="step-chip"><strong>3</strong> Mirror</span>
-            </div>
-            <div class="grid gap-2">
-              <label for="baseUrl" class="section-label">Base URL</label>
-              <div class="lm-connection-row">
-                <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
-                <button type="button" class="btn-sm-outline" id="refreshConnection">Test</button>
-              </div>
-            </div>
-            <p class="muted-copy text-sm leading-5" id="connectionMessage" aria-live="polite">Waiting for local API.</p>
-            <div class="sync-panel" id="syncPanel">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
-                  <h3 class="text-sm font-medium">Mirror mode</h3>
-                  <span class="badge-outline" id="syncModeBadge">Dev only</span>
+              <div id="lmStep1" class="grid gap-2">
+                <label for="baseUrl" class="section-label">LM Studio URL</label>
+                <div class="lm-connection-row">
+                  <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
+                  <button type="button" class="btn" id="refreshConnection">Test</button>
                 </div>
-                <div class="sync-actions">
-                  <button type="button" class="btn-sm-outline" id="mirrorPi">Mirror Pi</button>
-                  <button type="button" class="btn-sm-outline" id="mirrorOpenCode">Mirror OpenCode</button>
-                  <button type="button" class="btn-sm-outline" id="mirrorBoth">Mirror Both</button>
-                </div>
+                <p class="muted-copy text-sm leading-5" id="connectionMessage" aria-live="polite">Waiting for local API.</p>
               </div>
-              <p class="muted-copy text-sm leading-5" id="syncMessage" aria-live="polite">
-                Mirrors discovered LM Studio models into Pi and OpenCode configs by ID.
-              </p>
-            </div>
-            <div class="grid gap-2">
-              <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium">Model inventory</h3>
+            </section>
+
+            <section id="lmStep2" class="grid gap-3" aria-labelledby="modelInventoryHeading">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <h3 id="modelInventoryHeading" class="text-base font-semibold">Model inventory</h3>
+                  <p class="muted-copy mt-1 text-sm leading-5">Live LM Studio models plus saved run history, with Pi and OpenCode config status.</p>
+                </div>
                 <span class="badge-outline" id="availableModelCount">0</span>
               </div>
+              <div class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0 items-center pb-2 border-b border-border text-[0.72rem] font-semibold uppercase tracking-wide text-muted-foreground" id="lmModelHeader">
+                <span>Model</span>
+                <span class="flex gap-2">
+                  <span class="min-w-[5.5rem] text-center" title="Is this model in your Pi config?">Pi</span>
+                  <span class="min-w-[5.5rem] text-center" title="Is this model in your OpenCode config?">OpenCode</span>
+                </span>
+              </div>
               <div class="available-model-list" id="availableModelChoices"></div>
-            </div>
+            </section>
+
+            <section id="lmStep3" class="grid gap-3" aria-labelledby="syncConfigHeading">
+              <div>
+                <h3 id="syncConfigHeading" class="text-base font-semibold">Config sync</h3>
+                <p class="muted-copy mt-1 text-sm leading-5">Replace only the LM Studio section in each config with currently discovered models.</p>
+              </div>
+              <div class="grid gap-1">
+                <div class="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm" id="lmConfigPi">
+                  <span class="font-medium overflow-wrap-anywhere" id="lmConfigPiPath">~/.pi/agent/models.json</span>
+                  <span class="lm-config-indicator shrink-0 inline-flex items-center gap-1 text-[0.75rem] font-semibold" id="lmConfigPiStatus">Checking…</span>
+                </div>
+                <div class="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm" id="lmConfigOpenCode">
+                  <span class="font-medium overflow-wrap-anywhere" id="lmConfigOpenCodePath">~/.config/opencode/opencode.json</span>
+                  <span class="lm-config-indicator shrink-0 inline-flex items-center gap-1 text-[0.75rem] font-semibold" id="lmConfigOpenCodeStatus">Checking…</span>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="btn" id="syncPiBtn">Sync to Pi</button>
+                <button type="button" class="btn" id="syncOpenCodeBtn">Sync to OpenCode</button>
+              </div>
+              <p class="muted-copy text-sm leading-5" id="syncMessage" aria-live="polite">
+                Start LM Studio, test the URL, then sync discovered models to your tool configs.
+              </p>
+            </section>
           </div>
         </div>
       </article>
