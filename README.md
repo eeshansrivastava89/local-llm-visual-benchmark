@@ -95,7 +95,7 @@ Edit prompts in your normal editor. The app reads them from disk; it does not ed
 
 ## Viewing And Comparing
 
-The toolbar filters by saved-run model and benchmark prompt. The LM Studio panel separates current LM Studio inventory from historical run models discovered from the filesystem, so removed models still appear for old runs without being treated as currently available. The main area supports:
+The toolbar filters by saved-run model and benchmark prompt. The LM Studio panel shows one model inventory with badges for current LM Studio availability and saved filesystem runs, so removed models still appear for old runs without being treated as currently available. The main area supports:
 
 - `Gallery`: all filtered runs.
 - `By model`: model attempts grouped by prompt.

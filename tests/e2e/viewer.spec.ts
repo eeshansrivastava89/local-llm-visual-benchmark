@@ -40,7 +40,7 @@ const sampleRun = {
 };
 
 test("renders viewer with compact header and dropdown filters", async ({ page }) => {
-  await mockApi(page, { lmStudioOnline: false });
+  await mockApi(page, { lmStudioOnline: true });
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
@@ -61,8 +61,18 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
 
   await page.getByRole("button", { name: "LM Studio" }).click();
-  await expect(page.getByText("Current LM Studio models")).toBeVisible();
-  await expect(page.getByText("Run models from filesystem")).toBeVisible();
+  await expect(page.getByText("Model inventory")).toBeVisible();
+  await expect(page.getByText("current").first()).toBeVisible();
+  await expect(page.getByText("1 saved run").first()).toBeVisible();
+  await expect(page.getByText("Run models from filesystem")).toHaveCount(0);
+  await expect(page.locator("#availableModelChoices")).toHaveCSS("grid-template-columns", /px/);
+
+  const baseUrlBox = await page.locator("#baseUrl").boundingBox();
+  const testButtonBox = await page.locator("#refreshConnection").boundingBox();
+  expect(Math.abs((baseUrlBox?.height ?? 0) - (testButtonBox?.height ?? 0))).toBeLessThan(1);
+
+  await page.getByRole("button", { name: "Test" }).click();
+  await expect(page.locator("#connectionMessage")).toContainText("Refreshed 2 current models");
 });
 
 test("prepares a run slot via modal and shows the generated prompt", async ({ page }) => {

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { createLocalApi } from "../../src/server/api";
 import type { BenchmarkRecord, LMStudioModel, PreparedRun } from "../../src/lib/types";
+import type { MirrorModelsResult } from "../../src/lib/model-sync";
 
 const benchmarks: BenchmarkRecord[] = [
   {
@@ -181,5 +182,92 @@ describe("createLocalApi", () => {
         modelId: "model-a"
       })
     ).rejects.toThrow(/Unknown benchmark ID: missing/);
+  });
+
+  it("returns model sync state from the configured dependency", async () => {
+    const getModelSyncState = vi.fn(async () => ({
+      enabled: true,
+      paths: {
+        opencode: "/tmp/opencode.json",
+        pi: "/tmp/models.json"
+      },
+      files: {
+        opencode: { exists: true, modelIds: ["model-a"] },
+        pi: { exists: false, modelIds: [] }
+      }
+    }));
+    const api = createLocalApi({
+      getModelSyncState
+    });
+
+    await expect(api.getModelSyncState()).resolves.toEqual({
+      sync: {
+        enabled: true,
+        paths: {
+          opencode: "/tmp/opencode.json",
+          pi: "/tmp/models.json"
+        },
+        files: {
+          opencode: { exists: true, modelIds: ["model-a"] },
+          pi: { exists: false, modelIds: [] }
+        }
+      }
+    });
+  });
+
+  it("mirrors models through the model-sync dependency", async () => {
+    const mirrorModelsToConfigs = vi.fn(async (): Promise<MirrorModelsResult> => ({
+      updated: ["opencode", "pi"],
+      mirroredModelCount: 2,
+      state: {
+        enabled: true,
+        paths: {
+          opencode: "/tmp/opencode.json",
+          pi: "/tmp/models.json"
+        },
+        files: {
+          opencode: { exists: true, modelIds: ["model-a", "model-b"] },
+          pi: { exists: true, modelIds: ["model-a", "model-b"] }
+        }
+      }
+    }));
+    const api = createLocalApi({
+      mirrorModelsToConfigs
+    });
+
+    await expect(
+      api.mirrorModels({
+        baseUrl: "http://localhost:1234",
+        modelIds: ["model-a", "model-b"],
+        targets: ["opencode", "pi"]
+      })
+    ).resolves.toEqual({
+      updated: ["opencode", "pi"],
+      mirroredModelCount: 2,
+      sync: {
+        enabled: true,
+        paths: {
+          opencode: "/tmp/opencode.json",
+          pi: "/tmp/models.json"
+        },
+        files: {
+          opencode: { exists: true, modelIds: ["model-a", "model-b"] },
+          pi: { exists: true, modelIds: ["model-a", "model-b"] }
+        }
+      }
+    });
+
+    expect(mirrorModelsToConfigs).toHaveBeenCalledWith(
+      {
+        baseUrl: "http://localhost:1234",
+        modelIds: ["model-a", "model-b"],
+        targets: ["opencode", "pi"]
+      },
+      {
+        enabled: true,
+        opencodePath: undefined,
+        piPath: undefined
+      }
+    );
   });
 });

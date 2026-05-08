@@ -23,7 +23,7 @@ Use the native system UI stack. Keep labels compact, metadata readable, and run 
 
 ## Layout
 
-Desktop and tablet use a compact toolbar for saved-run model and prompt filters, leaving the viewport for the artifact gallery. The run grid should fit normal result sets in the first viewport and scroll internally only when there are more cards than the visible surface can hold. Passive LM Studio discovery lives in a modal that separates current LM Studio inventory from historical run models discovered from the filesystem.
+Desktop and tablet use a compact toolbar for saved-run model and prompt filters, leaving the viewport for the artifact gallery. The run grid should fit normal result sets in the first viewport and scroll internally only when there are more cards than the visible surface can hold. Passive LM Studio discovery lives in a modal with one model inventory; badges distinguish current LM Studio availability from saved filesystem run history.
 
 Run details are artifact-first. Completed runs show the saved `index.html` as the main surface inside the modal. Prompt text, filesystem paths, and a small status/model summary live in a narrow inspector. Optional actions appear only when the corresponding file exists.
 

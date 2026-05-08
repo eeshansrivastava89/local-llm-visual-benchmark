@@ -5,6 +5,12 @@ import {
   listLmStudioModels as defaultListLmStudioModels,
   normalizeLmStudioBaseUrl
 } from "../lib/lmstudio";
+import {
+  getModelSyncState as defaultGetModelSyncState,
+  mirrorModelsToConfigs as defaultMirrorModelsToConfigs,
+  type ModelSyncState,
+  type ModelSyncTarget
+} from "../lib/model-sync";
 import { prepareRun as defaultPrepareRun } from "../lib/prompt-prep";
 import { listRunMetadata as defaultListRunMetadata } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
@@ -26,15 +32,26 @@ export interface PrepareRunRequest {
   modelId?: string;
 }
 
+export interface MirrorModelsRequest {
+  baseUrl?: string;
+  modelIds?: unknown;
+  targets?: unknown;
+}
+
 export interface LocalApiDependencies {
   benchmarkDirectory?: string;
   runsRoot?: string;
+  enableModelSync?: boolean;
+  opencodePath?: string;
+  piModelsPath?: string;
   loadBenchmarks?: (benchmarkDirectory: string) => Promise<BenchmarkRecord[]>;
   checkLmStudioConnection?: typeof defaultCheckLmStudioConnection;
   listLmStudioModels?: typeof defaultListLmStudioModels;
   listRunMetadata?: (runsRoot?: string) => Promise<RunMetadata[]>;
   getSystemStats?: typeof defaultGetSystemStats;
   prepareRun?: typeof defaultPrepareRun;
+  getModelSyncState?: typeof defaultGetModelSyncState;
+  mirrorModelsToConfigs?: typeof defaultMirrorModelsToConfigs;
 }
 
 export interface LocalApi {
@@ -44,6 +61,8 @@ export interface LocalApi {
   getSystemStats(): Promise<SystemStatsResponse>;
   getSavedRuns(): Promise<SavedRunsResponse>;
   prepareRun(request: PrepareRunRequest): Promise<PrepareRunResponse>;
+  getModelSyncState(): Promise<ModelSyncStateResponse>;
+  mirrorModels(request: MirrorModelsRequest): Promise<MirrorModelsResponse>;
 }
 
 export interface StatusResponse {
@@ -77,6 +96,16 @@ export interface PrepareRunResponse {
   preparedRun: PreparedRun;
 }
 
+export interface ModelSyncStateResponse {
+  sync: ModelSyncState;
+}
+
+export interface MirrorModelsResponse {
+  updated: ModelSyncTarget[];
+  mirroredModelCount: number;
+  sync: ModelSyncState;
+}
+
 export class ApiRequestError extends Error {
   readonly status: number;
 
@@ -93,6 +122,9 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   const benchmarkDirectory =
     dependencies.benchmarkDirectory ?? join(process.cwd(), "benchmarks");
   const runsRoot = dependencies.runsRoot ?? join(process.cwd(), "runs");
+  const enableModelSync = dependencies.enableModelSync ?? process.env.NODE_ENV !== "production";
+  const opencodePath = dependencies.opencodePath;
+  const piModelsPath = dependencies.piModelsPath;
   const loadBenchmarks = dependencies.loadBenchmarks ?? defaultLoadBenchmarks;
   const checkLmStudioConnection =
     dependencies.checkLmStudioConnection ?? defaultCheckLmStudioConnection;
@@ -101,6 +133,9 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   const listRunMetadata = dependencies.listRunMetadata ?? defaultListRunMetadata;
   const getSystemStats = dependencies.getSystemStats ?? defaultGetSystemStats;
   const prepareRun = dependencies.prepareRun ?? defaultPrepareRun;
+  const getModelSyncState = dependencies.getModelSyncState ?? defaultGetModelSyncState;
+  const mirrorModelsToConfigs =
+    dependencies.mirrorModelsToConfigs ?? defaultMirrorModelsToConfigs;
 
   return {
     async getStatus(request = {}) {
@@ -160,6 +195,40 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
           modelId,
           runsRoot
         })
+      };
+    },
+
+    async getModelSyncState() {
+      return {
+        sync: await getModelSyncState({
+          enabled: enableModelSync,
+          opencodePath,
+          piPath: piModelsPath
+        })
+      };
+    },
+
+    async mirrorModels(request) {
+      const modelIds = readStringArray(request.modelIds, "modelIds");
+      const targets = readModelSyncTargets(request.targets);
+
+      const result = await mirrorModelsToConfigs(
+        {
+          baseUrl: request.baseUrl,
+          modelIds,
+          targets
+        },
+        {
+          enabled: enableModelSync,
+          opencodePath,
+          piPath: piModelsPath
+        }
+      );
+
+      return {
+        updated: result.updated,
+        mirroredModelCount: result.mirroredModelCount,
+        sync: result.state
       };
     }
   };
@@ -243,4 +312,41 @@ function readRequiredString(value: unknown, field: string): string {
   }
 
   return value.trim();
+}
+
+function readStringArray(value: unknown, field: string): string[] {
+  if (!Array.isArray(value)) {
+    throw new ApiRequestError(400, `${field} must be a string array.`);
+  }
+
+  const result = value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+
+  if (result.length === 0) {
+    throw new ApiRequestError(400, `${field} must contain at least one item.`);
+  }
+
+  return result;
+}
+
+function readModelSyncTargets(value: unknown): ModelSyncTarget[] {
+  const targets = value ?? ["opencode", "pi"];
+  if (!Array.isArray(targets)) {
+    throw new ApiRequestError(400, "targets must be an array.");
+  }
+
+  const normalized = Array.from(
+    new Set(
+      targets
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter((item): item is ModelSyncTarget => item === "opencode" || item === "pi")
+    )
+  );
+
+  if (normalized.length === 0) {
+    throw new ApiRequestError(400, "targets must include pi, opencode, or both.");
+  }
+
+  return normalized;
 }

@@ -2,6 +2,24 @@ const state = {
   staticMode: false,
   benchmarks: [],
   discoveredModels: [],
+  modelSync: {
+    enabled: false,
+    paths: {
+      opencode: "",
+      pi: ""
+    },
+    files: {
+      opencode: {
+        exists: false,
+        modelIds: []
+      },
+      pi: {
+        exists: false,
+        modelIds: []
+      }
+    }
+  },
+  syncBusy: false,
   runs: [],
   stats: null,
   selectedModel: "all",
@@ -34,8 +52,12 @@ const els = {
   connectionMessage: document.querySelector("#connectionMessage"),
   availableModelChoices: document.querySelector("#availableModelChoices"),
   availableModelCount: document.querySelector("#availableModelCount"),
-  runModelChoices: document.querySelector("#runModelChoices"),
-  runModelCount: document.querySelector("#runModelCount"),
+  syncPanel: document.querySelector("#syncPanel"),
+  syncModeBadge: document.querySelector("#syncModeBadge"),
+  syncMessage: document.querySelector("#syncMessage"),
+  mirrorPi: document.querySelector("#mirrorPi"),
+  mirrorOpenCode: document.querySelector("#mirrorOpenCode"),
+  mirrorBoth: document.querySelector("#mirrorBoth"),
   // Filters
   modelFilter: document.querySelector("#modelFilter"),
   benchmarkFilter: document.querySelector("#benchmarkFilter"),
@@ -85,11 +107,19 @@ function init() {
       void loadModels();
     }
   }, 60000);
+  setInterval(() => {
+    if (!state.staticMode) {
+      void loadModelSyncState();
+    }
+  }, 12000);
 }
 
 function wireEvents() {
-  els.refreshConnection.addEventListener("click", () => loadConnection());
+  els.refreshConnection.addEventListener("click", () => loadConnection({ manual: true }));
   els.refreshRuns.addEventListener("click", () => refreshRuns());
+  els.mirrorPi.addEventListener("click", () => mirrorModels(["pi"]));
+  els.mirrorOpenCode.addEventListener("click", () => mirrorModels(["opencode"]));
+  els.mirrorBoth.addEventListener("click", () => mirrorModels(["opencode", "pi"]));
 
   els.setupToggle.addEventListener("click", () => openModal("setup"));
   els.runToggle.addEventListener("click", () => openModal("prep"));
@@ -159,6 +189,9 @@ function openModal(name) {
     els.prepareRun.disabled = false;
     els.prepMessage.textContent = "The app will create the folder, metadata.json, and prompt.md.";
   }
+  if (name === "lmStudio") {
+    updateMirrorControls();
+  }
 }
 
 function closeModal(name) {
@@ -189,7 +222,7 @@ async function loadLocalData() {
     renderModelSources();
     renderRuns();
     renderPrepOptions();
-    await Promise.allSettled([loadConnection(), loadStats()]);
+    await Promise.allSettled([loadConnection(), loadStats(), loadModelSyncState()]);
   } catch (error) {
     await enterStaticMode(error);
   }
@@ -210,6 +243,7 @@ async function enterStaticMode(reason) {
     renderModelSources();
     renderPrepOptions();
     renderRuns();
+    updateMirrorControls();
   } catch (staticError) {
     setConnection("offline", "Unavailable", (reason?.message ?? "Local API unavailable.") + " " + staticError.message);
     els.statsDot.dataset.state = "offline";
@@ -218,7 +252,13 @@ async function enterStaticMode(reason) {
   }
 }
 
-async function loadConnection() {
+async function loadConnection(options = {}) {
+  if (options.manual) {
+    els.refreshConnection.disabled = true;
+    els.refreshConnection.textContent = "Testing...";
+    setConnection("checking", "Checking", "Checking LM Studio and refreshing the model inventory...");
+  }
+
   try {
     const status = await fetchJson("/api/status?baseUrl=" + encodeURIComponent(els.baseUrl.value));
     if (status.lmStudio?.baseUrl) {
@@ -226,16 +266,29 @@ async function loadConnection() {
     }
     const connection = status.lmStudio?.connection;
     if (connection?.ok) {
-      setConnection("online", "Online", "LM Studio is reachable. Model execution still stays outside this app.");
+      const modelCount = await loadModels();
+      await loadModelSyncState();
+      setConnection(
+        "online",
+        "Online",
+        "LM Studio is reachable. Refreshed " + modelCount + " current " + (modelCount === 1 ? "model" : "models") + ". Model execution still stays outside this app."
+      );
     } else {
       setConnection("offline", "Offline", connection?.error ?? "LM Studio is not reachable.");
+      await loadModels();
+      await loadModelSyncState();
     }
-    await loadModels();
   } catch (error) {
     setConnection("offline", "Offline", error.message);
     state.discoveredModels = [];
     renderModelSources();
     renderPrepOptions();
+    updateMirrorControls();
+  } finally {
+    if (options.manual) {
+      els.refreshConnection.disabled = false;
+      els.refreshConnection.textContent = "Test";
+    }
   }
 }
 
@@ -246,10 +299,43 @@ async function loadModels() {
     state.discoveredModels = discovered;
     renderModelSources();
     renderPrepOptions();
+    updateMirrorControls();
+    return discovered.length;
   } catch {
     state.discoveredModels = [];
     renderModelSources();
     renderPrepOptions();
+    updateMirrorControls();
+    return 0;
+  }
+}
+
+async function loadModelSyncState() {
+  if (state.staticMode) {
+    state.modelSync.enabled = false;
+    els.syncPanel.hidden = true;
+    updateMirrorControls();
+    return;
+  }
+
+  try {
+    const data = await fetchJson("/api/model-sync");
+    state.modelSync = data.sync ?? state.modelSync;
+    els.syncPanel.hidden = !state.modelSync.enabled;
+    els.syncModeBadge.textContent = state.modelSync.enabled ? "Enabled" : "Disabled";
+    if (!state.modelSync.enabled) {
+      els.syncMessage.textContent = "Mirror mode is only enabled in local dev server mode.";
+    } else {
+      els.syncMessage.textContent = "Mirror uses current LM Studio model IDs and rewrites only the LM Studio sections in Pi/OpenCode.";
+    }
+    renderModelSources();
+  } catch (error) {
+    state.modelSync.enabled = false;
+    els.syncPanel.hidden = true;
+    els.syncModeBadge.textContent = "Unavailable";
+    els.syncMessage.textContent = "Mirror mode unavailable: " + error.message;
+  } finally {
+    updateMirrorControls();
   }
 }
 
@@ -348,53 +434,107 @@ function renderModels() {
 }
 
 function renderModelSources() {
-  renderAvailableModels();
-  renderRunModels();
+  renderModelInventory();
 }
 
-function renderAvailableModels() {
-  els.availableModelCount.textContent = String(state.discoveredModels.length);
-  if (state.discoveredModels.length === 0) {
-    els.availableModelChoices.innerHTML = '<p class="muted-copy text-sm leading-5">LM Studio did not return models. Preparing a slot still allows a typed model ID.</p>';
-    return;
-  }
-
-  els.availableModelChoices.innerHTML = state.discoveredModels
-    .map((model) =>
-      '<span class="available-model">' +
-        '<span class="model-row-title truncate-line">' + escapeHtml(model.id) + "</span>" +
-        '<span class="model-row-meta">' +
-          '<span class="source-chip current">current</span>' +
-          '<span class="muted-copy">' + runsForModel(model.id).length + " saved runs</span>" +
-        "</span>" +
-      "</span>"
-    )
-    .join("");
-}
-
-function renderRunModels() {
+function renderModelInventory() {
   const runModels = modelsFromRuns(state.runs);
   const currentIds = new Set(state.discoveredModels.map((model) => model.id));
-  els.runModelCount.textContent = String(runModels.length);
-  if (runModels.length === 0) {
-    els.runModelChoices.innerHTML = '<p class="muted-copy text-sm leading-5">No run folders are indexed yet.</p>';
+  const runIds = new Set(runModels.map((model) => model.id));
+  const models = uniqueBy(
+    [
+      ...state.discoveredModels,
+      ...runModels
+    ],
+    (model) => model.id
+  );
+  const opencodeModelIds = new Set(state.modelSync.files?.opencode?.modelIds ?? []);
+  const piModelIds = new Set(state.modelSync.files?.pi?.modelIds ?? []);
+
+  els.availableModelCount.textContent = String(models.length);
+  if (models.length === 0) {
+    els.availableModelChoices.innerHTML = '<p class="muted-copy text-sm leading-5">LM Studio did not return models and no run folders are indexed yet. Preparing a slot still allows a typed model ID.</p>';
     return;
   }
 
-  els.runModelChoices.innerHTML = runModels
+  els.availableModelChoices.innerHTML = models
     .map((model) => {
       const isCurrent = currentIds.has(model.id);
+      const hasRuns = runIds.has(model.id);
+      const runCount = runsForModel(model.id).length;
+      const inOpenCode = opencodeModelIds.has(model.id);
+      const inPi = piModelIds.has(model.id);
       return (
         '<span class="available-model">' +
           '<span class="model-row-title truncate-line">' + escapeHtml(model.id) + "</span>" +
           '<span class="model-row-meta">' +
-            '<span class="source-chip ' + (isCurrent ? "current" : "historical") + '">' + (isCurrent ? "also current" : "filesystem only") + "</span>" +
-            '<span class="muted-copy">' + runsForModel(model.id).length + " saved runs</span>" +
+            (isCurrent ? '<span class="source-chip current">current</span>' : "") +
+            (hasRuns ? '<span class="source-chip saved">' + escapeHtml(runCount + " saved " + (runCount === 1 ? "run" : "runs")) + "</span>" : "") +
+            (inOpenCode ? '<span class="source-chip synced">opencode</span>' : "") +
+            (inPi ? '<span class="source-chip synced">pi</span>' : "") +
+            (!isCurrent && hasRuns ? '<span class="source-chip historical">filesystem only</span>' : "") +
+            (!hasRuns ? '<span class="muted-copy">No saved runs</span>' : "") +
           "</span>" +
         "</span>"
       );
     })
     .join("");
+}
+
+function updateMirrorControls() {
+  const canMirror =
+    !state.staticMode &&
+    state.modelSync.enabled &&
+    state.discoveredModels.length > 0 &&
+    !state.syncBusy;
+
+  els.mirrorPi.disabled = !canMirror;
+  els.mirrorOpenCode.disabled = !canMirror;
+  els.mirrorBoth.disabled = !canMirror;
+}
+
+async function mirrorModels(targets) {
+  if (state.staticMode) {
+    els.syncMessage.textContent = "Mirror mode is unavailable while browsing static exports.";
+    return;
+  }
+
+  const discoveredIds = state.discoveredModels
+    .map((model) => model.id)
+    .filter((id) => typeof id === "string" && id.length > 0);
+
+  if (discoveredIds.length === 0) {
+    els.syncMessage.textContent = "No discovered LM Studio models to mirror.";
+    return;
+  }
+
+  state.syncBusy = true;
+  updateMirrorControls();
+  const originalLabel = els.mirrorBoth.textContent;
+  els.mirrorBoth.textContent = "Mirroring...";
+  els.syncMessage.textContent = "Applying mirror mode to " + targets.join(" + ") + "...";
+
+  try {
+    const data = await postJson("/api/model-sync", {
+      baseUrl: els.baseUrl.value,
+      modelIds: discoveredIds,
+      targets
+    });
+    state.modelSync = data.sync ?? state.modelSync;
+    renderModelSources();
+    els.syncMessage.textContent =
+      "Mirrored " +
+      String(data.mirroredModelCount ?? discoveredIds.length) +
+      " model IDs to " +
+      targets.join(" + ") +
+      ".";
+  } catch (error) {
+    els.syncMessage.textContent = "Mirror failed: " + error.message;
+  } finally {
+    state.syncBusy = false;
+    els.mirrorBoth.textContent = originalLabel;
+    updateMirrorControls();
+  }
 }
 
 function renderPrepOptions() {

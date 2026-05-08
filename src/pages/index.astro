@@ -260,37 +260,51 @@ const title = "Local LLM Visual Benchmark";
 
     <!-- LM Studio Modal -->
     <div class="detail-backdrop" id="lmStudioBackdrop">
-      <article class="prep-shell" role="dialog" aria-modal="true" aria-label="LM Studio">
+      <article class="prep-shell lm-studio-shell" role="dialog" aria-modal="true" aria-label="LM Studio">
         <header class="detail-header">
           <div class="min-w-0">
             <h2 class="truncate-line text-lg font-semibold">LM Studio</h2>
-            <p class="muted-copy truncate-line mt-1 text-sm">Passive discovery of local models.</p>
+            <p class="muted-copy truncate-line mt-1 text-sm">Live model discovery and mirror mode.</p>
           </div>
           <button type="button" class="btn-sm-outline" id="closeLmStudio">Close</button>
         </header>
         <div class="prep-body p-5">
           <div class="grid gap-4">
+            <div class="lm-step-row" aria-label="LM Studio flow">
+              <span class="step-chip"><strong>1</strong> Connect</span>
+              <span class="step-chip"><strong>2</strong> Discover</span>
+              <span class="step-chip"><strong>3</strong> Mirror</span>
+            </div>
             <div class="grid gap-2">
               <label for="baseUrl" class="section-label">Base URL</label>
-              <div class="flex gap-2">
+              <div class="lm-connection-row">
                 <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
                 <button type="button" class="btn-sm-outline" id="refreshConnection">Test</button>
               </div>
             </div>
-            <p class="muted-copy text-sm leading-5" id="connectionMessage">Waiting for local API.</p>
-            <div class="grid gap-2">
-              <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium">Current LM Studio models</h3>
-                <span class="badge-outline" id="availableModelCount">0</span>
+            <p class="muted-copy text-sm leading-5" id="connectionMessage" aria-live="polite">Waiting for local API.</p>
+            <div class="sync-panel" id="syncPanel">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-medium">Mirror mode</h3>
+                  <span class="badge-outline" id="syncModeBadge">Dev only</span>
+                </div>
+                <div class="sync-actions">
+                  <button type="button" class="btn-sm-outline" id="mirrorPi">Mirror Pi</button>
+                  <button type="button" class="btn-sm-outline" id="mirrorOpenCode">Mirror OpenCode</button>
+                  <button type="button" class="btn-sm-outline" id="mirrorBoth">Mirror Both</button>
+                </div>
               </div>
-              <div class="available-model-list" id="availableModelChoices"></div>
+              <p class="muted-copy text-sm leading-5" id="syncMessage" aria-live="polite">
+                Mirrors discovered LM Studio models into Pi and OpenCode configs by ID.
+              </p>
             </div>
             <div class="grid gap-2">
               <div class="flex items-center justify-between">
-                <h3 class="text-sm font-medium">Run models from filesystem</h3>
-                <span class="badge-outline" id="runModelCount">0</span>
+                <h3 class="text-sm font-medium">Model inventory</h3>
+                <span class="badge-outline" id="availableModelCount">0</span>
               </div>
-              <div class="available-model-list" id="runModelChoices"></div>
+              <div class="available-model-list" id="availableModelChoices"></div>
             </div>
           </div>
         </div>

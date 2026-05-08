@@ -31,7 +31,7 @@ response.raw.txt
 ## UI
 
 - Toolbar: saved-run model filters, benchmark filters, setup guidance, run-prep guidance, and compare mode controls.
-- LM Studio modal: current model discovery from LM Studio is shown separately from historical run models discovered from the filesystem.
+- LM Studio modal: current model discovery from LM Studio and historical run models from the filesystem are shown in one model inventory with source badges.
 - Prepare-run panel: a three-step workflow for choosing the slot, copying the generated prompt, and refreshing after the external tool writes files.
 - Main gallery: run cards with preview, status, model, benchmark, timestamp, and artifact actions.
 - Compare modes:
