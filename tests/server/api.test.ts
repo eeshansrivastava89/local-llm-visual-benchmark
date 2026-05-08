@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { createLocalApi } from "../../src/server/api";
-import type { BenchmarkRecord, LMStudioModel, PreparedRun } from "../../src/lib/types";
+import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../../src/lib/types";
 import type { MirrorModelsResult } from "../../src/lib/model-sync";
 
 const benchmarks: BenchmarkRecord[] = [
@@ -170,6 +170,63 @@ describe("createLocalApi", () => {
       modelId: "model-a",
       runsRoot: "/runs"
     });
+  });
+
+  it("captures missing run media through the configured dependency", async () => {
+    const runs: RunMetadata[] = [];
+    const captureMissingRunMedia = vi.fn(async () => ({
+      captured: 2,
+      skipped: 1,
+      failed: 0,
+      runs
+    }));
+    const api = createLocalApi({
+      runsRoot: "/runs",
+      captureMissingRunMedia
+    });
+
+    await expect(api.captureMissingMedia({})).resolves.toEqual({
+      captured: 2,
+      skipped: 1,
+      failed: 0,
+      runs
+    });
+    expect(captureMissingRunMedia).toHaveBeenCalledWith({ runsRoot: "/runs" });
+  });
+
+  it("captures one requested run when a run directory is provided", async () => {
+    const runs: RunMetadata[] = [];
+    const captureSingleRunMedia = vi.fn(async () => ({
+      captured: 1,
+      skipped: 0,
+      failed: 0,
+      runs
+    }));
+    const api = createLocalApi({
+      runsRoot: "/runs",
+      captureSingleRunMedia
+    });
+
+    await expect(
+      api.captureMissingMedia({ runDirectory: "/runs/sakura/model-a/run-1" })
+    ).resolves.toEqual({
+      captured: 1,
+      skipped: 0,
+      failed: 0,
+      runs
+    });
+    expect(captureSingleRunMedia).toHaveBeenCalledWith({
+      runsRoot: "/runs",
+      runDirectory: "/runs/sakura/model-a/run-1"
+    });
+  });
+
+  it("rejects capture when writes are disabled", async () => {
+    const api = createLocalApi({ enableWrites: false });
+
+    await expect(api.captureMissingMedia({})).rejects.toThrow(
+      /Write actions are only available in dev server mode/
+    );
   });
 
   it("deletes a saved run folder from the configured runs root", async () => {

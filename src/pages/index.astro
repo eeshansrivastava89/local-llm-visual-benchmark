@@ -10,6 +10,14 @@ const title = "Local LLM Visual Benchmark";
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+    <script is:inline>
+      try {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          document.documentElement.dataset.theme = "dark";
+        }
+      } catch {}
+    </script>
   </head>
   <body>
     <div class="app-shell">
@@ -34,6 +42,10 @@ const title = "Local LLM Visual Benchmark";
               <span id="statsDot" class="status-dot" data-state="offline"></span>
               <span id="statsCompact">Loading…</span>
             </span>
+            <button type="button" class="btn-sm-outline" id="themeToggle" aria-label="Use dark theme" title="Use dark theme">
+              <span id="themeIcon" aria-hidden="true">☾</span>
+              <span class="hidden sm:inline" id="themeLabel">Dark</span>
+            </button>
             <button type="button" class="btn-sm-outline" id="setupToggle">Setup</button>
             <button type="button" class="btn" id="runToggle">Prepare run</button>
           </div>
@@ -58,7 +70,8 @@ const title = "Local LLM Visual Benchmark";
                 <option value="all">All prompts</option>
               </select>
             </div>
-            <button type="button" class="btn-sm-outline ml-auto" id="refreshRuns">Refresh</button>
+            <button type="button" class="btn-sm-outline ml-auto" id="captureMedia">Capture media</button>
+            <button type="button" class="btn-sm-outline" id="refreshRuns">Refresh</button>
           </div>
 
           <div class="gallery-summary">
@@ -85,18 +98,14 @@ const title = "Local LLM Visual Benchmark";
             <h2 id="detailTitle" class="truncate-line text-lg font-semibold">Run detail</h2>
             <p class="muted-copy truncate-line mt-1 text-sm" id="detailSubtitle"></p>
           </div>
-          <div class="flex shrink-0 items-center gap-2">
+          <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <button type="button" class="btn-sm-danger" id="deleteRun">Delete run</button>
             <button type="button" class="btn-sm-outline" id="closeDetail">Close</button>
           </div>
         </header>
         <div class="detail-body p-5">
-          <div class="grid min-w-0 gap-4">
+          <div class="grid min-w-0">
             <div id="detailPreview"></div>
-            <div class="detail-actions" id="detailActions">
-              <a class="btn-sm-outline" id="htmlLink" href="#" target="_blank" rel="noreferrer">Open HTML</a>
-              <a class="btn-sm-outline" id="rawLink" href="#" target="_blank" rel="noreferrer">Raw response</a>
-            </div>
           </div>
           <aside class="detail-inspector">
             <div class="run-identity">
@@ -228,8 +237,8 @@ const title = "Local LLM Visual Benchmark";
                 <li>
                   <span class="setup-flow-index">3</span>
                   <div>
-                    <h4>Refresh the gallery</h4>
-                    <p>Refresh when files land. Open a run card to inspect the artifact, prompt, metadata, and filesystem paths.</p>
+                    <h4>Capture preview media</h4>
+                    <p>After index.html lands, use Capture media to create thumbnails and short videos locally, then open cards to inspect the run.</p>
                   </div>
                 </li>
               </ol>

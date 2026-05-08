@@ -1,4 +1,9 @@
 import { join } from "node:path";
+import {
+  captureMissingRunMedia as defaultCaptureMissingRunMedia,
+  captureSingleRunMedia as defaultCaptureSingleRunMedia,
+  type CaptureMissingRunMediaResult
+} from "../lib/capture-media";
 import { loadBenchmarks as defaultLoadBenchmarks } from "../lib/benchmarks";
 import {
   checkLmStudioConnection as defaultCheckLmStudioConnection,
@@ -45,6 +50,10 @@ export interface DeleteRunRequest {
   runDirectory?: string;
 }
 
+export interface CaptureMediaRequest {
+  runDirectory?: string;
+}
+
 export interface LocalApiDependencies {
   benchmarkDirectory?: string;
   runsRoot?: string;
@@ -61,6 +70,8 @@ export interface LocalApiDependencies {
   prepareRun?: typeof defaultPrepareRun;
   getModelSyncState?: typeof defaultGetModelSyncState;
   mirrorModelsToConfigs?: typeof defaultMirrorModelsToConfigs;
+  captureMissingRunMedia?: typeof defaultCaptureMissingRunMedia;
+  captureSingleRunMedia?: typeof defaultCaptureSingleRunMedia;
 }
 
 export interface LocalApi {
@@ -73,6 +84,7 @@ export interface LocalApi {
   prepareRun(request: PrepareRunRequest): Promise<PrepareRunResponse>;
   getModelSyncState(): Promise<ModelSyncStateResponse>;
   mirrorModels(request: MirrorModelsRequest): Promise<MirrorModelsResponse>;
+  captureMissingMedia(request?: CaptureMediaRequest): Promise<CaptureMissingRunMediaResult>;
 }
 
 export interface StatusResponse {
@@ -155,6 +167,10 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   const getModelSyncState = dependencies.getModelSyncState ?? defaultGetModelSyncState;
   const mirrorModelsToConfigs =
     dependencies.mirrorModelsToConfigs ?? defaultMirrorModelsToConfigs;
+  const captureMissingRunMedia =
+    dependencies.captureMissingRunMedia ?? defaultCaptureMissingRunMedia;
+  const captureSingleRunMedia =
+    dependencies.captureSingleRunMedia ?? defaultCaptureSingleRunMedia;
 
   return {
     async getStatus(request = {}) {
@@ -228,6 +244,18 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
           runsRoot
         })
       };
+    },
+
+    async captureMissingMedia(request = {}) {
+      assertWritesEnabled(enableWrites);
+      if (request.runDirectory) {
+        return captureSingleRunMedia({
+          runsRoot,
+          runDirectory: readRequiredString(request.runDirectory, "runDirectory")
+        });
+      }
+
+      return captureMissingRunMedia({ runsRoot });
     },
 
     async getModelSyncState() {

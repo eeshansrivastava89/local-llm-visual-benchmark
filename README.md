@@ -1,25 +1,76 @@
 # Local LLM Visual Benchmark
 
-Local-first viewer for visual benchmark outputs. The app helps you prepare run folders and copy prompts for external tools, then browses and compares the saved HTML artifacts.
+Local-first viewer for visual benchmark outputs. The app prepares file-backed run folders for external tools, captures preview media from the generated HTML source, and displays every run through the same media-based gallery experience in both local server mode and published static mode.
 
-## What It Does
+## Display Contract
 
-- Checks whether LM Studio's local OpenAI-compatible server is reachable.
-- Lists models from LM Studio's `/v1/models` endpoint when available.
-- Loads benchmark prompt definitions from `benchmarks/`.
-- Creates prepared run slots under `runs/`.
-- Generates copyable, tool-agnostic prompts with exact output paths.
-- Displays saved runs as a gallery and comparison viewer.
-- Serves local run assets through the local web app so previews and artifact links work in the browser.
-- Exports saved results as a static GitHub Pages-ready site.
+The viewer does **not** display generated HTML directly.
 
-It does not run models, send chat-completion requests, load models, change LM Studio settings, rank outputs, or use a hosted backend.
+For every run:
+
+- Grid cards show `preview.png` when it exists.
+- Detail modals show captured video: `preview.mp4` when available, otherwise `preview.webm`.
+- If video is missing, the detail modal says that video has not been captured yet.
+- There is no live iframe preview, no `Open HTML` action, and no silent fallback from video to HTML.
+
+`index.html` is a source artifact for the capture process. It is not a user-facing viewer surface.
+
+## Server Mode vs Published Mode
+
+### Local server mode
+
+Run with:
+
+```bash
+npm run dev
+```
+
+Server mode can perform local operations:
+
+- Check LM Studio connection status.
+- List LM Studio models from `/v1/models`.
+- Sync discovered models to local Pi/OpenCode config files.
+- Load benchmark prompt definitions from `benchmarks/`.
+- Prepare run folders under `runs/`.
+- Delete local run folders.
+- Capture missing media from saved `index.html` files.
+- Serve captured media files (`preview.png`, `preview.webm`, `preview.mp4`) to the browser.
+
+Server mode display is still media-based. It does not show generated HTML directly.
+
+### Published static mode
+
+Build with:
+
+```bash
+npm run build:static
+```
+
+Publish the generated `dist-static/` directory.
+
+Published mode can:
+
+- Read `export/manifest.json`.
+- Show exported benchmark/run metadata.
+- Show exported `preview.png` images in the grid.
+- Show exported `preview.mp4` / `preview.webm` videos in details.
+
+Published mode cannot:
+
+- Prepare runs.
+- Delete runs.
+- Capture media.
+- Sync models.
+- Call LM Studio.
+- Serve or open generated `index.html`.
+- Serve raw model responses.
 
 ## Requirements
 
 - Node.js 24+
 - npm
 - Optional: LM Studio with the local server enabled
+- Optional: `ffmpeg` for Safari-friendly MP4 conversion during capture
 
 LM Studio default base URL:
 
@@ -33,22 +84,14 @@ http://localhost:1234/v1
 npm install
 ```
 
-## Run Locally
-
-```bash
-npm run dev
-```
-
-Open the Astro dev URL shown in the terminal. The UI can call local API routes for LM Studio status, model listing, system stats, benchmark prompts, saved runs, and run-slot preparation.
-
 ## Preparing A Run
 
 In the UI:
 
 1. Click `Prepare run`.
 2. Choose a benchmark prompt.
-3. Choose a discovered model or type a model ID.
-4. Click `Prepare run slot`.
+3. Choose a discovered model.
+4. Click `Prepare slot`.
 5. Copy the generated prompt into your external tool.
 
 The app creates:
@@ -59,21 +102,48 @@ runs/<benchmark-id>/<model-slug>/<run-id>/
   prompt.md
 ```
 
-The generated prompt tells the external tool to save the final artifact here:
+The generated prompt tells the external tool to save only the HTML source here:
 
 ```text
 runs/<benchmark-id>/<model-slug>/<run-id>/index.html
 ```
 
-Optional files:
+The model/tool should not create screenshots or videos. Media capture is handled by this app.
+
+## Capturing Media
+
+After the external tool writes `index.html`, click `Capture media` in server mode.
+
+The capture process:
+
+1. Finds runs with `index.html` but missing `preview.png` or video.
+2. Opens the HTML source locally with Playwright.
+3. Saves `preview.png`.
+4. Records `preview.webm`.
+5. Attempts to create `preview.mp4` with `ffmpeg` when available.
+6. Updates `metadata.json`.
+
+The UI shows which card is currently being captured, and server logs include per-run capture progress.
+
+Typical completed run folder:
 
 ```text
-preview.png
-preview.webm
-response.raw.txt
+runs/<benchmark-id>/<model-slug>/<run-id>/
+  metadata.json
+  prompt.md
+  index.html        # local source artifact, not published for display
+  preview.png       # grid image
+  preview.webm      # detail video
+  preview.mp4       # optional Safari-friendly detail video
 ```
 
-Refresh the viewer after the external tool writes files.
+## Why `metadata.json` and `prompt.md` exist per run
+
+`benchmarks/*.md` files are source prompts for future runs. A saved run is a historical snapshot.
+
+Per-run `prompt.md` stores the exact prompt used for that run, including model label, run folder, output path, and output contract. This remains accurate even if the benchmark prompt changes later.
+
+Per-run `metadata.json` stores the durable index record for the run: benchmark snapshot, model, status, timestamps, asset availability, and capture state.
 
 ## Benchmark Prompts
 
@@ -95,13 +165,13 @@ Edit prompts in your normal editor. The app reads them from disk; it does not ed
 
 ## Viewing And Comparing
 
-The toolbar filters by saved-run model and benchmark prompt. The LM Studio panel shows one model inventory with badges for current LM Studio availability and saved filesystem runs, so removed models still appear for old runs without being treated as currently available. The main area supports:
+The toolbar filters by saved-run model and benchmark prompt. The main area supports:
 
 - `Gallery`: all filtered runs.
 - `By model`: model attempts grouped by prompt.
 - `By prompt`: prompt outputs compared across models.
 
-Run cards open a detail view with the saved HTML artifact as the primary surface, plus prompt text, filesystem paths, and artifact links when those files exist.
+Run cards open a detail view with captured video, prompt text, run metadata, and filesystem paths. If a run has only `index.html`, the detail view explicitly asks you to run `Capture media`.
 
 ## Static Publishing
 
@@ -111,19 +181,29 @@ Build the local server/API version:
 npm run build
 ```
 
-Build the static GitHub Pages version:
+Build the static publish version:
 
 ```bash
 npm run build:static
 ```
 
-`build:static` generates `public/export/manifest.json`, copies exported run assets, runs the Astro build, and writes the publish artifact to:
+`build:static` generates `public/export/manifest.json`, copies export-safe assets, runs the Astro build, and writes the publish artifact to:
 
 ```text
 dist-static/
 ```
 
-Publish `dist-static/` to GitHub Pages. The static build does not need LM Studio or the local API. Static mode can browse exported runs, but it cannot prepare new run slots.
+Static export copies only publish-safe run files:
+
+```text
+metadata.json
+prompt.md
+preview.png
+preview.webm
+preview.mp4
+```
+
+It does not export `index.html` or raw model response files.
 
 ## Verification
 
@@ -138,6 +218,6 @@ npm run test:e2e
 ## Notes
 
 - `runs/` is ignored by default so local experiments do not get committed accidentally.
-- `metadata.json` is the viewer's index record for a run.
-- `index.html` is the minimum artifact for a completed visual output.
+- `index.html` is required before media capture can run.
+- `preview.mp4` is preferred for Safari/iOS playback; `preview.webm` is used when MP4 is unavailable.
 - System stats are best-effort and informational only.

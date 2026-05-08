@@ -25,8 +25,7 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     benchmark: input.benchmark,
     modelId: input.modelId,
     runDirectory: paths.runDirectory,
-    htmlPath: paths.htmlPath,
-    previewPath: paths.previewPath
+    htmlPath: paths.htmlPath
   });
   const timestamp = now.toISOString();
   const run: RunMetadata = {
@@ -75,7 +74,6 @@ export function buildToolPrompt(input: {
   modelId: string;
   runDirectory: string;
   htmlPath: string;
-  previewPath: string;
 }): string {
   return [
     `Model label: ${input.modelId}`,
@@ -86,8 +84,7 @@ export function buildToolPrompt(input: {
     `- Save one complete self-contained HTML document to: ${input.htmlPath}`,
     "- Do not place the final HTML in any other folder.",
     "- Do not require external network assets.",
-    "- If your tool can create a screenshot, save a PNG preview to:",
-    `  ${input.previewPath}`,
+    "- Only create index.html; the benchmark viewer captures preview media after index.html exists.",
     "",
     appendHtmlOutputContract(input.benchmark.prompt)
   ].join("\n");

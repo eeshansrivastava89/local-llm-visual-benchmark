@@ -47,4 +47,19 @@ describe("run asset reader", () => {
       })
     ).rejects.toThrow(/inside a run folder/);
   });
+
+  it("rejects generated HTML and raw response assets", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "visual-runs-assets-"));
+    const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(join(runDirectory, "index.html"), "<!doctype html>");
+    await writeFile(join(runDirectory, "response.raw.txt"), "raw");
+
+    await expect(
+      readRunAsset({ runsRoot, runDirectory, asset: "index.html" })
+    ).rejects.toThrow(/Only captured preview media can be served/);
+    await expect(
+      readRunAsset({ runsRoot, runDirectory, asset: "response.raw.txt" })
+    ).rejects.toThrow(/Only captured preview media can be served/);
+  });
 });

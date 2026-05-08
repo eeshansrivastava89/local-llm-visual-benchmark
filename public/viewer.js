@@ -22,13 +22,15 @@ const state = {
   lmConnected: false,
   writesEnabled: true,
   syncBusy: false,
+  captureBusy: false,
   runs: [],
   stats: null,
   selectedModel: "all",
   selectedBenchmark: "all",
   mode: "gallery",
   preparedPrompt: "",
-  selectedRun: null
+  selectedRun: null,
+  captureRunDirectory: ""
 };
 
 const els = {
@@ -37,6 +39,9 @@ const els = {
   statsDot: document.querySelector("#statsDot"),
   statsCompact: document.querySelector("#statsCompact"),
   // Toggles
+  themeToggle: document.querySelector("#themeToggle"),
+  themeIcon: document.querySelector("#themeIcon"),
+  themeLabel: document.querySelector("#themeLabel"),
   setupToggle: document.querySelector("#setupToggle"),
   runToggle: document.querySelector("#runToggle"),
   // Modals
@@ -92,13 +97,11 @@ const els = {
   runCount: document.querySelector("#runCount"),
   runsSurface: document.querySelector("#runsSurface"),
   refreshRuns: document.querySelector("#refreshRuns"),
+  captureMedia: document.querySelector("#captureMedia"),
   // Detail
   detailTitle: document.querySelector("#detailTitle"),
   detailSubtitle: document.querySelector("#detailSubtitle"),
   detailPreview: document.querySelector("#detailPreview"),
-  detailActions: document.querySelector("#detailActions"),
-  htmlLink: document.querySelector("#htmlLink"),
-  rawLink: document.querySelector("#rawLink"),
   deleteRun: document.querySelector("#deleteRun"),
   detailPrompt: document.querySelector("#detailPrompt"),
   promptLength: document.querySelector("#promptLength"),
@@ -109,6 +112,7 @@ const els = {
 init();
 
 function init() {
+  applyStoredTheme();
   wireEvents();
   void loadLocalData();
   setInterval(() => {
@@ -131,9 +135,11 @@ function init() {
 function wireEvents() {
   els.refreshConnection.addEventListener("click", () => loadConnection({ manual: true }));
   els.refreshRuns.addEventListener("click", () => refreshRuns());
+  els.captureMedia.addEventListener("click", () => captureMissingMedia());
   els.syncPiBtn.addEventListener("click", () => syncModels(["pi"]));
   els.syncOpenCodeBtn.addEventListener("click", () => syncModels(["opencode"]));
 
+  els.themeToggle.addEventListener("click", () => toggleTheme());
   els.setupToggle.addEventListener("click", () => openModal("setup"));
   els.runToggle.addEventListener("click", () => openModal("prep"));
 
@@ -178,6 +184,29 @@ function wireEvents() {
       renderRuns();
     });
   });
+}
+
+function applyStoredTheme() {
+  const theme = localStorage.getItem("theme") === "dark" ? "dark" : "light";
+  setTheme(theme);
+}
+
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  localStorage.setItem("theme", next);
+  setTheme(next);
+}
+
+function setTheme(theme) {
+  const isDark = theme === "dark";
+  document.documentElement.toggleAttribute("data-theme", isDark);
+  if (isDark) {
+    document.documentElement.dataset.theme = "dark";
+  }
+  els.themeToggle.setAttribute("aria-label", isDark ? "Use light theme" : "Use dark theme");
+  els.themeToggle.title = isDark ? "Use light theme" : "Use dark theme";
+  els.themeIcon.textContent = isDark ? "☼" : "☾";
+  els.themeLabel.textContent = isDark ? "Light" : "Dark";
 }
 
 /* ── Setup panel state ──────────────────────────────────────── */
@@ -392,6 +421,13 @@ function closeModal(name) {
     el.removeAttribute("open");
     document.body.style.overflow = "";
   }
+  if (name === "detail") {
+    els.detailPreview.replaceChildren();
+    state.selectedRun = null;
+  }
+  if (name === "prep") {
+    resetPrepareRunModal();
+  }
 }
 
 /* ── Data loading ────────────────────────────────────────── */
@@ -434,6 +470,7 @@ async function enterStaticMode(reason) {
     renderPrepOptions();
     renderRuns();
     updateLmStepStates();
+    updateWriteControls();
   } catch (staticError) {
     setConnection("offline", "Unavailable", (reason?.message ?? "Local API unavailable.") + " " + staticError.message);
     els.statsDot.dataset.state = "offline";
@@ -456,6 +493,7 @@ async function loadConnection(options = {}) {
     }
     if (typeof status.app?.writesEnabled === "boolean") {
       state.writesEnabled = status.app.writesEnabled;
+      updateWriteControls();
     }
     const connection = status.lmStudio?.connection;
     if (connection?.ok) {
@@ -567,6 +605,88 @@ async function refreshRuns() {
   renderModelSources();
   renderPrepOptions();
   renderRuns();
+}
+
+async function captureMissingMedia() {
+  if (state.staticMode || !state.writesEnabled || state.captureBusy) {
+    els.runSummary.textContent = "Capture requires the local dev server.";
+    return;
+  }
+
+  const queue = state.runs.filter((run) => needsMediaCapture(run));
+  if (queue.length === 0) {
+    els.runSummary.textContent = "No runs need media capture.";
+    return;
+  }
+
+  state.captureBusy = true;
+  updateWriteControls();
+
+  let captured = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  try {
+    for (const [index, run] of queue.entries()) {
+      state.captureRunDirectory = run.runDirectory ?? "";
+      renderRuns();
+      els.runSummary.textContent =
+        "Capturing " + String(index + 1) + "/" + String(queue.length) + ": " +
+        (run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run");
+
+      const data = await postJson("/api/capture-media", {
+        runDirectory: run.runDirectory
+      });
+      captured += Number(data.captured ?? 0);
+      skipped += Number(data.skipped ?? 0);
+      failed += Number(data.failed ?? 0);
+      state.runs = data.runs ?? state.runs;
+    }
+
+    state.captureRunDirectory = "";
+    renderModels();
+    renderModelSources();
+    renderPrepOptions();
+    renderRuns();
+    els.runSummary.textContent =
+      "Captured " + String(captured) +
+      ", skipped " + String(skipped) +
+      ", failed " + String(failed) + ".";
+  } catch (error) {
+    state.captureRunDirectory = "";
+    renderRuns();
+    els.runSummary.textContent = "Capture failed: " + error.message;
+  } finally {
+    state.captureBusy = false;
+    updateWriteControls();
+  }
+}
+
+function updateWriteControls() {
+  const canWrite = !state.staticMode && state.writesEnabled;
+  els.captureMedia.hidden = !canWrite;
+  els.captureMedia.disabled = !canWrite || state.captureBusy;
+  els.captureMedia.textContent = state.captureBusy ? "Capturing…" : "Capture media";
+}
+
+function resetPrepareRunModal() {
+  state.preparedPrompt = "";
+  els.preparedPrompt.value = "";
+  els.preparedPaths.textContent = "No run slot prepared yet.";
+  els.copyPrompt.disabled = true;
+
+  if (state.benchmarks[0]) {
+    els.prepBenchmark.value = state.benchmarks[0].id;
+  }
+  els.prepModelSelect.value = state.discoveredModels[0]?.id ?? "";
+
+  if (state.staticMode || !state.writesEnabled) {
+    els.prepareRun.disabled = true;
+    els.prepMessage.textContent = "Preparing runs requires the local dev server.";
+  } else {
+    els.prepareRun.disabled = false;
+    els.prepMessage.textContent = "The app will create the folder, metadata.json, and prompt.md.";
+  }
 }
 
 async function prepareRunSlot() {
@@ -710,7 +830,7 @@ function renderRuns() {
     ? "Group attempts by model and prompt."
     : state.mode === "benchmark"
       ? "Compare one prompt across models."
-      : "Browse saved local artifacts.";
+      : "Browse captured previews and videos.";
 
   if (runs.length === 0) {
     els.runsSurface.innerHTML = '<div class="empty">No runs match the current filters. <button type="button" class="btn-sm-ghost" id="emptyPrepRun">Prepare a run</button> or refresh after your external tool writes files.</div>';
@@ -758,13 +878,13 @@ function renderGroupedRuns(groups, mode) {
 }
 
 function renderRunCard(run, mode = "gallery") {
-  const htmlHref = assetHref(run, run.assets?.html);
+  const isCapturing = state.captureRunDirectory && run.runDirectory === state.captureRunDirectory;
   const stateLabel = runCardState(run);
   const identity = runCardIdentity(run, mode);
   return (
     '<button class="run-card" type="button" data-run-id="' + escapeAttribute(run.runId) + '" aria-label="' +
     escapeAttribute(run.benchmark?.title ?? "Run") + " " + escapeAttribute(run.model?.id ?? "") + '">' +
-      renderPreview(run) +
+      renderPreview(run, { capturing: isCapturing }) +
       '<span class="run-card-body">' +
         '<span class="grid min-w-0 gap-1">' +
           '<strong class="truncate-line text-sm font-semibold">' + escapeHtml(identity.primary) + "</strong>" +
@@ -777,10 +897,42 @@ function renderRunCard(run, mode = "gallery") {
           "</span>" +
           '<span class="muted-copy truncate-line text-xs">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</span>" +
         "</span>" +
-        '<span class="muted-copy text-sm">' + escapeHtml(htmlHref ? "Artifact ready" : "Waiting for index.html") + "</span>" +
+        renderAssetBadges(run) +
+        '<span class="muted-copy text-sm">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</span>" +
       "</span>" +
     "</button>"
   );
+}
+
+function renderAssetBadges(run) {
+  const badges = [
+    { label: "SRC", ready: Boolean(run.assets?.html) },
+    { label: "PNG", ready: Boolean(run.assets?.preview) },
+    { label: "VID", ready: Boolean(run.assets?.video || run.assets?.videoMp4) }
+  ];
+
+  return '<span class="flex flex-wrap items-center gap-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.08em]">' +
+    badges.map((badge) =>
+      '<span class="rounded border px-1.5 py-0.5 ' +
+        (badge.ready ? 'border-[oklch(0.78_0.08_158)] bg-[oklch(0.95_0.035_158)] text-[oklch(0.34_0.08_158)]' : 'border-border bg-muted text-muted-foreground') +
+      '">' + escapeHtml(badge.label + " " + (badge.ready ? "✓" : "—")) + "</span>"
+    ).join("") +
+  "</span>";
+}
+
+function renderCaptureOverlay(capturing) {
+  if (!capturing) {
+    return "";
+  }
+
+  return '<span class="capture-overlay" aria-live="polite"><span class="capture-spinner" aria-hidden="true"></span><strong>Capturing</strong></span>';
+}
+
+function runCardMediaMessage(run, isCapturing) {
+  if (isCapturing) return "Capturing preview media";
+  if (hasCapturedVideo(run)) return "Video ready";
+  if (run.assets?.html) return "Needs media capture";
+  return "Waiting for index.html source";
 }
 
 function runCardIdentity(run, mode) {
@@ -798,16 +950,16 @@ function runCardIdentity(run, mode) {
   return { primary: promptTitle, secondary: modelId };
 }
 
-function renderPreview(run) {
+function renderPreview(run, options = {}) {
   const previewHref = assetHref(run, run.assets?.preview);
   if (previewHref) {
-    return '<span class="preview"><img src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" /></span>';
+    return '<span class="preview"><img src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />' + renderCaptureOverlay(options.capturing) + '</span>';
   }
 
   return (
-    '<span class="preview">' +
+    '<span class="preview">' + renderCaptureOverlay(options.capturing) +
       '<span class="preview-placeholder">' +
-        "<strong>" + escapeHtml(run.assets?.html ? "HTML artifact" : "No preview yet") + "</strong>" +
+        "<strong>" + escapeHtml(run.assets?.html ? "HTML source saved" : "No preview yet") + "</strong>" +
         '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(run.status === "prepared" ? "Paste the prompt into your tool." : displayRunError(run) ?? "Add preview.png for gallery thumbnails.") + "</span>" +
       "</span>" +
     "</span>"
@@ -831,9 +983,6 @@ function openDetail(run) {
   els.detailTitle.textContent = run.benchmark?.title ?? "Run detail";
   els.detailSubtitle.textContent = (run.model?.id ?? "Unknown model") + " · " + (run.runId ?? "");
   els.detailPreview.innerHTML = renderDetailArtifact(run);
-  const hasHtml = setLink(els.htmlLink, assetHref(run, run.assets?.html));
-  const hasRaw = setLink(els.rawLink, assetHref(run, run.assets?.rawResponse));
-  els.detailActions.hidden = !(hasHtml || hasRaw);
   els.deleteRun.hidden = state.staticMode || !state.writesEnabled || !run.runDirectory;
   const prompt = run.promptText ?? run.benchmark?.prompt ?? "Prompt unavailable in run folder.";
   els.detailPrompt.textContent = prompt;
@@ -846,27 +995,38 @@ function openDetail(run) {
     '<span class="meta-label">Updated</span><strong>' + escapeHtml(formatDate(run.updatedAt)) + "</strong>";
   els.detailPaths.textContent = [
     "Run folder: " + (run.runDirectory ?? "-"),
-    "HTML: " + (assetPath(run, run.assets?.html) || "waiting for index.html"),
+    "HTML source: " + (assetPath(run, run.assets?.html) || "waiting for index.html"),
     "Prompt: " + (assetPath(run, run.assets?.prompt) || "prompt.md missing"),
-    "Preview: " + (assetPath(run, run.assets?.preview) || "preview.png missing")
+    "Preview: " + (assetPath(run, run.assets?.preview) || "preview.png missing"),
+    "Video: " + (assetPath(run, run.assets?.video || run.assets?.videoMp4) || "preview video missing")
   ].join("\n");
   openModal("detail");
 }
 
 function renderDetailArtifact(run) {
-  const htmlHref = assetHref(run, run.assets?.html);
-  if (htmlHref) {
-    return '<iframe class="artifact-frame" src="' + escapeAttribute(htmlHref) + '" title="' + escapeAttribute(run.benchmark?.title ?? "Run artifact") + '" loading="lazy"></iframe>';
+  const videoHref = assetHref(run, run.assets?.video);
+  const mp4Href = assetHref(run, run.assets?.videoMp4);
+  if (videoHref || mp4Href) {
+    const firstVideoHref = mp4Href || videoHref;
+    const previewHref = assetHref(run, run.assets?.preview);
+    return '<video class="artifact-video" src="' + escapeAttribute(firstVideoHref) + '" ' +
+      (previewHref ? 'poster="' + escapeAttribute(previewHref) + '" ' : '') +
+      'autoplay muted loop playsinline controls>' +
+      (mp4Href ? '<source src="' + escapeAttribute(mp4Href) + '" type="video/mp4" />' : '') +
+      (videoHref ? '<source src="' + escapeAttribute(videoHref) + '" type="video/webm" />' : '') +
+      '</video>';
   }
 
-  const previewHref = assetHref(run, run.assets?.preview);
-  if (previewHref) {
-    return '<span class="artifact-image"><img src="' + escapeAttribute(previewHref) + '" alt="" /></span>';
+  if (run.assets?.html) {
+    return '<span class="artifact-empty">' +
+      '<strong>Video not captured yet</strong>' +
+      '<span>Use Capture media in server mode to generate preview.png and preview video from the saved index.html source.</span>' +
+      "</span>";
   }
 
   return '<span class="artifact-empty">' +
     '<strong>' + escapeHtml(run.status === "prepared" ? "Run slot prepared" : "Artifact unavailable") + "</strong>" +
-    '<span>' + escapeHtml(run.status === "prepared" ? "Save index.html into the run folder, then refresh." : displayRunError(run) ?? "No index.html or preview.png found in this run folder.") + "</span>" +
+    '<span>' + escapeHtml(run.status === "prepared" ? "Save index.html into the run folder, then run Capture media." : displayRunError(run) ?? "No captured video is available for this run.") + "</span>" +
     "</span>";
 }
 
@@ -936,19 +1096,31 @@ function runsForModel(modelId) {
 
 function runSummaryText(runs) {
   const prepared = runs.filter((r) => r.status === "prepared").length;
-  const completed = runs.filter((r) => r.assets?.html).length;
+  const videoReady = runs.filter((r) => hasCapturedVideo(r)).length;
+  const needsCapture = runs.filter((r) => needsMediaCapture(r)).length;
   const failed = runs.filter((r) => r.status === "failed").length;
-  return completed + " with HTML, " + prepared + " prepared, " + failed + " failed";
+  return videoReady + " with video, " + needsCapture + " need capture, " + prepared + " prepared, " + failed + " failed";
 }
 
 function runCardState(run) {
+  if (hasCapturedVideo(run)) {
+    return { status: "completed", label: "video" };
+  }
   if (run.assets?.html) {
-    return { status: "completed", label: "ready" };
+    return { status: "prepared", label: "capture" };
   }
   if (run.status === "failed" || run.status === "cancelled") {
     return { status: run.status, label: run.status };
   }
   return { status: "prepared", label: "slot" };
+}
+
+function hasCapturedVideo(run) {
+  return Boolean(run.assets?.video || run.assets?.videoMp4);
+}
+
+function needsMediaCapture(run) {
+  return Boolean(run.runDirectory && run.assets?.html && (!run.assets?.preview || !hasCapturedVideo(run)));
 }
 
 function displayRunError(run) {

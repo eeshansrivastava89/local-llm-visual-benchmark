@@ -92,8 +92,9 @@ describe("appendHtmlOutputContract", () => {
     const prompt = appendHtmlOutputContract("Build a scene.");
 
     expect(prompt).toContain("Build a scene.");
-    expect(prompt).toContain("one complete HTML document");
+    expect(prompt).toContain("one complete self-contained HTML document");
     expect(prompt).toContain("no explanations");
+    expect(prompt).toContain("Do not depend on external network assets or CDN libraries");
     expect(prompt).toMatch(/<!doctype html>|<html/i);
   });
 });

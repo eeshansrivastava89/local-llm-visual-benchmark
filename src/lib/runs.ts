@@ -181,7 +181,8 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
     assetExists(metadata, declared.rawResponse),
     assetExists(metadata, declared.html),
     assetExists(metadata, declared.preview),
-    assetExists(metadata, declared.video)
+    assetExists(metadata, declared.video),
+    assetExists(metadata, declared.videoMp4)
   ]);
 
   const assets: RunMetadata["assets"] = {
@@ -193,6 +194,7 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
   if (checks[2]) assets.html = declared.html;
   if (checks[3]) assets.preview = declared.preview;
   if (checks[4]) assets.video = declared.video;
+  if (checks[5]) assets.videoMp4 = declared.videoMp4;
 
   const promptText = assets.prompt
     ? await readAssetTextIfPresent(metadata, assets.prompt)

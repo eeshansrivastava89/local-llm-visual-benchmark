@@ -38,7 +38,9 @@ describe("prepareRun", () => {
     expect(prepared.prompt).not.toContain("OpenCode");
     expect(prepared.prompt).not.toContain("Pi");
     expect(prepared.prompt).toContain(prepared.paths.htmlPath);
-    expect(prepared.prompt).toContain("one complete HTML document");
+    expect(prepared.prompt).toContain("one complete self-contained HTML document");
+    expect(prepared.prompt).not.toContain("screenshot");
+    expect(prepared.prompt).not.toContain("preview.png");
     await expect(stat(prepared.paths.runDirectory)).resolves.toBeTruthy();
     await expect(readFile(prepared.paths.promptPath, "utf8")).resolves.toBe(
       prepared.prompt

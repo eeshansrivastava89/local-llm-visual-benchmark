@@ -56,6 +56,7 @@ export interface RunAssets {
   html?: string;
   preview?: string;
   video?: string;
+  videoMp4?: string;
 }
 
 export interface RunError {

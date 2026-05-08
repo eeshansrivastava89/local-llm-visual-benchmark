@@ -39,6 +39,14 @@ const sampleRun = {
   }
 };
 
+const sampleRunWithVideo = {
+  ...sampleRun,
+  assets: {
+    ...sampleRun.assets,
+    video: "preview.webm"
+  }
+};
+
 test("renders viewer with compact header and dropdown filters", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: true });
 
@@ -50,28 +58,30 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   ).toBeVisible();
   await expect(page.getByText("Browse and collect visual benchmark outputs.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Prepare run" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Capture media" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Setup" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
   await expect(page.getByRole("button", { name: "LM Studio" })).toHaveCount(0);
   await expect(page.getByLabel("Filter by model")).toBeVisible();
   await expect(page.getByLabel("Filter by prompt")).toBeVisible();
   await expect(page.getByRole("button", { name: "Gallery" })).toBeVisible();
   await expect(page.getByRole("button", { name: "By model" })).toBeVisible();
   await expect(page.getByRole("button", { name: "By prompt" })).toBeVisible();
-  await expect(page.getByText("1 with HTML, 0 prepared, 0 failed")).toBeVisible();
+  await expect(page.getByText("0 with video, 1 need capture, 0 prepared, 0 failed")).toBeVisible();
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
 
   await page.getByRole("button", { name: "Setup" }).click();
   await expect(page.getByRole("dialog", { name: "Setup" })).toBeVisible();
   await expect(page.getByText("Prepare a run slot")).toBeVisible();
   await expect(page.getByText("Run in your tool")).toBeVisible();
-  await expect(page.getByText("Refresh the gallery")).toBeVisible();
+  await expect(page.getByText("Capture preview media")).toBeVisible();
   await expect(page.getByRole("heading", { name: "LM Studio" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Model inventory" })).toBeVisible();
   await expect(page.getByText("OpenCode Setup")).toHaveCount(0);
   await expect(page.getByText("Pi Setup")).toHaveCount(0);
   await expect(page.locator("[data-step]")).toHaveCount(0);
   await expect(page.getByText("✓ Pi").first()).toBeVisible();
-  await expect(page.getByText("live").first()).toBeVisible();
+  await expect(page.locator("#availableModelChoices").getByText("live").first()).toBeVisible();
   await expect(page.locator("#availableModelChoices")).toHaveCSS("grid-template-columns", /px/);
 
   const baseUrlBox = await page.locator("#baseUrl").boundingBox();
@@ -80,6 +90,25 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
 
   await page.getByRole("button", { name: "Test" }).click();
   await expect(page.locator("#connectionMessage")).toContainText("2 models discovered");
+});
+
+test("toggles and persists the dark theme", async ({ page }) => {
+  await mockApi(page, { lmStudioOnline: true });
+
+  await page.goto("/");
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("button", { name: "Use dark theme" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByRole("button", { name: "Use light theme" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("theme"))).toBe("dark");
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("button", { name: "Use light theme" }).click();
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", "dark");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("theme"))).toBe("light");
 });
 
 test("prepares a run slot via modal and shows the generated prompt", async ({ page }) => {
@@ -119,13 +148,18 @@ test("prepares a run slot via modal and shows the generated prompt", async ({ pa
 
   await page.locator("#closePrep").click();
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Prepare run" }).click();
+  await expect(page.locator("#preparedPrompt")).toHaveValue("");
+  await expect(page.locator("#preparedPaths")).toContainText("No run slot prepared yet.");
+  await expect(page.locator("#copyPrompt")).toBeDisabled();
 });
 
-test("supports prompt comparison and run details via modal", async ({ page }) => {
+test("supports prompt comparison and video-only run details", async ({ page }) => {
   await mockApi(page, {
     lmStudioOnline: true,
     runs: [
-      sampleRun,
+      sampleRunWithVideo,
       {
         ...sampleRun,
         runId: "2026-05-06T20-12-00-000Z",
@@ -146,19 +180,21 @@ test("supports prompt comparison and run details via modal", async ({ page }) =>
 
   await page.locator("[data-run-id]").first().click();
   await expect(page.locator("#detailBackdrop[open]")).toBeVisible();
-  await expect(page.locator("#detailPreview iframe")).toHaveAttribute(
-    "src",
-    /asset=index\.html$/
-  );
+  await expect(page.locator("#detailPreview iframe")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveCount(0);
+  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
   await expect(page.getByText("Create a sakura animation")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveAttribute(
-    "href",
-    /index\.html$/
-  );
   await expect(page.getByRole("link", { name: "Prompt file" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Raw response" })).toBeHidden();
+  await expect(page.getByRole("link", { name: "Raw response" })).toHaveCount(0);
   await expect(page.locator("#detailMeta")).not.toContainText("Tool");
   await expect(page.locator("#detailMeta")).not.toContainText("Error");
+  await page.locator("#closeDetail").click();
+
+  await page.locator("[data-run-id]").nth(1).click();
+  await expect(page.locator("#detailPreview video")).toHaveCount(0);
+  await expect(page.locator("#detailPreview")).toContainText("Video not captured yet");
+  await expect(page.locator("#detailPreview")).toContainText("Use Capture media");
 });
 
 test("grouped views scroll as one surface and avoid duplicate card labels", async ({ page }) => {
@@ -190,6 +226,38 @@ test("grouped views scroll as one surface and avoid duplicate card labels", asyn
   const modelCard = modelGroup.locator("[data-run-id]").first();
   await expect(modelCard).not.toContainText(models[0].id);
   await expect(modelCard).toContainText(/Sakura Particle Field|Solar System Orrery/);
+});
+
+test("captures missing run media with per-card progress", async ({ page }) => {
+  let captureCalled = false;
+  let releaseCapture: () => void = () => {};
+  const captureMayFinish = new Promise<void>((resolve) => {
+    releaseCapture = resolve;
+  });
+  let runsResponse: unknown[] = [sampleRun];
+  await mockApi(page, {
+    lmStudioOnline: true,
+    runs: () => runsResponse,
+    onCapture: async (payload) => {
+      expect(payload).toMatchObject({ runDirectory: sampleRun.runDirectory });
+      captureCalled = true;
+      await captureMayFinish;
+      runsResponse = [sampleRunWithVideo];
+    }
+  });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await expect(page.locator("[data-run-id]").first()).toContainText("VID —");
+
+  await page.getByRole("button", { name: "Capture media" }).click();
+
+  await expect.poll(() => captureCalled).toBe(true);
+  await expect(page.locator("[data-run-id]").first()).toContainText("Capturing");
+  await expect(page.locator("#runSummary")).toContainText("Capturing 1/1");
+
+  releaseCapture();
+  await expect(page.locator("[data-run-id]").first()).toContainText("VID ✓");
 });
 
 test("refresh reloads prompt files and saved runs", async ({ page }) => {
@@ -290,9 +358,15 @@ test("falls back to exported static data without prepare controls", async ({ pag
         benchmarks,
         runs: [
           {
-            ...sampleRun,
+            ...sampleRunWithVideo,
             runDirectory:
-              "export/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z"
+              "export/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z",
+            assets: {
+              metadata: "metadata.json",
+              prompt: "prompt.md",
+              preview: "preview.png",
+              video: "preview.webm"
+            }
           }
         ]
       })
@@ -306,6 +380,11 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await expect(page.getByRole("button", { name: "Prepare slot" })).toBeDisabled();
   await page.getByRole("button", { name: "Close" }).first().click();
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
+
+  await page.locator("[data-run-id]").first().click();
+  await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveCount(0);
+  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
 });
 
 async function mockApi(
@@ -316,6 +395,7 @@ async function mockApi(
     runs?: unknown[] | (() => unknown[]);
     onPrepare?: (payload: unknown) => void;
     onDelete?: (payload: unknown) => void;
+    onCapture?: (payload: unknown) => void | Promise<void>;
   }
 ): Promise<void> {
   await page.route("**/api/benchmarks", async (route) => {
@@ -404,6 +484,16 @@ async function mockApi(
         baseUrl: "http://localhost:1234/v1",
         models
       })
+    });
+  });
+
+  await page.route("**/api/capture-media", async (route) => {
+    const payload = route.request().postDataJSON();
+    await options.onCapture?.(payload);
+    const runs = typeof options.runs === "function" ? options.runs() : options.runs;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ captured: 1, skipped: 0, failed: 0, runs: runs ?? [sampleRunWithVideo] })
     });
   });
 

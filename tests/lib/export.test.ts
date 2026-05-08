@@ -70,7 +70,8 @@ async function writeRun(runsRoot: string) {
       prompt: "prompt.md",
       rawResponse: "response.raw.txt",
       html: "index.html",
-      preview: "preview.png"
+      preview: "preview.png",
+      video: "preview.webm"
     },
     capture: {
       preview: {
@@ -86,6 +87,7 @@ async function writeRun(runsRoot: string) {
   await writeFile(join(runDirectory, "response.raw.txt"), "raw response", "utf8");
   await writeFile(join(runDirectory, "index.html"), "<!doctype html><html></html>", "utf8");
   await writeFile(join(runDirectory, "preview.png"), "png bytes", "utf8");
+  await writeFile(join(runDirectory, "preview.webm"), "webm bytes", "utf8");
 }
 
 describe("generateStaticExport", () => {
@@ -123,9 +125,8 @@ describe("generateStaticExport", () => {
           assets: {
             metadata: "metadata.json",
             prompt: "prompt.md",
-            rawResponse: "response.raw.txt",
-            html: "index.html",
-            preview: "preview.png"
+            preview: "preview.png",
+            video: "preview.webm"
           }
         }
       ]
@@ -136,19 +137,21 @@ describe("generateStaticExport", () => {
       "utf8"
     );
     expect(JSON.parse(rawManifest)).toEqual(manifest);
-    await expect(
-      readFile(
-        join(
-          publicExportDirectory,
-          "runs",
-          "sakura",
-          "local-qwen2-5-vl",
-          "2026-05-06T19-12-00-000Z",
-          "preview.png"
-        ),
-        "utf8"
-      )
-    ).resolves.toBe("png bytes");
+    const exportedRunDirectory = join(
+      publicExportDirectory,
+      "runs",
+      "sakura",
+      "local-qwen2-5-vl",
+      "2026-05-06T19-12-00-000Z"
+    );
+    await expect(readFile(join(exportedRunDirectory, "preview.png"), "utf8"))
+      .resolves.toBe("png bytes");
+    await expect(readFile(join(exportedRunDirectory, "preview.webm"), "utf8"))
+      .resolves.toBe("webm bytes");
+    await expect(stat(join(exportedRunDirectory, "index.html")))
+      .rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(join(exportedRunDirectory, "response.raw.txt")))
+      .rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("handles an empty saved runs directory", async () => {

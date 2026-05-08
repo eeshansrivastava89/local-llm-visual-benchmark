@@ -4,12 +4,9 @@ import { extname, isAbsolute, join, normalize, resolve, sep } from "node:path";
 const DEFAULT_RUNS_ROOT = join(process.cwd(), "runs");
 
 const CONTENT_TYPES = new Map([
-  [".html", "text/html; charset=utf-8"],
-  [".json", "application/json; charset=utf-8"],
-  [".md", "text/markdown; charset=utf-8"],
   [".png", "image/png"],
-  [".txt", "text/plain; charset=utf-8"],
-  [".webm", "video/webm"]
+  [".webm", "video/webm"],
+  [".mp4", "video/mp4"]
 ]);
 
 export interface ReadRunAssetInput {
@@ -43,6 +40,12 @@ export async function readRunAsset(input: ReadRunAssetInput): Promise<RunAssetFi
     throw new Error("Asset path must stay inside a run folder.");
   }
 
+  const extension = extname(assetPath).toLowerCase();
+
+  if (!CONTENT_TYPES.has(extension)) {
+    throw new Error("Only captured preview media can be served through this endpoint.");
+  }
+
   const result = await stat(assetPath);
 
   if (!result.isFile()) {
@@ -51,7 +54,7 @@ export async function readRunAsset(input: ReadRunAssetInput): Promise<RunAssetFi
 
   return {
     path: assetPath,
-    contentType: CONTENT_TYPES.get(extname(assetPath).toLowerCase()) ?? "application/octet-stream",
+    contentType: CONTENT_TYPES.get(extension) ?? "application/octet-stream",
     body: await readFile(assetPath)
   };
 }
