@@ -1,4 +1,4 @@
-import { cp, rm } from "node:fs/promises";
+import { cp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -34,6 +34,7 @@ await rm(join(staticOutputDirectory, "export"), { recursive: true, force: true }
 await cp(publicExportDirectory, join(staticOutputDirectory, "export"), {
   recursive: true
 });
+await writeFile(join(staticOutputDirectory, ".nojekyll"), "", "utf8");
 
 process.stdout.write(`Wrote static publish build to ${staticOutputDirectory}.\n`);
 
