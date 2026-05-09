@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import {
   apiJsonResponse,
+  assertTrustedWriteRequest,
   getDefaultLocalApi,
   readJsonRequest,
   type PrepareRunRequest
@@ -10,7 +11,10 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) =>
   apiJsonResponse(
-    readJsonRequest(request).then((body) =>
-      getDefaultLocalApi().prepareRun(body as PrepareRunRequest)
-    )
+    Promise.resolve()
+      .then(() => assertTrustedWriteRequest(request))
+      .then(() => readJsonRequest(request))
+      .then((body) =>
+        getDefaultLocalApi().prepareRun(body as PrepareRunRequest)
+      )
   );

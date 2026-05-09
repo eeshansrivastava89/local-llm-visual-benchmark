@@ -11,7 +11,7 @@ Turn the app into a local-first viewer and prompt-prep tool for visual benchmark
 - Saved outputs live under `runs/{benchmarkId}/{modelSlug}/{runId}/`.
 - The UI helps prepare a run slot and generates copyable, tool-agnostic prompts for external tools.
 - The UI focuses on browsing, comparing, and inspecting run artifacts.
-- Local run assets are served by the local API so the browser can render previews and open artifacts without blocked `file://` URLs.
+- Local captured media is served by the local API so the browser can render previews and videos without blocked `file://` URLs.
 
 ## Run Convention
 
@@ -26,7 +26,7 @@ preview.webm
 response.raw.txt
 ```
 
-`metadata.json` and `prompt.md` are created by the app when preparing a run. `index.html` is the minimum external-tool output for a visible completed artifact. Preview images and videos are optional.
+`metadata.json` and `prompt.md` are created by the app when preparing a run. `index.html` is the external-tool source artifact for local capture. A run becomes viewer-ready when captured media exists.
 
 ## UI
 
@@ -38,7 +38,7 @@ response.raw.txt
   - Gallery: all filtered runs.
   - By model: one model's attempts grouped by prompt.
   - By prompt: one prompt compared across models.
-- Detail dialog: the saved HTML artifact gets the dominant viewport space; prompt text, useful metadata, and filesystem links stay in a compact inspector.
+- Detail dialog: captured video gets the dominant viewport space; prompt text, useful metadata, and filesystem paths stay in a compact inspector. The saved HTML artifact is not displayed or opened from the viewer.
 
 ## Boundaries
 
@@ -52,4 +52,4 @@ response.raw.txt
 
 ## Static Publish
 
-The static export keeps working by copying run assets and writing `export/manifest.json`. Static mode can browse exported runs but cannot prepare new run slots because file writes require the local API.
+The static export keeps working by copying publish-safe run assets and writing `export/manifest.json`. Static mode can browse exported runs but cannot prepare new run slots because file writes require the local API. Static export omits generated HTML and raw model responses.

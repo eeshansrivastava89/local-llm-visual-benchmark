@@ -53,7 +53,7 @@
 
 ## Phase 7: Product Flow Hardening
 
-- [x] Add `/api/run-asset` so local previews, HTML, prompts, and raw files load through the local web app instead of blocked `file://` URLs.
+- [x] Add `/api/run-asset` so local captured media loads through the local web app instead of blocked `file://` URLs, while generated HTML and raw response files stay unserved.
 - [x] Reorder the sidebar around saved run filters first; move passive LM Studio details and discovered models into a utility panel.
 - [x] Turn prepare-run into a three-step slot workflow: choose slot, copy prompt, save artifact and refresh.
 - [x] Disable the Astro dev toolbar for this project.
@@ -62,7 +62,7 @@
 
 ## Phase 8: Detail And Model Source UX
 
-- [x] Make run details artifact-first: completed runs open the saved `index.html` inside the modal instead of treating it as a secondary link.
+- [x] Make run details artifact-first: completed runs show captured video in the modal, with saved `index.html` kept as capture source only.
 - [x] Remove stale tool/error fields from the primary run inspector.
 - [x] Hide optional artifact actions, including raw response, unless the filesystem reports the file exists.
 - [x] Keep the run gallery within the viewport with denser cards and internal run-surface scrolling for larger result sets.

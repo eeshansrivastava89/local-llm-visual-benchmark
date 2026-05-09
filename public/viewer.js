@@ -30,7 +30,8 @@ const state = {
   mode: "gallery",
   preparedPrompt: "",
   selectedRun: null,
-  captureRunDirectory: ""
+  captureRunDirectory: "",
+  modalFocusReturn: {}
 };
 
 const els = {
@@ -38,6 +39,7 @@ const els = {
   statsPill: document.querySelector("#statsPill"),
   statsDot: document.querySelector("#statsDot"),
   statsCompact: document.querySelector("#statsCompact"),
+  operationalControls: document.querySelectorAll(".operational-control"),
   // Toggles
   themeToggle: document.querySelector("#themeToggle"),
   themeIcon: document.querySelector("#themeIcon"),
@@ -102,6 +104,8 @@ const els = {
   detailTitle: document.querySelector("#detailTitle"),
   detailSubtitle: document.querySelector("#detailSubtitle"),
   detailPreview: document.querySelector("#detailPreview"),
+  openHtml: document.querySelector("#openHtml"),
+  recaptureRun: document.querySelector("#recaptureRun"),
   deleteRun: document.querySelector("#deleteRun"),
   detailPrompt: document.querySelector("#detailPrompt"),
   promptLength: document.querySelector("#promptLength"),
@@ -121,7 +125,7 @@ function init() {
     }
   }, 5000);
   setInterval(() => {
-    if (!state.staticMode) {
+    if (!state.staticMode && state.lmConnected) {
       void loadModels();
     }
   }, 60000);
@@ -149,6 +153,7 @@ function wireEvents() {
   els.closeDeleteConfirm.addEventListener("click", () => closeModal("deleteConfirm"));
   els.cancelDeleteRun.addEventListener("click", () => closeModal("deleteConfirm"));
   els.confirmDeleteRun.addEventListener("click", () => confirmDeleteSelectedRun());
+  document.addEventListener("keydown", handleModalKeydown);
 
   els.detailBackdrop.addEventListener("click", (event) => {
     if (event.target === els.detailBackdrop) closeModal("detail");
@@ -164,6 +169,7 @@ function wireEvents() {
   });
 
   els.deleteRun.addEventListener("click", () => requestDeleteSelectedRun());
+  els.recaptureRun.addEventListener("click", () => captureSelectedRunMedia({ force: true }));
 
   els.modelFilter.addEventListener("change", () => {
     state.selectedModel = els.modelFilter.value;
@@ -214,7 +220,7 @@ function setTheme(theme) {
 function updateLmStepStates() {
   showSection(els.lmStep1, true);
   showSection(els.lmStep2, true);
-  showSection(els.lmStep3, !state.staticMode && state.modelSync.enabled);
+  showSection(els.lmStep3, canUseOperationalControls() && state.modelSync.enabled);
 }
 
 function showSection(section, visible) {
@@ -253,7 +259,7 @@ function updateConfigPresence() {
 
 function updateSyncButtons() {
   const canSync =
-    !state.staticMode &&
+    canUseOperationalControls() &&
     state.modelSync.enabled &&
     state.discoveredModels.length > 0 &&
     !state.syncBusy;
@@ -295,17 +301,17 @@ function renderModelInventory() {
       const isCurrent = currentIds.has(model.id);
       const inPi = piModelIds.has(model.id);
       const inOc = opencodeModelIds.has(model.id);
-      const liveTag = isCurrent ? '<span class="inline-flex items-center rounded-full bg-[oklch(0.92_0.038_158)] px-1.5 py-px text-[0.65rem] font-semibold text-[oklch(0.31_0.07_158)]">live</span>' : "";
+      const source = isCurrent ? "live" : runIds.has(model.id) ? "history" : "saved";
 
       return (
-        '<div class="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-sm">' +
-          '<span class="min-w-0 flex items-center gap-1.5 truncate font-semibold">' +
+        '<div class="lm-model-row">' +
+          '<span class="lm-model-name" title="' + escapeHtml(model.id) + '">' +
             escapeHtml(model.id) +
-            liveTag +
           "</span>" +
-          '<span class="flex shrink-0 items-center gap-2">' +
+          '<span class="lm-source-pill" data-source="' + source + '">' + source + "</span>" +
+          '<span class="lm-model-sync">' +
             renderStatusCheck("Pi", inPi, piExists) +
-            renderStatusCheck("OC", inOc, ocExists) +
+            renderStatusCheck("OpenCode", inOc, ocExists) +
           "</span>" +
         "</div>"
       );
@@ -315,23 +321,22 @@ function renderModelInventory() {
 
 function renderStatusCheck(label, isPresent, configExists) {
   if (!configExists) {
-    // Config file doesn't exist — show dimmed/unavailable
     return (
-      '<span class="inline-flex items-center gap-1 rounded border border-[oklch(0.82_0.01_255)] bg-muted px-1.5 py-0.5 text-[0.68rem] font-semibold text-muted-foreground opacity-50">' +
-        "— " + label +
+      '<span class="lm-status-chip" data-state="unavailable">' +
+        label + " unavailable" +
       "</span>"
     );
   }
   if (isPresent) {
     return (
-      '<span class="inline-flex items-center gap-1 rounded bg-[oklch(0.93_0.04_158)] px-1.5 py-0.5 text-[0.68rem] font-semibold text-[oklch(0.31_0.07_158)]">' +
-        "✓ " + label +
+      '<span class="lm-status-chip" data-state="present">' +
+        label + " synced" +
       "</span>"
     );
   }
   return (
-    '<span class="inline-flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-[0.68rem] font-semibold text-muted-foreground">' +
-      "○ " + label +
+    '<span class="lm-status-chip" data-state="missing">' +
+      label + " missing" +
     "</span>"
   );
 }
@@ -392,10 +397,12 @@ function openModal(name) {
   };
   const el = map[name];
   if (el) {
+    state.modalFocusReturn[name] = document.activeElement;
     el.setAttribute("open", "");
-    document.body.style.overflow = "hidden";
+    syncBodyOverflow();
+    queueMicrotask(() => focusFirstModalControl(el));
   }
-  if (name === "prep" && (state.staticMode || !state.writesEnabled)) {
+  if (name === "prep" && !canUseOperationalControls()) {
     els.prepareRun.disabled = true;
     els.prepMessage.textContent = "Preparing runs requires the local dev server.";
   } else if (name === "prep") {
@@ -419,7 +426,8 @@ function closeModal(name) {
   const el = map[name];
   if (el) {
     el.removeAttribute("open");
-    document.body.style.overflow = "";
+    syncBodyOverflow();
+    restoreModalFocus(name);
   }
   if (name === "detail") {
     els.detailPreview.replaceChildren();
@@ -428,6 +436,78 @@ function closeModal(name) {
   if (name === "prep") {
     resetPrepareRunModal();
   }
+}
+
+function handleModalKeydown(event) {
+  const modal = currentModal();
+  if (!modal) {
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeModal(modal.name);
+    return;
+  }
+
+  if (event.key === "Tab") {
+    trapModalFocus(event, modal.element);
+  }
+}
+
+function currentModal() {
+  const entries = [
+    ["deleteConfirm", els.deleteConfirmBackdrop],
+    ["detail", els.detailBackdrop],
+    ["prep", els.prepBackdrop],
+    ["setup", els.setupBackdrop]
+  ];
+  const entry = entries.find(([, element]) => element?.hasAttribute("open"));
+  return entry ? { name: entry[0], element: entry[1] } : null;
+}
+
+function syncBodyOverflow() {
+  document.body.style.overflow = currentModal() ? "hidden" : "";
+}
+
+function focusFirstModalControl(modal) {
+  const focusable = modalFocusableElements(modal);
+  (focusable[0] ?? modal).focus();
+}
+
+function restoreModalFocus(name) {
+  const target = state.modalFocusReturn[name];
+  delete state.modalFocusReturn[name];
+  if (target && typeof target.focus === "function" && !currentModal()) {
+    target.focus();
+  }
+}
+
+function trapModalFocus(event, modal) {
+  const focusable = modalFocusableElements(modal);
+  if (focusable.length === 0) {
+    event.preventDefault();
+    modal.focus();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function modalFocusableElements(modal) {
+  return Array.from(
+    modal.querySelectorAll(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((element) => !element.hidden && element.offsetParent !== null);
 }
 
 /* ── Data loading ────────────────────────────────────────── */
@@ -508,7 +588,9 @@ async function loadConnection(options = {}) {
     } else {
       state.lmConnected = false;
       setConnection("offline", "Offline", connection?.error ?? "LM Studio is not reachable.");
-      await loadModels();
+      state.discoveredModels = [];
+      renderModelSources();
+      renderPrepOptions();
       await loadModelSyncState();
     }
   } catch (error) {
@@ -608,7 +690,7 @@ async function refreshRuns() {
 }
 
 async function captureMissingMedia() {
-  if (state.staticMode || !state.writesEnabled || state.captureBusy) {
+  if (!canUseOperationalControls() || state.captureBusy) {
     els.runSummary.textContent = "Capture requires the local dev server.";
     return;
   }
@@ -663,10 +745,67 @@ async function captureMissingMedia() {
 }
 
 function updateWriteControls() {
-  const canWrite = !state.staticMode && state.writesEnabled;
-  els.captureMedia.hidden = !canWrite;
+  const canWrite = canUseOperationalControls();
+  syncOperationalControls();
   els.captureMedia.disabled = !canWrite || state.captureBusy;
+  els.refreshRuns.disabled = !canWrite;
   els.captureMedia.textContent = state.captureBusy ? "Capturing…" : "Capture media";
+  if (state.selectedRun) {
+    updateDetailActions(state.selectedRun);
+  }
+}
+
+function canUseOperationalControls() {
+  return !state.staticMode && state.writesEnabled;
+}
+
+function syncOperationalControls() {
+  const canShow = canUseOperationalControls();
+  els.operationalControls.forEach((control) => {
+    const available = control.dataset.operationalAvailable !== "false";
+    control.hidden = !(canShow && available);
+  });
+}
+
+function setOperationalAvailability(control, available) {
+  if (control) {
+    control.dataset.operationalAvailable = available ? "true" : "false";
+  }
+}
+
+async function captureSelectedRunMedia(options = {}) {
+  const run = state.selectedRun;
+  if (!run?.runDirectory || !canUseOperationalControls() || state.captureBusy) {
+    return;
+  }
+
+  state.captureBusy = true;
+  state.captureRunDirectory = run.runDirectory;
+  updateWriteControls();
+  els.recaptureRun.textContent = "Capturing…";
+
+  try {
+    const data = await postJson("/api/capture-media", {
+      runDirectory: run.runDirectory,
+      force: Boolean(options.force)
+    });
+    state.runs = data.runs ?? state.runs;
+    const nextRun = findRunByDirectoryOrId(run) ?? run;
+    state.selectedRun = nextRun;
+    renderModels();
+    renderModelSources();
+    renderPrepOptions();
+    renderRuns();
+    renderDetail(nextRun);
+  } catch (error) {
+    els.detailMeta.innerHTML +=
+      '<span class="meta-label">Capture</span><strong>' + escapeHtml(error.message) + "</strong>";
+  } finally {
+    state.captureBusy = false;
+    state.captureRunDirectory = "";
+    renderRuns();
+    updateWriteControls();
+  }
 }
 
 function resetPrepareRunModal() {
@@ -680,7 +819,7 @@ function resetPrepareRunModal() {
   }
   els.prepModelSelect.value = state.discoveredModels[0]?.id ?? "";
 
-  if (state.staticMode || !state.writesEnabled) {
+  if (!canUseOperationalControls()) {
     els.prepareRun.disabled = true;
     els.prepMessage.textContent = "Preparing runs requires the local dev server.";
   } else {
@@ -690,7 +829,7 @@ function resetPrepareRunModal() {
 }
 
 async function prepareRunSlot() {
-  if (state.staticMode || !state.writesEnabled) {
+  if (!canUseOperationalControls()) {
     els.prepMessage.textContent = "Preparing runs requires the local dev server.";
     return;
   }
@@ -734,7 +873,7 @@ async function copyPreparedPrompt() {
 
 function requestDeleteSelectedRun() {
   const run = state.selectedRun;
-  if (!run?.runDirectory || state.staticMode || !state.writesEnabled) {
+  if (!run?.runDirectory || !canUseOperationalControls()) {
     return;
   }
 
@@ -744,7 +883,7 @@ function requestDeleteSelectedRun() {
 
 async function confirmDeleteSelectedRun() {
   const run = state.selectedRun;
-  if (!run?.runDirectory || state.staticMode || !state.writesEnabled) {
+  if (!run?.runDirectory || !canUseOperationalControls()) {
     closeModal("deleteConfirm");
     return;
   }
@@ -833,7 +972,9 @@ function renderRuns() {
       : "Browse captured previews and videos.";
 
   if (runs.length === 0) {
-    els.runsSurface.innerHTML = '<div class="empty">No runs match the current filters. <button type="button" class="btn-sm-ghost" id="emptyPrepRun">Prepare a run</button> or refresh after your external tool writes files.</div>';
+    els.runsSurface.innerHTML = !canUseOperationalControls()
+      ? '<div class="empty">No runs match the current filters.</div>'
+      : '<div class="empty">No runs match the current filters. <button type="button" class="btn-sm-ghost" id="emptyPrepRun">Prepare a run</button> or refresh after your external tool writes files.</div>';
     const emptyPrep = document.querySelector("#emptyPrepRun");
     if (emptyPrep) {
       emptyPrep.addEventListener("click", () => openModal("prep"));
@@ -980,10 +1121,15 @@ function wireRunCards() {
 
 function openDetail(run) {
   state.selectedRun = run;
+  renderDetail(run);
+  openModal("detail");
+}
+
+function renderDetail(run) {
   els.detailTitle.textContent = run.benchmark?.title ?? "Run detail";
   els.detailSubtitle.textContent = (run.model?.id ?? "Unknown model") + " · " + (run.runId ?? "");
   els.detailPreview.innerHTML = renderDetailArtifact(run);
-  els.deleteRun.hidden = state.staticMode || !state.writesEnabled || !run.runDirectory;
+  updateDetailActions(run);
   const prompt = run.promptText ?? run.benchmark?.prompt ?? "Prompt unavailable in run folder.";
   els.detailPrompt.textContent = prompt;
   els.promptLength.textContent = prompt.length.toLocaleString() + " chars";
@@ -1000,7 +1146,35 @@ function openDetail(run) {
     "Preview: " + (assetPath(run, run.assets?.preview) || "preview.png missing"),
     "Video: " + (assetPath(run, run.assets?.video || run.assets?.videoMp4) || "preview video missing")
   ].join("\n");
-  openModal("detail");
+}
+
+function updateDetailActions(run) {
+  const htmlHref = assetHref(run, run.assets?.html);
+  setOperationalAvailability(els.openHtml, Boolean(run.runDirectory && run.assets?.html && htmlHref));
+  els.openHtml.href = htmlHref ?? "#";
+
+  const canCapture = Boolean(run.runDirectory && run.assets?.html);
+  setOperationalAvailability(els.recaptureRun, canCapture);
+  setOperationalAvailability(els.deleteRun, Boolean(run.runDirectory));
+  syncOperationalControls();
+
+  const canOperate = canUseOperationalControls();
+  els.recaptureRun.disabled = !canOperate || !canCapture || state.captureBusy;
+  els.deleteRun.disabled = !canOperate || !run.runDirectory;
+  if (state.captureBusy && state.captureRunDirectory === run.runDirectory) {
+    els.recaptureRun.textContent = "Capturing…";
+    return;
+  }
+  els.recaptureRun.textContent = run.assets?.preview || hasCapturedVideo(run)
+    ? "Recapture media"
+    : "Capture media";
+}
+
+function findRunByDirectoryOrId(run) {
+  return state.runs.find((candidate) =>
+    (run.runDirectory && candidate.runDirectory === run.runDirectory) ||
+    (run.runId && candidate.runId === run.runId)
+  );
 }
 
 function renderDetailArtifact(run) {
@@ -1095,7 +1269,7 @@ function runsForModel(modelId) {
 }
 
 function runSummaryText(runs) {
-  const prepared = runs.filter((r) => r.status === "prepared").length;
+  const prepared = runs.filter((r) => r.status === "prepared" && !hasCapturedVideo(r)).length;
   const videoReady = runs.filter((r) => hasCapturedVideo(r)).length;
   const needsCapture = runs.filter((r) => needsMediaCapture(r)).length;
   const failed = runs.filter((r) => r.status === "failed").length;
@@ -1106,11 +1280,11 @@ function runCardState(run) {
   if (hasCapturedVideo(run)) {
     return { status: "completed", label: "video" };
   }
-  if (run.assets?.html) {
-    return { status: "prepared", label: "capture" };
-  }
   if (run.status === "failed" || run.status === "cancelled") {
     return { status: run.status, label: run.status };
+  }
+  if (run.assets?.html) {
+    return { status: "prepared", label: "capture" };
   }
   return { status: "prepared", label: "slot" };
 }

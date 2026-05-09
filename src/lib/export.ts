@@ -1,5 +1,6 @@
-import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, posix } from "node:path";
+import { assertSafeRunAssetPath, resolveRunAssetPath } from "./asset-paths.ts";
 import { loadBenchmarks } from "./benchmarks.ts";
 import { listRunMetadata } from "./runs.ts";
 import type { BenchmarkRecord, RunMetadata } from "./types.ts";
@@ -71,24 +72,28 @@ async function exportRunAssets(
     run.model.slug,
     run.runId
   );
-  const assets = {
-    metadata: run.assets.metadata ?? "metadata.json",
-    ...(run.assets.prompt ? { prompt: run.assets.prompt } : {}),
-    ...(run.assets.preview ? { preview: run.assets.preview } : {}),
-    ...(run.assets.video ? { video: run.assets.video } : {}),
-    ...(run.assets.videoMp4 ? { videoMp4: run.assets.videoMp4 } : {})
+  const assets: RunMetadata["assets"] = {
+    metadata: safeAsset(run.assets.metadata ?? "metadata.json"),
+    ...(run.assets.prompt ? { prompt: safeAsset(run.assets.prompt) } : {}),
+    ...(run.assets.preview ? { preview: safeAsset(run.assets.preview) } : {}),
+    ...(run.assets.video ? { video: safeAsset(run.assets.video) } : {}),
+    ...(run.assets.videoMp4 ? { videoMp4: safeAsset(run.assets.videoMp4) } : {})
   };
+  const promptText = run.promptText
+    ? sanitizeExportedPrompt(run.promptText, run.runDirectory, exportRunDirectory)
+    : undefined;
   const exportedRun: RunMetadata = {
     ...run,
     benchmark: toStaticBenchmark(run.benchmark),
     runDirectory: exportRunDirectory,
-    assets
+    assets,
+    ...(promptText !== undefined ? { promptText } : {})
   };
 
   await mkdir(outputDirectory, { recursive: true });
   await Promise.all([
     writePrettyJson(join(outputDirectory, assets.metadata), exportedRun),
-    copyAssetIfPresent(run, outputDirectory, assets.prompt),
+    writePromptAssetIfPresent(run, outputDirectory, assets.prompt, exportRunDirectory),
     copyAssetIfPresent(run, outputDirectory, assets.preview),
     copyAssetIfPresent(run, outputDirectory, assets.video),
     copyAssetIfPresent(run, outputDirectory, assets.videoMp4)
@@ -107,7 +112,7 @@ async function copyAssetIfPresent(
   }
 
   try {
-    await copyFile(join(run.runDirectory, asset), join(outputDirectory, asset));
+    await copyFile(resolveRunAssetPath(run.runDirectory, asset), resolveRunAssetPath(outputDirectory, asset));
   } catch (error) {
     if (isMissingPathError(error)) {
       return;
@@ -115,6 +120,44 @@ async function copyAssetIfPresent(
 
     throw error;
   }
+}
+
+async function writePromptAssetIfPresent(
+  run: RunMetadata,
+  outputDirectory: string,
+  asset: string | undefined,
+  exportRunDirectory: string
+): Promise<void> {
+  if (!asset) {
+    return;
+  }
+
+  try {
+    const prompt = await readFile(resolveRunAssetPath(run.runDirectory, asset), "utf8");
+    await writeFile(
+      resolveRunAssetPath(outputDirectory, asset),
+      sanitizeExportedPrompt(prompt, run.runDirectory, exportRunDirectory),
+      "utf8"
+    );
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
+function safeAsset(asset: string): string {
+  return assertSafeRunAssetPath(asset);
+}
+
+function sanitizeExportedPrompt(
+  prompt: string,
+  sourceRunDirectory: string,
+  exportRunDirectory: string
+): string {
+  return prompt.split(sourceRunDirectory).join(exportRunDirectory);
 }
 
 function toStaticBenchmark(benchmark: BenchmarkRecord): BenchmarkRecord {

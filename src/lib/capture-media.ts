@@ -34,6 +34,7 @@ export interface CaptureMissingRunMediaOptions {
 
 export interface CaptureSingleRunMediaOptions extends CaptureMissingRunMediaOptions {
   runDirectory: string;
+  force?: boolean;
 }
 
 export interface CaptureMissingRunMediaResult {
@@ -46,6 +47,7 @@ export interface CaptureMissingRunMediaResult {
 export interface CaptureRunMediaOptions {
   now: Date;
   videoDurationMs: number;
+  force?: boolean;
 }
 
 export interface CaptureRunMediaResult {
@@ -105,6 +107,7 @@ export async function captureSingleRunMedia(
 
   const result = await captureOne(run, {
     captureRunMedia,
+    force: options.force,
     logger,
     now: options.now ?? new Date(),
     videoDurationMs: options.videoDurationMs ?? DEFAULT_VIDEO_DURATION_MS
@@ -120,12 +123,13 @@ async function captureOne(
   run: RunMetadata,
   options: {
     captureRunMedia: (run: RunMetadata, options: CaptureRunMediaOptions) => Promise<CaptureRunMediaResult>;
+    force?: boolean;
     logger: CaptureLogger;
     now: Date;
     videoDurationMs: number;
   }
 ): Promise<Omit<CaptureMissingRunMediaResult, "runs">> {
-  if (!shouldCaptureRun(run)) {
+  if (!shouldCaptureRun(run, options.force)) {
     options.logger.log(`[capture] skipped ${runLabel(run)}: preview media already exists or source HTML is missing`);
     return { captured: 0, skipped: 1, failed: 0 };
   }
@@ -134,10 +138,12 @@ async function captureOne(
 
   try {
     const result = await options.captureRunMedia(run, {
+      force: options.force,
       now: options.now,
       videoDurationMs: options.videoDurationMs
     });
     if (result.captured) {
+      await markCaptureCompleted(result.run, options.now);
       options.logger.log(`[capture] finished ${runLabel(run)}`);
       return { captured: 1, skipped: 0, failed: 0 };
     }
@@ -151,8 +157,8 @@ async function captureOne(
   }
 }
 
-function shouldCaptureRun(run: RunMetadata): boolean {
-  return Boolean(run.assets?.html && (!run.assets?.preview || !hasCapturedVideo(run)));
+function shouldCaptureRun(run: RunMetadata, force = false): boolean {
+  return Boolean(run.assets?.html && (force || !run.assets?.preview || !hasCapturedVideo(run)));
 }
 
 function hasCapturedVideo(run: RunMetadata): boolean {
@@ -173,8 +179,8 @@ async function captureRunMediaWithPlaywright(
     run.settings?.preview?.captureAtMs ?? DEFAULT_CAPTURE_AT_MS,
     options.videoDurationMs
   );
-  const needsPreview = !run.assets?.preview;
-  const needsVideo = !hasCapturedVideo(run);
+  const needsPreview = Boolean(options.force || !run.assets?.preview);
+  const needsVideo = Boolean(options.force || !hasCapturedVideo(run));
   const htmlAsset = run.assets?.html ?? DEFAULT_HTML_ASSET;
   const previewAsset = run.assets?.preview ?? DEFAULT_PREVIEW_ASSET;
   const videoAsset = run.assets?.video ?? DEFAULT_VIDEO_ASSET;
@@ -183,6 +189,9 @@ async function captureRunMediaWithPlaywright(
   const previewPath = join(run.runDirectory, previewAsset);
   const videoPath = join(run.runDirectory, videoAsset);
   const mp4Path = join(run.runDirectory, mp4Asset);
+  const previewCapturePath = options.force ? join(run.runDirectory, ".capture-preview.png") : previewPath;
+  const videoCapturePath = options.force ? join(run.runDirectory, ".capture-preview.webm") : videoPath;
+  const mp4CapturePath = options.force ? join(run.runDirectory, ".capture-preview.mp4") : mp4Path;
   const videoDirectory = join(run.runDirectory, ".capture-video");
   let convertedMp4 = false;
 
@@ -192,6 +201,13 @@ async function captureRunMediaWithPlaywright(
 
   await assertFileExists(htmlPath);
   await mkdir(run.runDirectory, { recursive: true });
+  if (options.force) {
+    await Promise.all([
+      rm(previewCapturePath, { force: true }),
+      rm(videoCapturePath, { force: true }),
+      rm(mp4CapturePath, { force: true })
+    ]);
+  }
   if (needsVideo) {
     await rm(videoDirectory, { recursive: true, force: true });
     await mkdir(videoDirectory, { recursive: true });
@@ -226,10 +242,10 @@ async function captureRunMediaWithPlaywright(
 
     if (needsPreview) {
       await page.screenshot({
-        path: previewPath,
+        path: previewCapturePath,
         fullPage: false
       });
-      console.log(`[capture] preview saved: ${previewPath}`);
+      console.log(`[capture] preview saved: ${previewCapturePath}`);
     }
 
     const remainingMs = Math.max(0, options.videoDurationMs - captureAtMs);
@@ -244,27 +260,45 @@ async function captureRunMediaWithPlaywright(
 
   if (needsVideo && video) {
     const recordedVideoPath = await video.path();
-    await rename(recordedVideoPath, videoPath);
-    console.log(`[capture] webm saved: ${videoPath}`);
-    await assertVideoHasVisibleFrames(videoPath);
+    await rename(recordedVideoPath, videoCapturePath);
+    console.log(`[capture] webm saved: ${videoCapturePath}`);
+    await assertVideoHasVisibleFrames(videoCapturePath);
     await rm(videoDirectory, { recursive: true, force: true });
-    convertedMp4 = await convertWebmToMp4IfAvailable(videoPath, mp4Path);
+    convertedMp4 = await convertWebmToMp4IfAvailable(videoCapturePath, mp4CapturePath);
     if (convertedMp4) {
-      console.log(`[capture] mp4 saved: ${mp4Path}`);
+      console.log(`[capture] mp4 saved: ${mp4CapturePath}`);
     } else {
       console.warn("[capture] mp4 conversion skipped or failed; install ffmpeg for Safari-friendly MP4 output");
     }
   }
 
+  if (options.force) {
+    if (needsPreview) {
+      await rename(previewCapturePath, previewPath);
+    }
+    if (needsVideo) {
+      await rename(videoCapturePath, videoPath);
+    }
+    if (convertedMp4) {
+      await rename(mp4CapturePath, mp4Path);
+    } else if (needsVideo) {
+      await rm(mp4Path, { force: true });
+    }
+  }
+
   const timestamp = options.now.toISOString();
+  const nextAssets = {
+    ...run.assets,
+    html: htmlAsset,
+    ...(needsPreview ? { preview: previewAsset } : {}),
+    ...(needsVideo ? { video: videoAsset } : {}),
+    ...(convertedMp4 ? { videoMp4: mp4Asset } : {})
+  };
+  if (options.force && needsVideo && !convertedMp4) {
+    delete nextAssets.videoMp4;
+  }
   const nextRun = await writeUpdatedRunMetadata(run, {
-    assets: {
-      ...run.assets,
-      html: htmlAsset,
-      ...(needsPreview ? { preview: previewAsset } : {}),
-      ...(needsVideo ? { video: videoAsset } : {}),
-      ...(convertedMp4 ? { videoMp4: mp4Asset } : {})
-    },
+    assets: nextAssets,
     capture: {
       ...run.capture,
       ...(needsPreview
@@ -302,10 +336,19 @@ async function markCaptureFailed(
 ): Promise<void> {
   const timestamp = now.toISOString();
   const runError = toRunError(error);
-  const preview = !run.assets?.preview
+  const previewAsset = run.assets?.preview ?? DEFAULT_PREVIEW_ASSET;
+  const videoAsset = run.assets?.video ?? DEFAULT_VIDEO_ASSET;
+  const previewReady = await fileExists(join(run.runDirectory, previewAsset));
+  const preview = previewReady
+    ? {
+        status: "ready" as const,
+        path: previewAsset,
+        capturedAt: timestamp
+      }
+    : !run.assets?.preview
     ? {
         status: "failed" as const,
-        path: DEFAULT_PREVIEW_ASSET,
+        path: previewAsset,
         capturedAt: timestamp,
         error: runError
       }
@@ -313,18 +356,33 @@ async function markCaptureFailed(
   const video = !run.assets?.video
     ? {
         status: "failed" as const,
-        path: DEFAULT_VIDEO_ASSET,
+        path: videoAsset,
         capturedAt: timestamp,
         error: runError
       }
     : run.capture?.video;
 
   await writeUpdatedRunMetadata(run, {
+    status: "failed",
+    failedAt: timestamp,
+    assets: {
+      ...run.assets,
+      ...(previewReady ? { preview: previewAsset } : {})
+    },
     capture: {
       ...run.capture,
       ...(preview ? { preview } : {}),
       ...(video ? { video } : {})
     },
+    updatedAt: timestamp
+  });
+}
+
+async function markCaptureCompleted(run: RunMetadata, now: Date): Promise<void> {
+  const timestamp = now.toISOString();
+  await writeUpdatedRunMetadata(run, {
+    status: "completed",
+    completedAt: timestamp,
     updatedAt: timestamp
   });
 }
@@ -364,7 +422,7 @@ export async function isVideoMostlyBlack(path: string): Promise<boolean | undefi
         "-i",
         path,
         "-vf",
-        "fps=1,scale=4:4:flags=area,format=rgb24",
+        "fps=1,scale=64:64:flags=area,format=rgb24",
         "-frames:v",
         "3",
         "-f",
@@ -381,9 +439,25 @@ export async function isVideoMostlyBlack(path: string): Promise<boolean | undefi
       throw new Error("ffmpeg produced no sample frames.");
     }
 
-    const maxChannel = Math.max(...bytes);
-    const average = bytes.reduce((sum, value) => sum + value, 0) / bytes.length;
-    return maxChannel < 12 && average < 6;
+    let maxChannel = 0;
+    let lumaTotal = 0;
+    let visiblePixels = 0;
+    for (let index = 0; index < bytes.length; index += 3) {
+      const red = bytes[index] ?? 0;
+      const green = bytes[index + 1] ?? 0;
+      const blue = bytes[index + 2] ?? 0;
+      const brightestChannel = Math.max(red, green, blue);
+      const darkestChannel = Math.min(red, green, blue);
+      const luma = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      maxChannel = Math.max(maxChannel, brightestChannel);
+      lumaTotal += luma;
+      if (brightestChannel >= 24 || (brightestChannel >= 16 && brightestChannel - darkestChannel >= 10)) {
+        visiblePixels += 1;
+      }
+    }
+
+    const averageLuma = lumaTotal / (bytes.length / 3);
+    return visiblePixels === 0 && maxChannel < 24 && averageLuma < 8;
   } catch (error) {
     if (isMissingCommandError(error)) {
       return undefined;
@@ -435,7 +509,29 @@ async function assertFileExists(path: string): Promise<void> {
   }
 }
 
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    const result = await stat(path);
+    return result.isFile();
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 function isMissingCommandError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ENOENT"
+  );
+}
+
+function isMissingPathError(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&

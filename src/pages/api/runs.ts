@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import {
   apiJsonResponse,
+  assertTrustedWriteRequest,
   getDefaultLocalApi,
   readJsonRequest,
   type DeleteRunRequest
@@ -13,7 +14,10 @@ export const GET: APIRoute = () =>
 
 export const DELETE: APIRoute = async ({ request }) =>
   apiJsonResponse(
-    readJsonRequest(request).then((body) =>
-      getDefaultLocalApi().deleteSavedRun(body as DeleteRunRequest)
-    )
+    Promise.resolve()
+      .then(() => assertTrustedWriteRequest(request))
+      .then(() => readJsonRequest(request))
+      .then((body) =>
+        getDefaultLocalApi().deleteSavedRun(body as DeleteRunRequest)
+      )
   );

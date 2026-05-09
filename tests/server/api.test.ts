@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { createLocalApi } from "../../src/server/api";
+import { assertTrustedWriteRequest, createLocalApi } from "../../src/server/api";
 import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../../src/lib/types";
 import type { MirrorModelsResult } from "../../src/lib/model-sync";
 
@@ -217,8 +217,50 @@ describe("createLocalApi", () => {
     });
     expect(captureSingleRunMedia).toHaveBeenCalledWith({
       runsRoot: "/runs",
-      runDirectory: "/runs/sakura/model-a/run-1"
+      runDirectory: "/runs/sakura/model-a/run-1",
+      force: false
     });
+  });
+
+  it("forwards forced recapture only for one requested run", async () => {
+    const runs: RunMetadata[] = [];
+    const captureSingleRunMedia = vi.fn(async () => ({
+      captured: 1,
+      skipped: 0,
+      failed: 0,
+      runs
+    }));
+    const captureMissingRunMedia = vi.fn();
+    const api = createLocalApi({
+      runsRoot: "/runs",
+      captureSingleRunMedia,
+      captureMissingRunMedia
+    });
+
+    await expect(
+      api.captureMissingMedia({
+        runDirectory: "/runs/sakura/model-a/run-1",
+        force: true
+      })
+    ).resolves.toMatchObject({
+      captured: 1,
+      skipped: 0,
+      failed: 0
+    });
+    expect(captureSingleRunMedia).toHaveBeenCalledWith({
+      runsRoot: "/runs",
+      runDirectory: "/runs/sakura/model-a/run-1",
+      force: true
+    });
+    expect(captureMissingRunMedia).not.toHaveBeenCalled();
+  });
+
+  it("rejects forced bulk capture", async () => {
+    const api = createLocalApi();
+
+    await expect(api.captureMissingMedia({ force: true })).rejects.toThrow(
+      /force recapture requires a runDirectory/
+    );
   });
 
   it("rejects capture when writes are disabled", async () => {
@@ -362,6 +404,53 @@ describe("createLocalApi", () => {
         opencodePath: undefined,
         piPath: undefined
       }
+    );
+  });
+});
+
+describe("assertTrustedWriteRequest", () => {
+  it("allows same-origin browser write requests", () => {
+    const request = new Request("http://localhost:4321/api/prepare-run", {
+      method: "POST",
+      headers: {
+        origin: "http://localhost:4321",
+        "sec-fetch-site": "same-origin",
+        "content-type": "application/json"
+      },
+      body: "{}"
+    });
+
+    expect(() => assertTrustedWriteRequest(request)).not.toThrow();
+  });
+
+  it("rejects cross-origin browser write requests", () => {
+    const request = new Request("http://localhost:4321/api/prepare-run", {
+      method: "POST",
+      headers: {
+        origin: "https://evil.example",
+        "sec-fetch-site": "cross-site",
+        "content-type": "application/json"
+      },
+      body: "{}"
+    });
+
+    expect(() => assertTrustedWriteRequest(request)).toThrow(
+      /Write requests must come from the local app origin/
+    );
+  });
+
+  it("rejects write requests without JSON content type", () => {
+    const request = new Request("http://localhost:4321/api/prepare-run", {
+      method: "POST",
+      headers: {
+        origin: "http://localhost:4321",
+        "content-type": "text/plain"
+      },
+      body: "{}"
+    });
+
+    expect(() => assertTrustedWriteRequest(request)).toThrow(
+      /Write requests must use application\/json/
     );
   });
 });

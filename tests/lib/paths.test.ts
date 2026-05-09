@@ -60,4 +60,26 @@ describe("buildRunPaths", () => {
     expect(paths.htmlPath).toBe(join(paths.runDirectory, "index.html"));
     expect(paths.previewPath).toBe(join(paths.runDirectory, "preview.png"));
   });
+
+  it("rejects path-like benchmark IDs before constructing run folders", () => {
+    expect(() =>
+      buildRunPaths({
+        runsRoot: "/tmp/local-visual-runs",
+        benchmarkId: "../outside",
+        modelId: "model-a",
+        runId: "2026-05-06T01-02-03-004Z"
+      })
+    ).toThrow(/Benchmark ID must be a filesystem-safe slug/);
+  });
+
+  it("rejects path-like run IDs before constructing run folders", () => {
+    expect(() =>
+      buildRunPaths({
+        runsRoot: "/tmp/local-visual-runs",
+        benchmarkId: "sakura",
+        modelId: "model-a",
+        runId: "../run-1"
+      })
+    ).toThrow(/Run ID must be filesystem-safe/);
+  });
 });

@@ -71,18 +71,36 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
 
   await page.getByRole("button", { name: "Setup" }).click();
-  await expect(page.getByRole("dialog", { name: "Setup" })).toBeVisible();
-  await expect(page.getByText("Prepare a run slot")).toBeVisible();
-  await expect(page.getByText("Run in your tool")).toBeVisible();
-  await expect(page.getByText("Capture preview media")).toBeVisible();
+  const setupDialog = page.getByRole("dialog", { name: "Setup" });
+  await expect(setupDialog).toBeVisible();
+  await expect(setupDialog.getByRole("heading", { name: "Prepare slot" })).toHaveCount(0);
+  await expect(setupDialog.getByRole("heading", { name: "Run externally" })).toHaveCount(0);
+  await expect(setupDialog.getByRole("heading", { name: "Capture media" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "LM Studio" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Model inventory" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sync Pi" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sync OpenCode" })).toBeVisible();
+  await expect(page.locator("#lmConfigPi .sync-target-logo")).toBeVisible();
+  await expect(page.locator("#lmConfigOpenCode .sync-target-logo")).toBeVisible();
   await expect(page.getByText("OpenCode Setup")).toHaveCount(0);
   await expect(page.getByText("Pi Setup")).toHaveCount(0);
   await expect(page.locator("[data-step]")).toHaveCount(0);
-  await expect(page.getByText("✓ Pi").first()).toBeVisible();
+  await expect(page.getByText("Pi synced").first()).toBeVisible();
+  await expect(page.getByText("OpenCode synced").first()).toBeVisible();
+  await expect(page.getByText("/home/.pi/agent/models.json")).toBeVisible();
   await expect(page.locator("#availableModelChoices").getByText("live").first()).toBeVisible();
-  await expect(page.locator("#availableModelChoices")).toHaveCSS("grid-template-columns", /px/);
+  const setupColumns = await page.locator(".setup-console-layout").evaluate((el) =>
+    getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
+  );
+  expect(setupColumns).toBe(1);
+  const operationColumns = await page.locator(".lm-operations-grid").evaluate((el) =>
+    getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
+  );
+  expect(operationColumns).toBe(3);
+  const modelRowColumns = await page.locator(".lm-model-row").first().evaluate((el) =>
+    getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
+  );
+  expect(modelRowColumns).toBe(3);
 
   const baseUrlBox = await page.locator("#baseUrl").boundingBox();
   const testButtonBox = await page.locator("#refreshConnection").boundingBox();
@@ -182,7 +200,8 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
   await expect(page.locator("#detailBackdrop[open]")).toBeVisible();
   await expect(page.locator("#detailPreview iframe")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Open HTML" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveAttribute("href", /asset=index\.html/);
   await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
   await expect(page.getByText("Create a sakura animation")).toBeVisible();
   await expect(page.getByRole("link", { name: "Prompt file" })).toHaveCount(0);
@@ -195,6 +214,41 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
   await expect(page.locator("#detailPreview video")).toHaveCount(0);
   await expect(page.locator("#detailPreview")).toContainText("Video not captured yet");
   await expect(page.locator("#detailPreview")).toContainText("Use Capture media");
+});
+
+test("recaptures media for the open run detail", async ({ page }) => {
+  let capturePayload: unknown;
+  let runsResponse: unknown[] = [sampleRunWithVideo];
+  await mockApi(page, {
+    lmStudioOnline: true,
+    runs: () => runsResponse,
+    onCapture: (payload) => {
+      capturePayload = payload;
+      runsResponse = [
+        {
+          ...sampleRunWithVideo,
+          updatedAt: "2026-05-06T20:00:00.000Z"
+        }
+      ];
+    }
+  });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await page.locator("[data-run-id]").first().click();
+  await expect(page.getByRole("button", { name: "Recapture media" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Recapture media" }).click();
+
+  await expect.poll(() => capturePayload).toMatchObject({
+    runDirectory: sampleRunWithVideo.runDirectory,
+    force: true
+  });
+  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
+
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page.locator("[data-run-id]").first()).not.toContainText("Capturing");
+  await expect(page.locator("[data-run-id]").first()).toContainText("Video ready");
 });
 
 test("grouped views scroll as one surface and avoid duplicate card labels", async ({ page }) => {
@@ -337,6 +391,23 @@ test("keeps the viewer usable on mobile widths", async ({ page }) => {
   expect(overflow).toBe(false);
 });
 
+test("hides operational chrome when writes are disabled", async ({ page }) => {
+  await mockApi(page, { lmStudioOnline: true, writesEnabled: false });
+
+  await page.goto("/");
+  await expect(page.locator("[data-run-id]").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Setup" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Refresh" })).toHaveCount(0);
+  await expect(page.locator("#statsPill")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
+  await expect(page.locator("#themeLabel")).toHaveClass(/sr-only/);
+
+  await page.locator("[data-run-id]").first().click();
+  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveCount(0);
+});
+
 test("falls back to exported static data without prepare controls", async ({ page }) => {
   await page.route("**/api/**", async (route) => {
     await route.fulfill({
@@ -374,14 +445,18 @@ test("falls back to exported static data without prepare controls", async ({ pag
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Prepare run" }).click();
-
-  await expect(page.getByRole("dialog", { name: "Prepare run" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Prepare slot" })).toBeDisabled();
-  await page.getByRole("button", { name: "Close" }).first().click();
+  await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Setup" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Refresh" })).toHaveCount(0);
+  await expect(page.locator("#statsPill")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
+  await expect(page.locator("#themeLabel")).toHaveClass(/sr-only/);
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
 
   await page.locator("[data-run-id]").first().click();
+  await expect(page.getByRole("button", { name: "Recapture media" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Open HTML" })).toHaveCount(0);
   await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
@@ -396,6 +471,7 @@ async function mockApi(
     onPrepare?: (payload: unknown) => void;
     onDelete?: (payload: unknown) => void;
     onCapture?: (payload: unknown) => void | Promise<void>;
+    writesEnabled?: boolean;
   }
 ): Promise<void> {
   await page.route("**/api/benchmarks", async (route) => {
@@ -449,7 +525,7 @@ async function mockApi(
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
-        app: { status: "ok" },
+        app: { status: "ok", writesEnabled: options.writesEnabled ?? true },
         lmStudio: {
           baseUrl: "http://localhost:1234/v1",
           connection: options.lmStudioOnline

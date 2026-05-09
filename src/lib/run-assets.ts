@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
-import { extname, isAbsolute, join, normalize, resolve, sep } from "node:path";
+import { extname, join, resolve } from "node:path";
+import { assertSafeRunAssetPath, isPathInside, resolveRunAssetPath } from "./asset-paths";
 
 const DEFAULT_RUNS_ROOT = join(process.cwd(), "runs");
 
@@ -24,21 +25,13 @@ export interface RunAssetFile {
 export async function readRunAsset(input: ReadRunAssetInput): Promise<RunAssetFile> {
   const runsRoot = resolve(input.runsRoot ?? DEFAULT_RUNS_ROOT);
   const runDirectory = resolve(input.runDirectory);
-  const asset = normalize(input.asset);
+  const asset = assertSafeRunAssetPath(input.asset);
 
   if (!isPathInside(runDirectory, runsRoot)) {
     throw new Error("Run directory is outside the configured runs folder.");
   }
 
-  if (isAbsolute(asset) || asset.startsWith("..") || asset.includes(`${sep}..${sep}`)) {
-    throw new Error("Asset path must stay inside a run folder.");
-  }
-
-  const assetPath = resolve(runDirectory, asset);
-
-  if (!isPathInside(assetPath, runDirectory)) {
-    throw new Error("Asset path must stay inside a run folder.");
-  }
+  const assetPath = resolveRunAssetPath(runDirectory, asset);
 
   const extension = extname(assetPath).toLowerCase();
 
@@ -57,8 +50,4 @@ export async function readRunAsset(input: ReadRunAssetInput): Promise<RunAssetFi
     contentType: CONTENT_TYPES.get(extension) ?? "application/octet-stream",
     body: await readFile(assetPath)
   };
-}
-
-function isPathInside(path: string, root: string): boolean {
-  return path === root || path.startsWith(`${root}${sep}`);
 }

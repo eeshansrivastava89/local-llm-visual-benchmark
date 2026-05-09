@@ -25,7 +25,7 @@ Use the native system UI stack. Keep labels compact, metadata readable, and run 
 
 Desktop and tablet use a compact toolbar for saved-run model and prompt filters, leaving the viewport for the artifact gallery. The run grid should fit normal result sets in the first viewport and scroll internally only when there are more cards than the visible surface can hold. Passive LM Studio discovery lives in a modal with one model inventory; badges distinguish current LM Studio availability from saved filesystem run history.
 
-Run details are artifact-first. Completed runs show the saved `index.html` as the main surface inside the modal. Prompt text, filesystem paths, and a small status/model summary live in a narrow inspector. Optional actions appear only when the corresponding file exists.
+Run details are artifact-first. Completed runs show captured video (`preview.mp4` when available, otherwise `preview.webm`) as the main surface inside the modal. Generated `index.html` is source input for local capture only; it is not displayed or linked as a viewer surface. Prompt text, filesystem paths, and a small status/model summary live in a narrow inspector. Optional actions appear only when the corresponding publish-safe file exists.
 
 ## Components
 

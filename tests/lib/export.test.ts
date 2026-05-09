@@ -88,6 +88,7 @@ async function writeRun(runsRoot: string) {
   await writeFile(join(runDirectory, "index.html"), "<!doctype html><html></html>", "utf8");
   await writeFile(join(runDirectory, "preview.png"), "png bytes", "utf8");
   await writeFile(join(runDirectory, "preview.webm"), "webm bytes", "utf8");
+  return { runDirectory, metadata };
 }
 
 describe("generateStaticExport", () => {
@@ -152,6 +153,78 @@ describe("generateStaticExport", () => {
       .rejects.toMatchObject({ code: "ENOENT" });
     await expect(stat(join(exportedRunDirectory, "response.raw.txt")))
       .rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("sanitizes local run paths from exported prompt text and prompt files", async () => {
+    const root = await createTempRoot("llm-visual-export-sanitize-");
+    const benchmarkDirectory = join(root, "benchmarks");
+    const runsRoot = join(root, "runs");
+    const publicExportDirectory = join(root, "public", "export");
+    await writeBenchmark(benchmarkDirectory);
+    const { runDirectory } = await writeRun(runsRoot);
+
+    await writeFile(
+      join(runDirectory, "prompt.md"),
+      [
+        `Run folder: ${runDirectory}`,
+        `Save to: ${join(runDirectory, "index.html")}`,
+        `Preview: ${join(runDirectory, "preview.png")}`
+      ].join("\n"),
+      "utf8"
+    );
+
+    const manifest = await generateStaticExport({
+      benchmarkDirectory,
+      runsRoot,
+      publicExportDirectory,
+      generatedAt: new Date("2026-05-06T20:00:00.000Z")
+    });
+    const [run] = manifest.runs;
+    const exportedRunDirectory =
+      "export/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z";
+    const exportedPrompt = await readFile(
+      join(
+        publicExportDirectory,
+        "runs",
+        "sakura",
+        "local-qwen2-5-vl",
+        "2026-05-06T19-12-00-000Z",
+        "prompt.md"
+      ),
+      "utf8"
+    );
+
+    expect(run.promptText).toContain(`Run folder: ${exportedRunDirectory}`);
+    expect(run.promptText).toContain(`${exportedRunDirectory}/index.html`);
+    expect(run.promptText).not.toContain(runDirectory);
+    expect(exportedPrompt).toBe(run.promptText);
+    expect(exportedPrompt).not.toContain(runDirectory);
+  });
+
+  it("rejects traversal asset names while exporting run assets", async () => {
+    const root = await createTempRoot("llm-visual-export-traversal-");
+    const benchmarkDirectory = join(root, "benchmarks");
+    const runsRoot = join(root, "runs");
+    const publicExportDirectory = join(root, "public", "export");
+    await writeBenchmark(benchmarkDirectory);
+    const { runDirectory, metadata } = await writeRun(runsRoot);
+    const maliciousMetadata: RunMetadata = {
+      ...metadata,
+      assets: {
+        ...metadata.assets,
+        preview: "../leaked.png"
+      }
+    };
+    await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(maliciousMetadata), "utf8");
+    await writeFile(join(runDirectory, "..", "leaked.png"), "leaked", "utf8");
+
+    await expect(
+      generateStaticExport({
+        benchmarkDirectory,
+        runsRoot,
+        publicExportDirectory
+      })
+    ).rejects.toThrow(/Asset path must stay inside a run folder/);
   });
 
   it("handles an empty saved runs directory", async () => {

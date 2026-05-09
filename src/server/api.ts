@@ -52,6 +52,7 @@ export interface DeleteRunRequest {
 
 export interface CaptureMediaRequest {
   runDirectory?: string;
+  force?: unknown;
 }
 
 export interface LocalApiDependencies {
@@ -248,10 +249,15 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
 
     async captureMissingMedia(request = {}) {
       assertWritesEnabled(enableWrites);
+      const force = readOptionalBoolean(request.force, "force") ?? false;
+      if (force && !request.runDirectory) {
+        throw new ApiRequestError(400, "force recapture requires a runDirectory.");
+      }
       if (request.runDirectory) {
         return captureSingleRunMedia({
           runsRoot,
-          runDirectory: readRequiredString(request.runDirectory, "runDirectory")
+          runDirectory: readRequiredString(request.runDirectory, "runDirectory"),
+          force
         });
       }
 
@@ -294,12 +300,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   };
 }
 
-const CORS_HEADERS = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
-  "access-control-allow-headers": "content-type"
-};
-
 export async function apiJsonResponse<T>(
   operation: Promise<T> | T
 ): Promise<Response> {
@@ -309,8 +309,7 @@ export async function apiJsonResponse<T>(
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: {
-        "content-type": "application/json",
-        ...CORS_HEADERS
+        "content-type": "application/json"
       }
     });
   } catch (error) {
@@ -326,11 +325,45 @@ export async function apiJsonResponse<T>(
       {
         status,
         headers: {
-          "content-type": "application/json",
-          ...CORS_HEADERS
+          "content-type": "application/json"
         }
       }
     );
+  }
+}
+
+export function assertTrustedWriteRequest(request: Request): void {
+  if (request.method !== "POST" && request.method !== "DELETE") {
+    return;
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+  const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
+  if (mediaType !== "application/json") {
+    throw new ApiRequestError(415, "Write requests must use application/json.");
+  }
+
+  const fetchSite = request.headers.get("sec-fetch-site")?.toLowerCase();
+  if (fetchSite && !["same-origin", "same-site", "none"].includes(fetchSite)) {
+    throw new ApiRequestError(403, "Write requests must come from the local app origin.");
+  }
+
+  const origin = request.headers.get("origin");
+  if (!origin) {
+    return;
+  }
+
+  let requestOrigin: string;
+  let providedOrigin: string;
+  try {
+    requestOrigin = new URL(request.url).origin;
+    providedOrigin = new URL(origin).origin;
+  } catch {
+    throw new ApiRequestError(403, "Write requests must come from the local app origin.");
+  }
+
+  if (providedOrigin !== requestOrigin) {
+    throw new ApiRequestError(403, "Write requests must come from the local app origin.");
   }
 }
 
@@ -378,6 +411,16 @@ function readRequiredString(value: unknown, field: string): string {
   }
 
   return value.trim();
+}
+
+function readOptionalBoolean(value: unknown, field: string): boolean | undefined {
+  if (typeof value === "undefined") {
+    return undefined;
+  }
+  if (typeof value !== "boolean") {
+    throw new ApiRequestError(400, `${field} must be a boolean.`);
+  }
+  return value;
 }
 
 function readStringArray(value: unknown, field: string): string[] {

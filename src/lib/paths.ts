@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 
 const DEFAULT_MAX_SLUG_LENGTH = 80;
+const BENCHMARK_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/u;
+const RUN_ID_PATTERN = /^[A-Za-z0-9._-]+$/u;
 
 export interface BuildRunPathsInput {
   runsRoot?: string;
@@ -61,6 +63,9 @@ export function createRunId(date = new Date()): string {
 }
 
 export function buildRunPaths(input: BuildRunPathsInput): RunPaths {
+  assertBenchmarkId(input.benchmarkId);
+  assertRunId(input.runId);
+
   const runsRoot = input.runsRoot ?? join(process.cwd(), "runs");
   const modelSlug = slugModelId(input.modelId);
   const benchmarkDirectory = join(runsRoot, input.benchmarkId);
@@ -83,4 +88,16 @@ export function buildRunPaths(input: BuildRunPathsInput): RunPaths {
     previewPath: join(runDirectory, "preview.png"),
     videoPath: join(runDirectory, "preview.webm")
   };
+}
+
+function assertBenchmarkId(benchmarkId: string): void {
+  if (!BENCHMARK_ID_PATTERN.test(benchmarkId)) {
+    throw new Error("Benchmark ID must be a filesystem-safe slug.");
+  }
+}
+
+function assertRunId(runId: string): void {
+  if (!RUN_ID_PATTERN.test(runId)) {
+    throw new Error("Run ID must be filesystem-safe.");
+  }
 }

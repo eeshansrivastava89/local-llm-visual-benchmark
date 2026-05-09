@@ -197,6 +197,11 @@ textarea {
   box-shadow: 0 1px 2px oklch(0.2 0.01 255 / 0.04);
 }
 
+.icon-only-btn {
+  width: 1.95rem;
+  padding-inline: 0;
+}
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -235,12 +240,15 @@ button:disabled,
 }
 
 .lm-connection-row .input,
-.lm-connection-row #refreshConnection {
+.lm-connection-row #refreshConnection,
+.lm-connect-control .input,
+.lm-connect-control #refreshConnection {
   height: 2.35rem;
   min-height: 2.35rem;
 }
 
-.lm-connection-row #refreshConnection {
+.lm-connection-row #refreshConnection,
+.lm-connect-control #refreshConnection {
   min-width: 4.25rem;
   padding-inline: 0.9rem;
   font-size: 0.875rem;
@@ -468,55 +476,302 @@ button:disabled,
   overflow: auto;
 }
 
-.lm-studio-shell .available-model-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-  max-height: min(34rem, 46dvh);
+.setup-body {
+  padding: 1rem;
 }
 
-.setup-flow-list {
+.setup-console-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.lm-source-panel {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.95rem;
+  background: var(--card);
+  padding: 0.95rem;
+  box-shadow: 0 1px 2px oklch(0.2 0.01 255 / 0.04);
+}
+
+.lm-source-heading,
+.lm-model-section-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.lm-source-heading h3,
+.lm-model-section-head h3,
+.setup-guide-heading h3 {
+  margin: 0.08rem 0 0;
+  font-size: 0.98rem;
+  font-weight: 680;
+  line-height: 1.25;
+}
+
+.lm-source-heading p,
+.lm-model-section-head p,
+.setup-guide-heading p {
+  margin-top: 0.2rem;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.lm-count-badge {
+  min-width: max-content;
+}
+
+.lm-operations-grid {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1.05fr) repeat(2, minmax(14rem, 1fr));
+  gap: 0.6rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.85rem;
+}
+
+.lm-sync-cells {
+  display: contents;
+}
+
+.lm-op-cell {
+  display: grid;
+  grid-template-rows: auto minmax(2.35rem, auto) auto;
+  align-content: stretch;
+  gap: 0.55rem;
+  min-width: 0;
+  min-height: 7.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--subtle-surface);
+  padding: 0.7rem;
+}
+
+.lm-op-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.lm-op-title {
+  color: var(--foreground);
+  font-size: 0.83rem;
+  font-weight: 680;
+  line-height: 1.2;
+}
+
+.lm-op-control {
+  min-width: 0;
+}
+
+.lm-connect-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+}
+
+.lm-op-message,
+.lm-sync-message {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.lm-sync-message {
+  margin-top: -0.2rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+}
+
+.sync-target-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.2rem 0.45rem;
+  align-self: start;
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.sync-target-name {
+  color: var(--foreground);
+  font-size: 0.83rem;
+  font-weight: 680;
+  line-height: 1.2;
+}
+
+.sync-target-path {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lm-config-indicator {
+  justify-self: start;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.sync-target .btn-sm-outline {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  justify-self: start;
+}
+
+.sync-target {
+  position: relative;
+  overflow: hidden;
+}
+
+.sync-target-logo {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.55rem;
+  z-index: 0;
+  height: 5.2rem;
+  max-width: 46%;
+  opacity: 0.11;
+  object-fit: contain;
+  object-position: right bottom;
+  pointer-events: none;
+}
+
+.sync-target-logo-pi {
+  width: 5.2rem;
+  color: var(--foreground);
+}
+
+.sync-target-logo-opencode {
+  width: min(12.5rem, 46%);
+}
+
+html[data-theme="dark"] .sync-target-logo {
+  filter: invert(1);
+  opacity: 0.14;
+}
+
+.lm-model-section {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.lm-model-table-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem minmax(15.5rem, 0.32fr);
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0 0.45rem 0.45rem;
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 680;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.lm-model-table-head span:nth-child(3) {
+  justify-self: end;
+  padding-right: 0.45rem;
+}
+
+.lm-studio-shell .available-model-list {
   display: grid;
   gap: 0;
-  overflow: hidden;
+  max-height: min(28rem, 45dvh);
+  overflow: auto;
   border: 1px solid var(--border);
-  border-radius: 0.9rem;
+  border-radius: 0.8rem;
   background: var(--card);
 }
 
-.setup-flow-list li {
+.lm-model-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.85rem;
-  padding: 0.9rem 1rem;
+  grid-template-columns: minmax(0, 1fr) 4.5rem minmax(15.5rem, 0.32fr);
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.62rem 0.7rem;
+  font-size: 0.83rem;
 }
 
-.setup-flow-list li + li {
+.lm-model-row + .lm-model-row {
   border-top: 1px solid var(--border);
 }
 
-.setup-flow-index {
+.lm-model-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 660;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lm-source-pill {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--subtle-surface);
+  padding: 0.08rem 0.45rem;
+  color: var(--muted-foreground);
+  font-size: 0.67rem;
+  font-weight: 680;
+  line-height: 1.25;
+}
+
+.lm-source-pill[data-source="live"] {
+  border-color: oklch(0.83 0.045 158);
+  background: oklch(0.93 0.04 158);
+  color: oklch(0.31 0.07 158);
+}
+
+.lm-model-sync {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.lm-status-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.45rem;
-  height: 1.45rem;
+  min-width: 4.2rem;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--muted);
-  color: var(--foreground);
-  font-size: 0.75rem;
-  font-weight: 650;
-}
-
-.setup-flow-list h4 {
-  font-size: 0.875rem;
-  font-weight: 650;
-}
-
-.setup-flow-list p {
-  margin-top: 0.2rem;
+  background: var(--card);
+  padding: 0.14rem 0.42rem;
   color: var(--muted-foreground);
-  font-size: 0.875rem;
-  line-height: 1.45;
+  font-size: 0.66rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.lm-status-chip[data-state="present"] {
+  border-color: oklch(0.83 0.045 158);
+  background: oklch(0.93 0.04 158);
+  color: oklch(0.31 0.07 158);
+}
+
+.lm-status-chip[data-state="unavailable"] {
+  opacity: 0.58;
 }
 
 /* Config indicator data states */
@@ -974,6 +1229,27 @@ button:disabled,
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) minmax(220px, 0.62fr);
   }
+
+  .setup-console-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .lm-operations-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lm-model-table-head {
+    display: none;
+  }
+
+  .lm-model-row {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .lm-model-sync {
+    justify-content: start;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1035,13 +1311,12 @@ button:disabled,
   }
 
   .lm-studio-shell .available-model-list {
-    grid-template-columns: 1fr;
     max-height: 42dvh;
   }
 
-  #syncPiBtn,
-  #syncOpenCodeBtn {
-    flex: 1 1 auto;
+  .sync-target {
+    align-items: stretch;
+    min-height: auto;
   }
 
   .detail-header {
