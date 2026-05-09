@@ -8,6 +8,7 @@ public/export/
 runs/
 test-results/
 playwright-report/
+internal-docs/
 
 # Local recording scratch
 app/**/.frames-*/
