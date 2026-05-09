@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   captureMissingRunMedia,
   captureSingleRunMedia,
+  isAnimationFrameRateAcceptable,
   isVideoMostlyBlack
 } from "../../src/lib/capture-media";
 import type { RunMetadata } from "../../src/lib/types";
@@ -23,6 +24,25 @@ async function hasFfmpeg(): Promise<boolean> {
 }
 
 describe("capture media video validation", () => {
+  it("rejects animation capture when measured render FPS is too low", () => {
+    expect(
+      isAnimationFrameRateAcceptable({
+        frames: 6,
+        durationMs: 2000,
+        fps: 3,
+        minFps: 12
+      })
+    ).toBe(false);
+    expect(
+      isAnimationFrameRateAcceptable({
+        frames: 34,
+        durationMs: 2000,
+        fps: 17,
+        minFps: 12
+      })
+    ).toBe(true);
+  });
+
   it("detects all-black videos and accepts visible videos", async () => {
     if (!(await hasFfmpeg())) {
       return;
@@ -85,6 +105,18 @@ describe("capture media video validation", () => {
 describe("capture media metadata updates", () => {
   it("marks a run completed after a successful media capture", async () => {
     const { runsRoot, run } = await writePreparedRun();
+    await writeFile(
+      join(run.runDirectory, "metadata.json"),
+      JSON.stringify({
+        ...run,
+        status: "failed",
+        failedAt: "2026-05-08T11:30:00.000Z",
+        error: {
+          message: "Previous capture failed."
+        }
+      }),
+      "utf8"
+    );
 
     await expect(
       captureMissingRunMedia({
@@ -105,10 +137,21 @@ describe("capture media metadata updates", () => {
     ) as RunMetadata;
     expect(metadata.status).toBe("completed");
     expect(metadata.completedAt).toBe("2026-05-08T12:00:00.000Z");
+    expect(metadata.failedAt).toBeUndefined();
+    expect(metadata.error).toBeUndefined();
   });
 
   it("preserves a written preview when video capture fails later", async () => {
     const { runsRoot, run } = await writePreparedRun();
+    await writeFile(
+      join(run.runDirectory, "metadata.json"),
+      JSON.stringify({
+        ...run,
+        status: "completed",
+        completedAt: "2026-05-08T11:30:00.000Z"
+      }),
+      "utf8"
+    );
 
     await expect(
       captureMissingRunMedia({
@@ -139,6 +182,12 @@ describe("capture media metadata updates", () => {
         message: "Captured video appears to be black."
       }
     });
+    expect(metadata.error).toMatchObject({
+      message: "Captured video appears to be black."
+    });
+    expect(metadata.completedAt).toBeUndefined();
+    expect(metadata.assets.video).toBeUndefined();
+    expect(metadata.assets.videoMp4).toBeUndefined();
   });
 
   it("recaptures one run when forced even if preview media already exists", async () => {

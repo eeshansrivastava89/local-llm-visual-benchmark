@@ -12,6 +12,9 @@ const DEFAULT_VIEWPORT: ViewportSettings = {
 };
 const DEFAULT_CAPTURE_AT_MS = 5000;
 const DEFAULT_VIDEO_DURATION_MS = 10000;
+const DEFAULT_MIN_CAPTURE_RENDER_FPS = 12;
+const DEFAULT_FRAME_RATE_SAMPLE_MS = 1600;
+const DEFAULT_FRAME_RATE_WARMUP_MS = 400;
 const DEFAULT_HTML_ASSET = "index.html";
 const DEFAULT_PREVIEW_ASSET = "preview.png";
 const DEFAULT_VIDEO_ASSET = "preview.webm";
@@ -53,6 +56,37 @@ export interface CaptureRunMediaOptions {
 export interface CaptureRunMediaResult {
   captured: boolean;
   run: RunMetadata;
+}
+
+export interface AnimationFrameRateMeasurement {
+  frames: number;
+  durationMs: number;
+  fps: number;
+  minFps: number;
+  maxFrameGapMs?: number;
+}
+
+type CapturePage = {
+  evaluate<T, Arg>(pageFunction: (arg: Arg) => T | Promise<T>, arg: Arg): Promise<T>;
+};
+
+export function isAnimationFrameRateAcceptable(
+  measurement: AnimationFrameRateMeasurement
+): boolean {
+  return measurement.fps >= measurement.minFps;
+}
+
+export function captureChromiumLaunchArgs(platform = process.platform): string[] {
+  const args = [
+    "--ignore-gpu-blocklist",
+    "--enable-gpu-rasterization"
+  ];
+
+  if (platform === "darwin") {
+    args.push("--use-gl=angle", "--use-angle=metal");
+  }
+
+  return args;
 }
 
 export async function captureMissingRunMedia(
@@ -213,11 +247,18 @@ async function captureRunMediaWithPlaywright(
     await mkdir(videoDirectory, { recursive: true });
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const launchArgs = captureChromiumLaunchArgs();
+  console.log(`[capture] chromium launch args: ${launchArgs.join(" ")}`);
+  const browser = await chromium.launch({
+    headless: true,
+    args: launchArgs
+  });
   let video;
+  let frameRate: AnimationFrameRateMeasurement | undefined;
+  let context;
 
   try {
-    const context = await browser.newContext({
+    context = await browser.newContext({
       viewport,
       ...(needsVideo
         ? {
@@ -248,13 +289,33 @@ async function captureRunMediaWithPlaywright(
       console.log(`[capture] preview saved: ${previewCapturePath}`);
     }
 
+    if (needsVideo) {
+      frameRate = await measureAnimationFrameRate(page, {
+        minFps: DEFAULT_MIN_CAPTURE_RENDER_FPS,
+        sampleMs: DEFAULT_FRAME_RATE_SAMPLE_MS,
+        warmupMs: DEFAULT_FRAME_RATE_WARMUP_MS
+      });
+      console.log(
+        `[capture] measured render FPS: ${frameRate.fps.toFixed(1)} ` +
+          `(${frameRate.frames} frame(s) over ${Math.round(frameRate.durationMs)}ms, ` +
+          `minimum ${frameRate.minFps})`
+      );
+      if (!isAnimationFrameRateAcceptable(frameRate)) {
+        throw new Error(captureFrameRateErrorMessage(frameRate, viewport));
+      }
+    }
+
     const remainingMs = Math.max(0, options.videoDurationMs - captureAtMs);
     if (needsVideo && remainingMs > 0) {
       await page.waitForTimeout(remainingMs);
     }
 
     await context.close();
+    context = undefined;
   } finally {
+    if (context) {
+      await context.close().catch(() => {});
+    }
     await browser.close();
   }
 
@@ -315,7 +376,19 @@ async function captureRunMediaWithPlaywright(
             video: {
               status: "ready",
               path: videoAsset,
-              capturedAt: timestamp
+              capturedAt: timestamp,
+              ...(frameRate
+                ? {
+                    quality: {
+                      measuredFps: Number(frameRate.fps.toFixed(1)),
+                      minFps: frameRate.minFps,
+                      sampleMs: Math.round(frameRate.durationMs),
+                      frames: frameRate.frames,
+                      viewport,
+                      launchArgs
+                    }
+                  }
+                : {})
             } satisfies RunCaptureAsset
           }
         : {})
@@ -336,6 +409,7 @@ async function markCaptureFailed(
 ): Promise<void> {
   const timestamp = now.toISOString();
   const runError = toRunError(error);
+  const frameRate = parseFrameRateFromError(runError.message);
   const previewAsset = run.assets?.preview ?? DEFAULT_PREVIEW_ASSET;
   const videoAsset = run.assets?.video ?? DEFAULT_VIDEO_ASSET;
   const previewReady = await fileExists(join(run.runDirectory, previewAsset));
@@ -353,26 +427,38 @@ async function markCaptureFailed(
         error: runError
       }
     : run.capture?.preview;
-  const video = !run.assets?.video
-    ? {
-        status: "failed" as const,
-        path: videoAsset,
-        capturedAt: timestamp,
-        error: runError
-      }
-    : run.capture?.video;
+  const video = {
+    status: "failed" as const,
+    path: videoAsset,
+    capturedAt: timestamp,
+    error: runError,
+    ...(frameRate
+      ? {
+          quality: {
+            measuredFps: frameRate.measuredFps,
+            minFps: frameRate.minFps,
+            viewport: frameRate.viewport
+          }
+        }
+      : {})
+  };
+  const nextAssets = {
+    ...run.assets,
+    ...(previewReady ? { preview: previewAsset } : {}),
+    video: undefined,
+    videoMp4: undefined
+  };
 
   await writeUpdatedRunMetadata(run, {
     status: "failed",
     failedAt: timestamp,
-    assets: {
-      ...run.assets,
-      ...(previewReady ? { preview: previewAsset } : {})
-    },
+    completedAt: undefined,
+    error: runError,
+    assets: nextAssets,
     capture: {
       ...run.capture,
       ...(preview ? { preview } : {}),
-      ...(video ? { video } : {})
+      video
     },
     updatedAt: timestamp
   });
@@ -383,6 +469,8 @@ async function markCaptureCompleted(run: RunMetadata, now: Date): Promise<void> 
   await writeUpdatedRunMetadata(run, {
     status: "completed",
     completedAt: timestamp,
+    failedAt: undefined,
+    error: undefined,
     updatedAt: timestamp
   });
 }
@@ -410,6 +498,111 @@ async function writeUpdatedRunMetadata(
 
   await writeFile(metadataPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
   return next;
+}
+
+async function measureAnimationFrameRate(
+  page: CapturePage,
+  options: {
+    minFps: number;
+    sampleMs: number;
+    warmupMs: number;
+  }
+): Promise<AnimationFrameRateMeasurement> {
+  return page.evaluate(
+    ({ minFps, sampleMs, warmupMs }) =>
+      new Promise<AnimationFrameRateMeasurement>((resolve) => {
+        let frameCount = 0;
+        let sampleStart = 0;
+        let previousFrame = 0;
+        let maxFrameGapMs = 0;
+        let settled = false;
+
+        function finish(now: number) {
+          if (settled) return;
+          settled = true;
+          const durationMs = Math.max(1, now - sampleStart);
+          resolve({
+            frames: frameCount,
+            durationMs,
+            fps: frameCount / (durationMs / 1000),
+            minFps,
+            maxFrameGapMs
+          });
+        }
+
+        function sample(now: number) {
+          if (frameCount > 0) {
+            maxFrameGapMs = Math.max(maxFrameGapMs, now - previousFrame);
+          }
+          frameCount += 1;
+          previousFrame = now;
+
+          if (now - sampleStart >= sampleMs) {
+            finish(now);
+            return;
+          }
+
+          requestAnimationFrame(sample);
+        }
+
+        function begin(now: number) {
+          sampleStart = now;
+          previousFrame = now;
+          requestAnimationFrame(sample);
+          window.setTimeout(
+            () => finish(performance.now()),
+            sampleMs + Math.max(1000, sampleMs)
+          );
+        }
+
+        requestAnimationFrame((firstFrame) => {
+          if (warmupMs <= 0) {
+            begin(firstFrame);
+            return;
+          }
+
+          const warmupStart = firstFrame;
+          function warmup(now: number) {
+            if (now - warmupStart >= warmupMs) {
+              begin(now);
+              return;
+            }
+            requestAnimationFrame(warmup);
+          }
+          requestAnimationFrame(warmup);
+        });
+      }),
+    options
+  );
+}
+
+function captureFrameRateErrorMessage(
+  measurement: AnimationFrameRateMeasurement,
+  viewport: ViewportSettings
+): string {
+  return (
+    `Captured animation rendered too slowly: ${measurement.fps.toFixed(1)} FPS ` +
+    `at ${viewport.width}x${viewport.height}. Minimum is ${measurement.minFps} FPS. ` +
+    "Open the HTML to inspect the live version, then optimize the generated animation or recapture after editing it."
+  );
+}
+
+function parseFrameRateFromError(message: string): {
+  measuredFps: number;
+  minFps: number;
+  viewport: ViewportSettings;
+} | undefined {
+  const match = /rendered too slowly:\s*([0-9.]+)\s*FPS\s*at\s*(\d+)x(\d+).*Minimum is\s*([0-9.]+)\s*FPS/iu.exec(message);
+  if (!match) return undefined;
+
+  return {
+    measuredFps: Number(match[1]),
+    viewport: {
+      width: Number(match[2]),
+      height: Number(match[3])
+    },
+    minFps: Number(match[4])
+  };
 }
 
 export async function isVideoMostlyBlack(path: string): Promise<boolean | undefined> {

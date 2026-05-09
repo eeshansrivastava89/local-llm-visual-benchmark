@@ -307,6 +307,47 @@ describe("createLocalApi", () => {
     ).rejects.toThrow(/Write actions are only available in dev server mode/);
   });
 
+  it("opens generated HTML from an absolute run path", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "local-visual-runs-open-"));
+    const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
+    const htmlPath = join(runDirectory, "index.html");
+    const openFile = vi.fn(async () => {});
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(htmlPath, "<!doctype html>", "utf8");
+    const api = createLocalApi({ runsRoot, openFile });
+
+    await expect(
+      api.openRunHtml({ runDirectory, asset: "index.html" })
+    ).resolves.toEqual({
+      opened: true,
+      path: htmlPath
+    });
+    expect(openFile).toHaveBeenCalledWith(htmlPath);
+  });
+
+  it("rejects opening generated HTML when writes are disabled", async () => {
+    const api = createLocalApi({ enableWrites: false });
+
+    await expect(
+      api.openRunHtml({ runDirectory: "/runs/sakura/model-a/run-1", asset: "index.html" })
+    ).rejects.toThrow(/Write actions are only available in dev server mode/);
+  });
+
+  it("rejects opening non-HTML run assets", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "local-visual-runs-open-"));
+    const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(join(runDirectory, "preview.png"), "png", "utf8");
+    const api = createLocalApi({
+      runsRoot,
+      openFile: vi.fn(async () => {})
+    });
+
+    await expect(
+      api.openRunHtml({ runDirectory, asset: "preview.png" })
+    ).rejects.toThrow(/Only generated HTML files can be opened/);
+  });
+
   it("rejects unknown benchmark IDs while preparing a run", async () => {
     const api = createLocalApi({
       loadBenchmarks: vi.fn(async () => benchmarks)

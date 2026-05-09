@@ -22,7 +22,7 @@ const title = "Local LLM Visual Benchmark";
   <body>
     <div class="app-shell">
       <header class="app-header">
-        <div class="mx-auto flex min-h-14 w-full max-w-[1600px] items-center gap-4 px-4 md:px-5">
+        <div class="mx-auto flex min-h-14 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
           <div class="flex min-w-0 flex-1 items-center gap-3">
             <div class="grid size-8 place-items-center rounded-lg border bg-card text-xs font-semibold shadow-sm">
               LV
@@ -36,6 +36,10 @@ const title = "Local LLM Visual Benchmark";
               </p>
             </div>
           </div>
+
+          <a class="sidequest-attribution" href="https://eeshans.com/" target="_blank" rel="noopener">
+            a side quest by <span>eeshans.com</span>
+          </a>
 
           <div class="flex shrink-0 items-center gap-2">
             <span class="badge-outline gap-1.5 text-xs operational-control" id="statsPill" title="System stats">
@@ -52,13 +56,13 @@ const title = "Local LLM Visual Benchmark";
         </div>
       </header>
 
-      <main class="mx-auto w-full max-w-[1600px] px-4 py-4 md:px-5 md:py-5">
+      <main class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8 md:py-5">
         <div class="grid gap-4">
           <div class="flex flex-wrap items-center gap-2">
             <div class="inline-flex rounded-lg border bg-muted p-0.5">
-              <button type="button" class="btn-sm-ghost" data-mode="gallery" aria-pressed="true">Gallery</button>
-              <button type="button" class="btn-sm-ghost" data-mode="benchmark">By prompt</button>
-              <button type="button" class="btn-sm-ghost" data-mode="model">By model</button>
+              <button type="button" class="btn-sm-ghost" data-mode="model" aria-pressed="true">By model</button>
+              <button type="button" class="btn-sm-ghost" data-mode="benchmark" aria-pressed="false">By prompt</button>
+              <button type="button" class="btn-sm-ghost" data-mode="gallery" aria-pressed="false">Gallery</button>
             </div>
             <div class="dropdown-wrap">
               <select id="modelFilter" class="input text-sm" aria-label="Filter by model">
@@ -88,6 +92,23 @@ const title = "Local LLM Visual Benchmark";
           <div id="runsSurface"></div>
         </div>
       </main>
+
+      <footer class="footer" role="contentinfo">
+        <span>&copy; 2025&ndash;2026 Eeshan Srivastava</span>
+        <span>Personal project &middot; MIT License &middot; Non-commercial</span>
+        <span class="footer-links">
+          <a
+            href="https://github.com/eeshansrivastava89/local-llm-visual-benchmark"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Source
+          </a>
+          <a href="https://www.linkedin.com/in/eeshans/" target="_blank" rel="noopener noreferrer">
+            LinkedIn
+          </a>
+        </span>
+      </footer>
     </div>
 
     <!-- Detail Modal -->
@@ -99,7 +120,7 @@ const title = "Local LLM Visual Benchmark";
             <p class="muted-copy truncate-line mt-1 text-sm" id="detailSubtitle"></p>
           </div>
           <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <a class="btn-sm-outline operational-control" id="openHtml" href="#" target="_blank" rel="noreferrer" data-operational-available="false" hidden>Open HTML</a>
+            <button type="button" class="btn-sm-outline operational-control" id="openHtml" data-operational-available="false">Open HTML</button>
             <button type="button" class="btn-sm-outline operational-control" id="recaptureRun" data-operational-available="false">Recapture media</button>
             <button type="button" class="btn-sm-danger operational-control" id="deleteRun" data-operational-available="false">Delete run</button>
             <button type="button" class="btn-sm-outline" id="closeDetail">Close</button>
@@ -116,15 +137,21 @@ const title = "Local LLM Visual Benchmark";
             <section class="inspector-section">
               <div class="section-row">
                 <h3>Prompt</h3>
-                <span class="badge-outline" id="promptLength">0 chars</span>
+                <div class="section-actions">
+                  <span class="badge-outline" id="promptLength">0 chars</span>
+                  <button type="button" class="btn-sm-outline" id="copyDetailPrompt">Copy prompt</button>
+                </div>
               </div>
               <pre class="code-block prompt-block" id="detailPrompt"></pre>
             </section>
-            <section class="inspector-section compact-section">
+            <section class="inspector-section compact-section run-folder-section">
               <div class="section-row">
-                <h3>Filesystem</h3>
+                <h3>Run folder</h3>
+                <button type="button" class="btn-sm-outline" id="copyRunFolder">Copy path</button>
               </div>
-              <pre class="code-block paths-block" id="detailPaths"></pre>
+              <div class="run-folder-path-wrap">
+                <code class="run-folder-path" id="detailRunFolderPath">-</code>
+              </div>
             </section>
           </aside>
         </div>

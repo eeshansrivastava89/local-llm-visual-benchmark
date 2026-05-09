@@ -27,7 +27,7 @@ const state = {
   stats: null,
   selectedModel: "all",
   selectedBenchmark: "all",
-  mode: "gallery",
+  mode: "model",
   preparedPrompt: "",
   selectedRun: null,
   captureRunDirectory: "",
@@ -109,8 +109,10 @@ const els = {
   deleteRun: document.querySelector("#deleteRun"),
   detailPrompt: document.querySelector("#detailPrompt"),
   promptLength: document.querySelector("#promptLength"),
+  copyDetailPrompt: document.querySelector("#copyDetailPrompt"),
   detailMeta: document.querySelector("#detailMeta"),
-  detailPaths: document.querySelector("#detailPaths")
+  detailRunFolderPath: document.querySelector("#detailRunFolderPath"),
+  copyRunFolder: document.querySelector("#copyRunFolder")
 };
 
 init();
@@ -169,7 +171,10 @@ function wireEvents() {
   });
 
   els.deleteRun.addEventListener("click", () => requestDeleteSelectedRun());
+  els.openHtml.addEventListener("click", () => openSelectedRunHtml());
   els.recaptureRun.addEventListener("click", () => captureSelectedRunMedia({ force: true }));
+  els.copyDetailPrompt.addEventListener("click", () => copyDetailPrompt());
+  els.copyRunFolder.addEventListener("click", () => copySelectedRunFolder());
 
   els.modelFilter.addEventListener("change", () => {
     state.selectedModel = els.modelFilter.value;
@@ -867,8 +872,34 @@ async function copyPreparedPrompt() {
   if (!els.preparedPrompt.value) {
     return;
   }
-  await navigator.clipboard.writeText(els.preparedPrompt.value);
+  await copyTextToClipboard(els.preparedPrompt.value, els.copyPrompt, "Copy");
   els.prepMessage.textContent = "Prompt copied.";
+}
+
+async function copyDetailPrompt() {
+  const prompt = els.detailPrompt.textContent ?? "";
+  await copyTextToClipboard(prompt, els.copyDetailPrompt, "Copy prompt");
+}
+
+async function copySelectedRunFolder() {
+  const runFolder = state.selectedRun?.runDirectory ?? "";
+  await copyTextToClipboard(runFolder, els.copyRunFolder, "Copy path");
+}
+
+async function copyTextToClipboard(text, button, label) {
+  if (!text) {
+    return;
+  }
+
+  await navigator.clipboard.writeText(text);
+  if (!button) {
+    return;
+  }
+
+  button.textContent = "Copied";
+  window.setTimeout(() => {
+    button.textContent = label;
+  }, 1200);
 }
 
 function requestDeleteSelectedRun() {
@@ -905,6 +936,26 @@ async function confirmDeleteSelectedRun() {
   } finally {
     els.confirmDeleteRun.disabled = false;
     els.deleteRun.disabled = false;
+  }
+}
+
+async function openSelectedRunHtml() {
+  const run = state.selectedRun;
+  if (!run?.runDirectory || !run.assets?.html || !canUseOperationalControls()) {
+    return;
+  }
+
+  els.openHtml.disabled = true;
+  try {
+    await postJson("/api/open-html", {
+      runDirectory: run.runDirectory,
+      asset: run.assets.html
+    });
+  } catch (error) {
+    els.detailMeta.innerHTML +=
+      '<span class="meta-label">Open HTML</span><strong>' + escapeHtml(error.message) + "</strong>";
+  } finally {
+    updateDetailActions(run);
   }
 }
 
@@ -1027,19 +1078,19 @@ function renderRunCard(run, mode = "gallery") {
     escapeAttribute(run.benchmark?.title ?? "Run") + " " + escapeAttribute(run.model?.id ?? "") + '">' +
       renderPreview(run, { capturing: isCapturing }) +
       '<span class="run-card-body">' +
-        '<span class="grid min-w-0 gap-1">' +
-          '<strong class="truncate-line text-sm font-semibold">' + escapeHtml(identity.primary) + "</strong>" +
-          (identity.secondary ? '<span class="muted-copy truncate-line text-sm">' + escapeHtml(identity.secondary) + "</span>" : "") +
+        '<span class="run-card-title-row">' +
+          '<strong class="truncate-line">' + escapeHtml(identity.primary) + "</strong>" +
+          '<span class="muted-copy truncate-line">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</span>" +
         "</span>" +
-        '<span class="flex items-center justify-between gap-3">' +
-          '<span class="inline-flex items-center gap-2 rounded-full border px-2 py-1 text-[0.72rem] font-medium text-muted-foreground">' +
+        (identity.secondary ? '<span class="run-card-subtitle truncate-line">' + escapeHtml(identity.secondary) + "</span>" : "") +
+        '<span class="run-card-status-row">' +
+          '<span class="run-state-pill">' +
             '<span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' +
             escapeHtml(stateLabel.label) +
           "</span>" +
-          '<span class="muted-copy truncate-line text-xs">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</span>" +
+          renderAssetBadges(run) +
         "</span>" +
-        renderAssetBadges(run) +
-        '<span class="muted-copy text-sm">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</span>" +
+        '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</span>" +
       "</span>" +
     "</button>"
   );
@@ -1052,11 +1103,11 @@ function renderAssetBadges(run) {
     { label: "VID", ready: Boolean(run.assets?.video || run.assets?.videoMp4) }
   ];
 
-  return '<span class="flex flex-wrap items-center gap-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.08em]">' +
+  return '<span class="asset-badges">' +
     badges.map((badge) =>
-      '<span class="rounded border px-1.5 py-0.5 ' +
-        (badge.ready ? 'border-[oklch(0.78_0.08_158)] bg-[oklch(0.95_0.035_158)] text-[oklch(0.34_0.08_158)]' : 'border-border bg-muted text-muted-foreground') +
-      '">' + escapeHtml(badge.label + " " + (badge.ready ? "✓" : "—")) + "</span>"
+      '<span class="asset-chip" data-ready="' + String(badge.ready) + '">' +
+        escapeHtml(badge.label + " " + (badge.ready ? "✓" : "—")) +
+      "</span>"
     ).join("") +
   "</span>";
 }
@@ -1072,6 +1123,9 @@ function renderCaptureOverlay(capturing) {
 function runCardMediaMessage(run, isCapturing) {
   if (isCapturing) return "Capturing preview media";
   if (hasCapturedVideo(run)) return "Video ready";
+  if (run.status === "failed" || run.capture?.video?.status === "failed") {
+    return displayRunError(run) ?? "Capture failed";
+  }
   if (run.assets?.html) return "Needs media capture";
   return "Waiting for index.html source";
 }
@@ -1133,25 +1187,19 @@ function renderDetail(run) {
   const prompt = run.promptText ?? run.benchmark?.prompt ?? "Prompt unavailable in run folder.";
   els.detailPrompt.textContent = prompt;
   els.promptLength.textContent = prompt.length.toLocaleString() + " chars";
+  els.copyDetailPrompt.disabled = !prompt;
+  els.detailRunFolderPath.textContent = run.runDirectory ?? "Run folder unavailable";
+  els.copyRunFolder.disabled = !run.runDirectory;
   const stateLabel = runCardState(run);
   els.detailMeta.innerHTML =
     '<span class="meta-label">State</span><strong>' + escapeHtml(stateLabel.label) + "</strong>" +
     '<span class="meta-label">Model</span><strong>' + escapeHtml(run.model?.id ?? "-") + "</strong>" +
     '<span class="meta-label">Prompt</span><strong>' + escapeHtml(run.benchmark?.id ?? "-") + "</strong>" +
     '<span class="meta-label">Updated</span><strong>' + escapeHtml(formatDate(run.updatedAt)) + "</strong>";
-  els.detailPaths.textContent = [
-    "Run folder: " + (run.runDirectory ?? "-"),
-    "HTML source: " + (assetPath(run, run.assets?.html) || "waiting for index.html"),
-    "Prompt: " + (assetPath(run, run.assets?.prompt) || "prompt.md missing"),
-    "Preview: " + (assetPath(run, run.assets?.preview) || "preview.png missing"),
-    "Video: " + (assetPath(run, run.assets?.video || run.assets?.videoMp4) || "preview video missing")
-  ].join("\n");
 }
 
 function updateDetailActions(run) {
-  const htmlHref = assetHref(run, run.assets?.html);
-  setOperationalAvailability(els.openHtml, Boolean(run.runDirectory && run.assets?.html && htmlHref));
-  els.openHtml.href = htmlHref ?? "#";
+  setOperationalAvailability(els.openHtml, Boolean(run.runDirectory && run.assets?.html));
 
   const canCapture = Boolean(run.runDirectory && run.assets?.html);
   setOperationalAvailability(els.recaptureRun, canCapture);
@@ -1159,6 +1207,7 @@ function updateDetailActions(run) {
   syncOperationalControls();
 
   const canOperate = canUseOperationalControls();
+  els.openHtml.disabled = !canOperate || !run.runDirectory || !run.assets?.html;
   els.recaptureRun.disabled = !canOperate || !canCapture || state.captureBusy;
   els.deleteRun.disabled = !canOperate || !run.runDirectory;
   if (state.captureBusy && state.captureRunDirectory === run.runDirectory) {
@@ -1298,8 +1347,9 @@ function needsMediaCapture(run) {
 }
 
 function displayRunError(run) {
-  const message = run.error?.message;
+  const message = run.capture?.video?.error?.message ?? run.error?.message;
   if (!message) return null;
+  if (/rendered too slowly/iu.test(message)) return message;
   if (/chat completion timed out/iu.test(message)) return "External tool timed out before writing an artifact.";
   if (/LM Studio.*chat completion/iu.test(message)) return "External tool failed to produce an artifact.";
   if (/LM Studio/iu.test(message)) return "External tool error. Open details for the original message.";

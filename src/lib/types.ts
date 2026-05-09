@@ -72,6 +72,14 @@ export interface RunCaptureAsset {
   capturedAt?: string;
   reason?: string;
   error?: RunError;
+  quality?: {
+    measuredFps?: number;
+    minFps?: number;
+    sampleMs?: number;
+    frames?: number;
+    viewport?: ViewportSettings;
+    launchArgs?: string[];
+  };
 }
 
 export interface RunCaptureMetadata {

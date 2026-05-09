@@ -1,9 +1,14 @@
+import { execFile } from "node:child_process";
+import { stat } from "node:fs/promises";
+import { extname, resolve } from "node:path";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import {
   captureMissingRunMedia as defaultCaptureMissingRunMedia,
   captureSingleRunMedia as defaultCaptureSingleRunMedia,
   type CaptureMissingRunMediaResult
 } from "../lib/capture-media";
+import { assertSafeRunAssetPath, isPathInside, resolveRunAssetPath } from "../lib/asset-paths";
 import { loadBenchmarks as defaultLoadBenchmarks } from "../lib/benchmarks";
 import {
   checkLmStudioConnection as defaultCheckLmStudioConnection,
@@ -26,6 +31,7 @@ import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from ".
 
 const STATUS_TIMEOUT_MS = 2000;
 const MODEL_LIST_TIMEOUT_MS = 10000;
+const execFileAsync = promisify(execFile);
 
 export interface StatusRequest {
   baseUrl?: string;
@@ -55,6 +61,11 @@ export interface CaptureMediaRequest {
   force?: unknown;
 }
 
+export interface OpenRunHtmlRequest {
+  runDirectory?: string;
+  asset?: string;
+}
+
 export interface LocalApiDependencies {
   benchmarkDirectory?: string;
   runsRoot?: string;
@@ -73,6 +84,7 @@ export interface LocalApiDependencies {
   mirrorModelsToConfigs?: typeof defaultMirrorModelsToConfigs;
   captureMissingRunMedia?: typeof defaultCaptureMissingRunMedia;
   captureSingleRunMedia?: typeof defaultCaptureSingleRunMedia;
+  openFile?: (path: string) => Promise<void>;
 }
 
 export interface LocalApi {
@@ -86,6 +98,7 @@ export interface LocalApi {
   getModelSyncState(): Promise<ModelSyncStateResponse>;
   mirrorModels(request: MirrorModelsRequest): Promise<MirrorModelsResponse>;
   captureMissingMedia(request?: CaptureMediaRequest): Promise<CaptureMissingRunMediaResult>;
+  openRunHtml(request: OpenRunHtmlRequest): Promise<OpenRunHtmlResponse>;
 }
 
 export interface StatusResponse {
@@ -135,6 +148,11 @@ export interface MirrorModelsResponse {
   sync: ModelSyncState;
 }
 
+export interface OpenRunHtmlResponse {
+  opened: true;
+  path: string;
+}
+
 export class ApiRequestError extends Error {
   readonly status: number;
 
@@ -172,6 +190,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
     dependencies.captureMissingRunMedia ?? defaultCaptureMissingRunMedia;
   const captureSingleRunMedia =
     dependencies.captureSingleRunMedia ?? defaultCaptureSingleRunMedia;
+  const openFile = dependencies.openFile ?? defaultOpenFile;
 
   return {
     async getStatus(request = {}) {
@@ -264,6 +283,21 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       return captureMissingRunMedia({ runsRoot });
     },
 
+    async openRunHtml(request) {
+      assertWritesEnabled(enableWrites);
+      const path = await resolveRunHtmlPath({
+        runsRoot,
+        runDirectory: readRequiredString(request.runDirectory, "runDirectory"),
+        asset: request.asset ?? "index.html"
+      });
+      await openFile(path);
+
+      return {
+        opened: true,
+        path
+      };
+    },
+
     async getModelSyncState() {
       return {
         sync: await getModelSyncState({
@@ -298,6 +332,36 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       };
     }
   };
+}
+
+async function defaultOpenFile(path: string): Promise<void> {
+  await execFileAsync("open", [path]);
+}
+
+async function resolveRunHtmlPath(input: {
+  runsRoot: string;
+  runDirectory: string;
+  asset: string;
+}): Promise<string> {
+  const runsRoot = resolve(input.runsRoot);
+  const runDirectory = resolve(input.runDirectory);
+  const asset = assertSafeRunAssetPath(input.asset);
+
+  if (!isPathInside(runDirectory, runsRoot)) {
+    throw new ApiRequestError(400, "Run directory is outside the configured runs folder.");
+  }
+
+  const path = resolveRunAssetPath(runDirectory, asset);
+  if (extname(path).toLowerCase() !== ".html") {
+    throw new ApiRequestError(400, "Only generated HTML files can be opened.");
+  }
+
+  const result = await stat(path);
+  if (!result.isFile()) {
+    throw new ApiRequestError(400, "HTML path does not point to a file.");
+  }
+
+  return path;
 }
 
 export async function apiJsonResponse<T>(

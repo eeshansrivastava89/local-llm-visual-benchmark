@@ -62,13 +62,28 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(page.getByRole("button", { name: "Setup" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
   await expect(page.getByRole("button", { name: "LM Studio" })).toHaveCount(0);
+  const attribution = page.getByRole("link", { name: "a side quest by eeshans.com" });
+  await expect(attribution).toHaveAttribute("href", "https://eeshans.com/");
+  await expect(attribution).toHaveCSS("border-radius", "999px");
   await expect(page.getByLabel("Filter by model")).toBeVisible();
   await expect(page.getByLabel("Filter by prompt")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Gallery" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "By model" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "By prompt" })).toBeVisible();
+  await expect(page.locator("[data-mode]")).toHaveText(["By model", "By prompt", "Gallery"]);
+  await expect(page.getByRole("button", { name: "By model" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "By prompt" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Gallery" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("heading", { name: "Model attempts" })).toBeVisible();
   await expect(page.getByText("0 with video, 1 need capture, 0 prepared, 0 failed")).toBeVisible();
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
+  await expect(page.getByRole("contentinfo")).toContainText("© 2025–2026 Eeshan Srivastava");
+  await expect(page.getByRole("contentinfo")).toContainText("Personal project · MIT License · Non-commercial");
+  await expect(page.getByRole("link", { name: "Source" })).toHaveAttribute(
+    "href",
+    "https://github.com/eeshansrivastava89/local-llm-visual-benchmark"
+  );
+  await expect(page.getByRole("link", { name: "LinkedIn" })).toHaveAttribute(
+    "href",
+    "https://www.linkedin.com/in/eeshans/"
+  );
 
   await page.getByRole("button", { name: "Setup" }).click();
   const setupDialog = page.getByRole("dialog", { name: "Setup" });
@@ -174,8 +189,27 @@ test("prepares a run slot via modal and shows the generated prompt", async ({ pa
 });
 
 test("supports prompt comparison and video-only run details", async ({ page }) => {
+  let openHtmlPayload: unknown;
+  let copiedText = "";
+  await page.exposeFunction("recordClipboardWrite", (value: string) => {
+    copiedText = String(value);
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: (value: string) =>
+          (window as unknown as { recordClipboardWrite: (text: string) => Promise<void> }).recordClipboardWrite(
+            value
+          )
+      },
+      configurable: true
+    });
+  });
   await mockApi(page, {
     lmStudioOnline: true,
+    onOpenHtml: (payload) => {
+      openHtmlPayload = payload;
+    },
     runs: [
       sampleRunWithVideo,
       {
@@ -200,10 +234,24 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
   await expect(page.locator("#detailBackdrop[open]")).toBeVisible();
   await expect(page.locator("#detailPreview iframe")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Open HTML" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveAttribute("href", /asset=index\.html/);
+  await expect(page.getByRole("button", { name: "Open HTML" })).toBeVisible();
+  await page.getByRole("button", { name: "Open HTML" }).click();
+  await expect.poll(() => openHtmlPayload).toMatchObject({
+    runDirectory: sampleRunWithVideo.runDirectory,
+    asset: "index.html"
+  });
   await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
   await expect(page.getByText("Create a sakura animation")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy prompt" })).toBeVisible();
+  await page.getByRole("button", { name: "Copy prompt" }).click();
+  await expect.poll(() => copiedText).toBe(benchmarks[0].prompt);
+  await expect(page.getByRole("heading", { name: "Run folder" })).toBeVisible();
+  await expect(page.locator("#detailRunFolderPath")).toHaveText(sampleRunWithVideo.runDirectory);
+  await expect(page.locator("#detailBackdrop")).not.toContainText("HTML source:");
+  await expect(page.locator("#detailBackdrop")).not.toContainText("Preview:");
+  await expect(page.locator("#detailBackdrop")).not.toContainText("Video:");
+  await page.getByRole("button", { name: "Copy path" }).click();
+  await expect.poll(() => copiedText).toBe(sampleRunWithVideo.runDirectory);
   await expect(page.getByRole("link", { name: "Prompt file" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Raw response" })).toHaveCount(0);
   await expect(page.locator("#detailMeta")).not.toContainText("Tool");
@@ -267,7 +315,7 @@ test("grouped views scroll as one surface and avoid duplicate card labels", asyn
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
 
   await page.getByRole("button", { name: "By prompt" }).click();
-  await expect(page.locator("#runsSurface")).toHaveCSS("overflow-y", "auto");
+  await expect(page.locator("#runsSurface")).toHaveCSS("overflow-y", "visible");
   await expect(page.locator("#runsSurface")).toHaveCSS("scrollbar-width", "none");
   await expect(page.locator(".grouped-runs")).toBeVisible();
   const promptGroup = page.locator(".group").filter({ hasText: benchmarks[0].title }).first();
@@ -280,6 +328,69 @@ test("grouped views scroll as one surface and avoid duplicate card labels", asyn
   const modelCard = modelGroup.locator("[data-run-id]").first();
   await expect(modelCard).not.toContainText(models[0].id);
   await expect(modelCard).toContainText(/Sakura Particle Field|Solar System Orrery/);
+});
+
+test("uses dense Sidequests-style gallery geometry on desktop", async ({ page }) => {
+  const manyRuns = Array.from({ length: 9 }, (_, index) => ({
+    ...sampleRunWithVideo,
+    runId: `2026-05-06T21-${String(index).padStart(2, "0")}-00-000Z`,
+    benchmark: index % 2 === 0 ? benchmarks[0] : benchmarks[1],
+    model: index % 3 === 0
+      ? { id: models[0].id, slug: "google-gemma-4-e4b" }
+      : { id: models[1].id, slug: "local-qwen2-5-vl" },
+    runDirectory: `/tmp/runs/dense/${index}`
+  }));
+  await mockApi(page, { lmStudioOnline: true, runs: manyRuns });
+  await page.setViewportSize({ width: 1600, height: 900 });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+
+  const galleryColumns = await page.locator(".run-grid").first().evaluate((el) =>
+    getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
+  );
+  expect(galleryColumns).toBe(4);
+
+  const summaryBox = await page.locator(".gallery-summary").boundingBox();
+  expect(summaryBox?.height ?? Infinity).toBeLessThanOrEqual(52);
+
+  const firstCardBox = await page.locator("[data-run-id]").first().boundingBox();
+  expect(firstCardBox?.height ?? Infinity).toBeLessThanOrEqual(292);
+
+  await page.getByRole("button", { name: "By model" }).click();
+
+  const groupHeadBox = await page.locator(".group-head").first().boundingBox();
+  expect(groupHeadBox?.height ?? Infinity).toBeLessThanOrEqual(48);
+
+  const groupedColumns = await page.locator(".group .run-grid").first().evaluate((el) =>
+    getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
+  );
+  expect(groupedColumns).toBe(4);
+});
+
+test("scrolls grouped views from the page margins instead of trapping the grid", async ({ page }) => {
+  const manyRuns = Array.from({ length: 30 }, (_, index) => ({
+    ...sampleRunWithVideo,
+    runId: `2026-05-06T22-${String(index).padStart(2, "0")}-00-000Z`,
+    benchmark: index % 2 === 0 ? benchmarks[0] : benchmarks[1],
+    model: index % 3 === 0
+      ? { id: models[0].id, slug: "google-gemma-4-e4b" }
+      : { id: models[1].id, slug: "local-qwen2-5-vl" },
+    runDirectory: `/tmp/runs/group-scroll/${index}`
+  }));
+  await mockApi(page, { lmStudioOnline: true, runs: manyRuns });
+  await page.setViewportSize({ width: 1600, height: 900 });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await page.getByRole("button", { name: "By model" }).click();
+
+  await expect(page.locator("#runsSurface")).toHaveCSS("overflow-y", "visible");
+
+  const beforePageScroll = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(1260, 420);
+  await page.mouse.wheel(0, 650);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(beforePageScroll);
 });
 
 test("captures missing run media with per-card progress", async ({ page }) => {
@@ -312,6 +423,43 @@ test("captures missing run media with per-card progress", async ({ page }) => {
 
   releaseCapture();
   await expect(page.locator("[data-run-id]").first()).toContainText("VID ✓");
+});
+
+test("shows capture quality failures instead of hiding them behind capture prompts", async ({ page }) => {
+  await mockApi(page, {
+    lmStudioOnline: true,
+    runs: [
+      {
+        ...sampleRun,
+        status: "failed",
+        error: {
+          message: "Captured animation rendered too slowly: 3.0 FPS at 1280x720."
+        },
+        capture: {
+          preview: {
+            status: "ready",
+            path: "preview.png",
+            capturedAt: "2026-05-06T20:00:00.000Z"
+          },
+          video: {
+            status: "failed",
+            path: "preview.webm",
+            capturedAt: "2026-05-06T20:00:00.000Z",
+            error: {
+              message: "Captured animation rendered too slowly: 3.0 FPS at 1280x720."
+            }
+          }
+        }
+      }
+    ]
+  });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+
+  await expect(page.locator("[data-run-id]").first()).toContainText("failed");
+  await expect(page.locator("[data-run-id]").first()).toContainText("Captured animation rendered too slowly");
+  await expect(page.locator("[data-run-id]").first()).not.toContainText("Needs media capture");
 });
 
 test("refresh reloads prompt files and saved runs", async ({ page }) => {
@@ -405,7 +553,7 @@ test("hides operational chrome when writes are disabled", async ({ page }) => {
   await expect(page.locator("#themeLabel")).toHaveClass(/sr-only/);
 
   await page.locator("[data-run-id]").first().click();
-  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open HTML" })).toHaveCount(0);
 });
 
 test("falls back to exported static data without prepare controls", async ({ page }) => {
@@ -458,7 +606,7 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await expect(page.getByRole("button", { name: "Recapture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Open HTML" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Open HTML" })).toHaveCount(0);
   await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
 });
 
@@ -471,6 +619,7 @@ async function mockApi(
     onPrepare?: (payload: unknown) => void;
     onDelete?: (payload: unknown) => void;
     onCapture?: (payload: unknown) => void | Promise<void>;
+    onOpenHtml?: (payload: unknown) => void | Promise<void>;
     writesEnabled?: boolean;
   }
 ): Promise<void> {
@@ -570,6 +719,18 @@ async function mockApi(
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({ captured: 1, skipped: 0, failed: 0, runs: runs ?? [sampleRunWithVideo] })
+    });
+  });
+
+  await page.route("**/api/open-html", async (route) => {
+    const payload = route.request().postDataJSON();
+    await options.onOpenHtml?.(payload);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        opened: true,
+        path: payload.runDirectory + "/" + payload.asset
+      })
     });
   });
 
