@@ -1,5 +1,4 @@
 import { mkdir } from "node:fs/promises";
-import { appendHtmlOutputContract } from "./benchmarks";
 import { buildRunPaths, createRunId } from "./paths";
 import { writePromptMarkdown, writeRunMetadata } from "./runs";
 import type { BenchmarkRecord, PreparedRun, RunMetadata } from "./types";
@@ -76,16 +75,14 @@ export function buildToolPrompt(input: {
   htmlPath: string;
 }): string {
   return [
-    `Model label: ${input.modelId}`,
-    `Benchmark: ${input.benchmark.title} (${input.benchmark.id})`,
-    `Run folder: ${input.runDirectory}`,
+    "Create a complete, self-contained HTML file for the request below.",
+    "Do not print the HTML in chat. Write the file directly to this exact path:",
     "",
-    "Required output:",
-    `- Save one complete self-contained HTML document to: ${input.htmlPath}`,
-    "- Do not place the final HTML in any other folder.",
-    "- Do not require external network assets.",
-    "- Only create index.html; the benchmark viewer captures preview media after index.html exists.",
+    input.htmlPath,
     "",
-    appendHtmlOutputContract(input.benchmark.prompt)
+    "The HTML must include all CSS and JavaScript inline and must not depend on external network assets.",
+    "Compose for a 1280x720 capture viewport; keep the main subject fully visible and centered at that resolution and common desktop sizes.",
+    "",
+    input.benchmark.prompt.trim()
   ].join("\n");
 }

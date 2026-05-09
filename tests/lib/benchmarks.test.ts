@@ -2,10 +2,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
-import {
-  appendHtmlOutputContract,
-  loadBenchmarks
-} from "../../src/lib/benchmarks";
+import { loadBenchmarks } from "../../src/lib/benchmarks";
 
 async function createBenchmarkDir(files: Record<string, string>) {
   const dir = await mkdtemp(join(tmpdir(), "llm-benchmarks-"));
@@ -84,17 +81,5 @@ Second prompt.
     await expect(loadBenchmarks(benchmarkDir)).rejects.toThrow(
       /duplicate benchmark id "duplicate".*first\.md.*second\.md/i
     );
-  });
-});
-
-describe("appendHtmlOutputContract", () => {
-  it("appends the shared HTML output contract outside benchmark markdown", () => {
-    const prompt = appendHtmlOutputContract("Build a scene.");
-
-    expect(prompt).toContain("Build a scene.");
-    expect(prompt).toContain("one complete self-contained HTML document");
-    expect(prompt).toContain("no explanations");
-    expect(prompt).toContain("Do not depend on external network assets or CDN libraries");
-    expect(prompt).toMatch(/<!doctype html>|<html/i);
   });
 });

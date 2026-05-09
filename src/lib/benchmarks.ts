@@ -16,19 +16,6 @@ interface BenchmarkFrontmatter {
   description?: unknown;
 }
 
-const HTML_OUTPUT_CONTRACT = [
-  "Output contract:",
-  "- Return exactly one complete self-contained HTML document.",
-  "- The document must include <!doctype html>, <html>, <head>, and <body>.",
-  "- Do not depend on external network assets or CDN libraries.",
-  "- Inline small helper functions if useful, but keep the final artifact portable as one file.",
-  "- Use no explanations, Markdown fences, commentary, or extra text before or after the HTML."
-].join("\n");
-
-export function appendHtmlOutputContract(prompt: string): string {
-  return `${prompt.trim()}\n\n${HTML_OUTPUT_CONTRACT}`;
-}
-
 export async function loadBenchmarks(
   benchmarkDirectory: string
 ): Promise<BenchmarkDefinition[]> {

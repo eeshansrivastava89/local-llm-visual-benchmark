@@ -44,6 +44,18 @@ const sampleRunWithVideo = {
   assets: {
     ...sampleRun.assets,
     video: "preview.webm"
+  },
+  capture: {
+    preview: {
+      status: "ready",
+      path: "preview.png",
+      capturedAt: "2026-05-06T19:13:00.000Z"
+    },
+    video: {
+      status: "ready",
+      path: "preview.webm",
+      capturedAt: "2026-05-06T19:13:00.000Z"
+    }
   }
 };
 
@@ -240,7 +252,7 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
     runDirectory: sampleRunWithVideo.runDirectory,
     asset: "index.html"
   });
-  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
+  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm.*v=2026-05-06T19%3A13%3A00\.000Z/);
   await expect(page.getByText("Create a sakura animation")).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy prompt" })).toBeVisible();
   await page.getByRole("button", { name: "Copy prompt" }).click();
@@ -275,7 +287,19 @@ test("recaptures media for the open run detail", async ({ page }) => {
       runsResponse = [
         {
           ...sampleRunWithVideo,
-          updatedAt: "2026-05-06T20:00:00.000Z"
+          updatedAt: "2026-05-06T20:00:00.000Z",
+          capture: {
+            preview: {
+              status: "ready",
+              path: "preview.png",
+              capturedAt: "2026-05-06T20:00:00.000Z"
+            },
+            video: {
+              status: "ready",
+              path: "preview.webm",
+              capturedAt: "2026-05-06T20:00:00.000Z"
+            }
+          }
         }
       ];
     }
@@ -292,7 +316,9 @@ test("recaptures media for the open run detail", async ({ page }) => {
     runDirectory: sampleRunWithVideo.runDirectory,
     force: true
   });
-  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
+  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm.*v=2026-05-06T20%3A00%3A00\.000Z/);
+  await expect(page.locator("#detailPreview video")).toHaveAttribute("poster", /preview\.png.*v=2026-05-06T20%3A00%3A00\.000Z/);
+  await expect(page.getByRole("button", { name: "Recapture media" })).toBeEnabled();
 
   await page.getByRole("button", { name: "Close" }).click();
   await expect(page.locator("[data-run-id]").first()).not.toContainText("Capturing");
@@ -607,7 +633,7 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Open HTML" })).toHaveCount(0);
-  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm$/);
+  await expect(page.locator("#detailPreview video")).toHaveAttribute("src", /preview\.webm.*v=2026-05-06T19%3A13%3A00\.000Z/);
 });
 
 async function mockApi(
