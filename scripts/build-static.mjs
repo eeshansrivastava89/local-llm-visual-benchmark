@@ -15,6 +15,7 @@ const staticOutputDirectory =
   process.env.STATIC_OUTPUT_DIR ?? join(repoRoot, "dist-static");
 const clientBuildDirectory =
   process.env.STATIC_CLIENT_BUILD_DIR ?? join(repoRoot, "dist", "client");
+const astroBase = process.env.ASTRO_BASE ?? "/local-llm-visual-benchmark/";
 
 const manifest = await generateStaticExport({
   benchmarkDirectory,
@@ -41,7 +42,10 @@ async function run(command, args, cwd) {
     const child = spawn(command, args, {
       cwd,
       stdio: "inherit",
-      env: process.env
+      env: {
+        ...process.env,
+        ASTRO_BASE: astroBase
+      }
     });
 
     child.on("error", reject);
