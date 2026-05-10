@@ -591,7 +591,7 @@ test("captures missing run media with per-card progress", async ({ page }) => {
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
-  await expect(page.locator("[data-run-id]").first()).toContainText("VID —");
+  await expect(page.locator("[data-run-id]").first()).toContainText("Needs media capture");
 
   await page.getByRole("button", { name: /Capture preview for Sakura Particle Field/ }).click();
 
@@ -599,7 +599,7 @@ test("captures missing run media with per-card progress", async ({ page }) => {
   await expect(page.locator("[data-run-id]").first()).toContainText("Capturing");
 
   releaseCapture();
-  await expect(page.locator("[data-run-id]").first()).toContainText("VID ✓");
+  await expect(page.locator("[data-run-id]").first()).toContainText("Video ready");
 });
 
 test("auto-detects newly saved HTML and starts capture from the toast", async ({ page }) => {

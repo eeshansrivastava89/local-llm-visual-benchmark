@@ -1213,7 +1213,6 @@ function renderRunCard(run, mode = "gallery") {
             '<span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' +
             escapeHtml(stateLabel.label) +
           "</span>" +
-          renderAssetBadges(run) +
         "</span>" +
         '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</span>" +
         renderRunCaptureAction(run, isCapturing, "card") +
@@ -1244,22 +1243,6 @@ function renderRunCaptureAction(run, isCapturing, placement) {
       "</button>" +
     "</span>"
   );
-}
-
-function renderAssetBadges(run) {
-  const badges = [
-    { label: "SRC", ready: Boolean(run.assets?.html) },
-    { label: "PNG", ready: Boolean(run.assets?.preview) },
-    { label: "VID", ready: Boolean(run.assets?.video || run.assets?.videoMp4) }
-  ];
-
-  return '<span class="asset-badges">' +
-    badges.map((badge) =>
-      '<span class="asset-chip" data-ready="' + String(badge.ready) + '">' +
-        escapeHtml(badge.label + " " + (badge.ready ? "✓" : "—")) +
-      "</span>"
-    ).join("") +
-  "</span>";
 }
 
 function renderCaptureOverlay(capturing) {
