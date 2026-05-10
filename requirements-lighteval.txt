@@ -1,7 +1,0 @@
-# Optional Python environment for LightEval runs.
-# Use Python 3.12. Example:
-#   uv venv .venv-lighteval --python 3.12
-#   source .venv-lighteval/bin/activate
-#   uv pip install -r requirements-lighteval.txt
-lighteval[litellm]
-litellm[caching]>=1.66.0

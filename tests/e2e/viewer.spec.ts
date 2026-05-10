@@ -65,12 +65,12 @@ const sampleRunWithVideo = {
   }
 };
 
-const sampleLightEvalRun = {
+const sampleUnsupportedRun = {
   runId: "2026-05-10T03-11-10-113Z",
   benchmark: {
     id: "boolq-0",
-    title: "LightEval: boolq|0",
-    description: "LightEval task(s): boolq|0",
+    title: "Deprecated quantitative task",
+    description: "Unsupported quantitative task metadata.",
     prompt: "boolq|0"
   },
   model: {
@@ -80,13 +80,13 @@ const sampleLightEvalRun = {
   kind: "lighteval",
   runner: {
     mode: "lighteval",
-    intendedRunner: "LightEval",
-    backendLabel: "LightEval",
+    intendedRunner: "Deprecated quantitative runner",
+    backendLabel: "Deprecated quantitative runner",
     baseUrl: "http://localhost:1234/v1",
     model: "google/gemma-4-e4b",
-    launchCommand: "lighteval endpoint litellm args boolq|0",
+    launchCommand: "quantitative-runner boolq|0",
     commandAsset: "command.txt",
-    metricSource: "LightEval",
+    metricSource: "Deprecated quantitative result",
     retries: 0,
     tokenMetrics: {
       reported: false
@@ -99,13 +99,11 @@ const sampleLightEvalRun = {
     "/tmp/runs/boolq-0/google-gemma-4-e4b-bae096a7fc/2026-05-10T03-11-10-113Z",
   assets: {
     metadata: "metadata.json",
-    command: "command.txt",
-    lightevalResults: "results",
-    lightevalDetails: "details"
+    command: "command.txt"
   }
 };
 
-test("renders viewer with compact header and dropdown filters", async ({ page }) => {
+test("renders the visual workbench with prompt/model/table modes", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: true });
 
   await page.goto("/");
@@ -114,7 +112,7 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(
     page.getByRole("heading", { name: "Local LLM Visual Benchmark" })
   ).toBeVisible();
-  await expect(page.getByText("Browse and collect visual benchmark outputs.")).toBeVisible();
+  await expect(page.getByText("Browse visual benchmark outputs by prompt, model, or table.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Prepare run" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Setup" })).toBeVisible();
@@ -125,23 +123,21 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(attribution).toHaveCSS("border-radius", "999px");
   await expect(page.getByLabel("Filter by model")).toBeVisible();
   await expect(page.getByLabel("Filter by prompt")).toBeVisible();
-  // Phase 2: section tabs
-  await expect(page.locator("[data-section]")).toHaveCount(2);
-  await expect(page.locator("[data-section]").first()).toHaveAttribute("aria-pressed", "true");
-  // Phase 2: view tabs default to Gallery
-  await expect(page.locator("[data-mode]")).toHaveText(["Gallery", "Table", "By model", "By prompt"]);
-  await expect(page.getByRole("button", { name: "Gallery" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: "Table" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("link", { name: /Gallery Visual outputs/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Runs Metadata & files/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /LightEval/i })).toHaveCount(0);
+  await expect(page.locator("[data-section]")).toHaveCount(0);
+  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table"]);
+  await expect(page.getByRole("button", { name: "By prompt" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "By model" })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByRole("button", { name: "By prompt" })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByRole("heading", { name: "Gallery" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Table" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("heading", { name: "Prompt comparison" })).toBeVisible();
   await expect(page.getByText("0 with video, 1 need capture, 0 prepared, 0 failed")).toBeVisible();
   await expect(page.locator(".run-grid")).toBeVisible();
-  await expect(page.locator("[data-run-id]").first()).toContainText("Sakura Particle Field");
+  await expect(page.getByRole("heading", { name: "Sakura Particle Field" })).toBeVisible();
+  await expect(page.locator("[data-run-id]").first()).toContainText("local/qwen2.5-vl");
   await expect(page.getByLabel("Search runs")).toBeVisible();
-  await expect(page.getByLabel("Filter by run type")).toContainText("Visual");
-  await expect(page.getByLabel("Filter by run status")).toContainText("completed");
-  await expect(page.getByLabel("Filter by runner")).toContainText("manual");
+  await expect(page.locator("#runsFilterPanel")).toHaveCount(0);
   await page.getByLabel("Search runs").fill("no matching run");
   await expect(page.locator("[data-run-id]")).toHaveCount(0);
   await page.getByLabel("Search runs").fill("");
@@ -149,12 +145,12 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(page.getByRole("dialog", { name: "Run detail" })).toBeVisible();
   await expect(page.locator("#detailMeta")).toContainText("State");
   await expect(page.locator("#detailMeta")).toContainText("capture");
-  await expect(page.locator("#detailArtifacts")).toContainText("Metadata");
+  await expect(page.locator("#detailArtifacts")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture preview" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open in Finder" })).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
   await page.getByRole("button", { name: "By model" }).click();
-  await expect(page.locator("#runsFilterPanel")).toBeHidden();
+  await expect(page.locator("#runsFilterPanel")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Model attempts" })).toBeVisible();
   await expect(page.getByText("0 with video, 1 need capture, 0 prepared, 0 failed")).toBeVisible();
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
@@ -210,7 +206,7 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(page.locator("#connectionMessage")).toContainText("2 models discovered");
 });
 
-test("paginates the Runs table at 25 records", async ({ page }) => {
+test("paginates the table mode at 25 records", async ({ page }) => {
   const manyRuns = Array.from({ length: 30 }, (_, index) => ({
     ...sampleRun,
     runId: `2026-05-06T20-${String(index).padStart(2, "0")}-00-000Z`,
@@ -223,8 +219,8 @@ test("paginates the Runs table at 25 records", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: true, runs: manyRuns });
 
   await page.goto("/");
-  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
   await page.getByRole("button", { name: "Table" }).click();
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
 
   await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(25);
   await expect(page.locator(".runs-pagination")).toContainText("Showing 1-25 of 30");
@@ -301,7 +297,7 @@ test("prepares a run slot via modal and shows the generated prompt", async ({ pa
   await expect(page.locator("#copyPrompt")).toBeDisabled();
 });
 
-test("prepares llama.cpp and LightEval runs with editable commands", async ({ page }) => {
+test("prepares visual llama.cpp runs with editable commands", async ({ page }) => {
   const preparePayloads: unknown[] = [];
   await mockApi(page, {
     lmStudioOnline: true,
@@ -313,6 +309,8 @@ test("prepares llama.cpp and LightEval runs with editable commands", async ({ pa
   await page.goto("/");
   await page.getByRole("button", { name: "Prepare run" }).click();
 
+  await expect(page.locator("#prepKind")).toHaveCount(0);
+  await expect(page.locator("#prepLightEvalFields")).toHaveCount(0);
   await page.locator("#prepRunner").selectOption("llama-cpp");
   await expect(page.locator("#prepBaseUrl")).toBeVisible();
   await expect(page.locator("#prepCommand")).toBeVisible();
@@ -331,53 +329,6 @@ test("prepares llama.cpp and LightEval runs with editable commands", async ({ pa
   });
   await expect(page.locator("#preparedPaths")).toContainText("command.txt");
   await expect(page.locator("#preparedPaths")).toContainText("Command saved");
-  await page.locator("#prepModelSelect").selectOption(models[0].id);
-
-  await page.locator("#prepKind").selectOption("lighteval");
-  await expect(page.locator("#prepBackendHelperGroup")).toBeHidden();
-  await expect(page.locator("#prepVisualPromptGroup")).toBeHidden();
-  await expect(page.locator("#prepModelSelectGroup")).toBeVisible();
-  await expect(page.locator("#prepModelSelectLabel")).toContainText("LM Studio model");
-  await expect(page.locator("#prepModelSelect")).toHaveValue(models[0].id);
-  await expect(page.locator("#prepBaseUrlGroup")).toBeVisible();
-  await expect(page.locator("#prepBaseUrl")).toHaveValue("http://localhost:1234/v1");
-  await expect(page.locator("#prepLightEvalFields")).toBeVisible();
-  await expect(page.locator("#prepLightEvalTaskPreset")).toBeVisible();
-  await expect(page.locator("#prepLightEvalTaskPreset")).toHaveValue("boolq|0");
-  await expect(page.locator("#prepLightEvalTasks")).toHaveValue("boolq|0");
-  await expect(page.locator("#prepCommandGroup")).toBeHidden();
-  await expect(page.locator("#prepareRun")).toBeVisible();
-  await expect(page.locator("#prepareRun")).toHaveText("Prepare command");
-  await expect(page.locator("#preparedPrompt")).toHaveValue(/lighteval \\\n  endpoint \\\n  litellm/);
-  await expect(page.locator("#preparedPrompt")).toHaveValue(/model_name=openai\/google\/gemma-4-e4b/);
-  await expect(page.locator("#preparedPrompt")).toHaveValue(/base_url=http:\/\/localhost:1234\/v1/);
-  await expect(page.locator("#preparedPrompt")).toHaveValue(/<prepared-run-folder>/);
-  await expect(page.locator("#copyPrompt")).toBeDisabled();
-  await page.locator("#prepModelSelect").selectOption(models[1].id);
-  await expect(page.locator("#preparedPrompt")).toHaveValue(/model_name=openai\/local\/qwen2.5-vl/);
-  await page.locator("#prepLightEvalTaskPreset").selectOption("arc:easy|0");
-  await expect(page.locator("#prepLightEvalTasks")).toHaveValue("arc:easy|0");
-  await expect(page.locator("#preparedPrompt")).toHaveValue(/'arc:easy\|0'/);
-  await page.locator("#prepLightEvalTasks").fill("http://localhost:1234/v1");
-  await expect(page.locator("#prepLightEvalTasks")).toHaveValue("boolq|0");
-  await expect(page.locator("#preparedPrompt")).not.toHaveValue(/'http:\/\/localhost:1234\/v1'/);
-  await page.locator("#prepLightEvalTasks").fill("mmlu,truthfulqa");
-  await expect(page.locator("#prepLightEvalTaskPreset")).toHaveValue("");
-  await page.locator("#prepareRun").click();
-
-  await expect.poll(() => preparePayloads.at(-1)).toMatchObject({
-    kind: "lighteval",
-    runner: "lighteval",
-    taskId: "mmlu,truthfulqa",
-    modelId: models[1].id,
-    baseUrl: "http://localhost:1234/v1",
-    launchCommand: expect.stringContaining("model_name=openai/local/qwen2.5-vl")
-  });
-  expect((preparePayloads.at(-1) as { benchmarkId?: unknown }).benchmarkId).toBeUndefined();
-  await expect(page.locator("#preparedPrompt")).toHaveValue(/lighteval \\\n  endpoint \\\n  litellm/);
-  await expect(page.locator("#preparedPrompt")).not.toHaveValue(/<prepared-run-folder>/);
-  await expect(page.locator("#copyPrompt")).toBeEnabled();
-  await expect(page.locator("#preparedPaths")).toContainText("LightEval run prepared");
 });
 
 test("supports prompt comparison and video-only run details", async ({ page }) => {
@@ -457,84 +408,23 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
   await expect(page.locator("#detailPreview")).toContainText("Use Capture preview");
 });
 
-test("shows LightEval runs with task and result artifacts instead of visual prompt/media language", async ({ page }) => {
-  let copiedText = "";
-  await page.exposeFunction("recordClipboardWrite", (value: string) => {
-    copiedText = String(value);
-  });
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, "clipboard", {
-      value: {
-        writeText: (value: string) =>
-          (window as unknown as { recordClipboardWrite: (text: string) => Promise<void> }).recordClipboardWrite(
-            value
-          )
-      },
-      configurable: true
-    });
-  });
+test("hides unsupported non-visual runs from visual workspaces", async ({ page }) => {
   await mockApi(page, {
     lmStudioOnline: true,
-    runs: [sampleLightEvalRun],
-    lightEvalResults: [
-      {
-        taskId: "boolq|0",
-        taskName: "boolq",
-        metrics: [
-          {
-            metricName: "em",
-            value: 0.75,
-            higherIsBetter: true
-          }
-        ],
-        totalEvaluationTimeSeconds: 3.71,
-        modelName: "openai/google/gemma-4-e4b"
-      }
-    ]
+    runs: [sampleRun, sampleUnsupportedRun]
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Quantitative Benchmark" }).click();
-  await expect(page.getByText("1 with results, 0 command only, 0 failed")).toBeVisible();
-  await expect(page.locator("[data-run-id]").first()).toContainText("LightEval results");
-  await expect(page.locator("[data-run-id]").first()).toContainText("Open details for parsed scores");
-  await expect(page.locator("[data-run-id]").first()).not.toContainText("Paste the prompt into your tool");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await expect(page.locator("[data-run-id]")).toHaveCount(1);
+  await expect(page.locator("body")).not.toContainText("Deprecated quantitative task");
+  await expect(page.getByRole("link", { name: /LightEval/i })).toHaveCount(0);
+
+  await page.goto("/");
   await page.getByRole("button", { name: "Table" }).click();
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
-
-  const row = page.locator("[data-run-id]").first();
-  await expect(row).toContainText("LightEval: boolq|0");
-  await expect(row).toContainText("google/gemma-4-e4b");
-  await expect(row).toContainText("results");
-  await expect(row).toContainText("CMD ✓");
-  await expect(row).toContainText("RES ✓");
-  await expect(row).toContainText("DTL ✓");
-  await expect(row).toContainText("LightEval results ready");
-  await expect(row).not.toContainText("Waiting for index.html source");
-  await expect(row).not.toContainText("SRC");
-
-  await row.click();
-  await expect(page.locator("#recordBackdrop[open]")).toBeVisible();
-  await expect(page.locator("#recordMeta")).toContainText("Task");
-  await expect(page.locator("#recordMeta")).toContainText("boolq|0");
-  await expect(page.locator("#recordMeta")).toContainText("Status");
-  await expect(page.locator("#recordMeta")).toContainText("completed");
-  await expect(page.locator("#recordMeta")).toContainText("Metadata status");
-  await expect(page.locator("#recordMeta")).toContainText("prepared");
-  await expect(page.locator("#recordTextTitle")).toHaveText("Task");
-  await expect(page.locator("#recordPrompt")).toHaveText("boolq|0");
-  await expect(page.getByRole("button", { name: "Copy task" })).toBeVisible();
-  await page.getByRole("button", { name: "Copy task" }).click();
-  await expect.poll(() => copiedText).toBe("boolq|0");
-  await expect(page.locator("#recordArtifacts")).toContainText("LightEval results");
-  await expect(page.locator("#recordArtifacts")).toContainText("LightEval details");
-  await expect(page.locator("#recordArtifacts")).not.toContainText("Prompt");
-  await expect(page.locator("#recordArtifacts")).not.toContainText("HTML");
-  await expect(page.getByRole("button", { name: "Open results" })).toBeVisible();
-  await page.getByRole("button", { name: "Open results" }).click();
-  await expect(page.locator("#lightevalResultsPanel")).toContainText("boolq");
-  await expect(page.locator("#lightevalResultsPanel")).toContainText("em");
-  await expect(page.locator("#lightevalResultsPanel")).toContainText("0.7500");
+  await expect(page.locator("[data-run-id]")).toHaveCount(1);
+  await expect(page.locator("body")).not.toContainText("Deprecated quantitative task");
 });
 
 test("recaptures media for the open run detail", async ({ page }) => {
@@ -568,7 +458,6 @@ test("recaptures media for the open run detail", async ({ page }) => {
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
-  await page.getByRole("button", { name: "Gallery" }).click();
   await page.locator("[data-run-id]").first().click();
   await expect(page.getByRole("button", { name: "Recapture media" })).toBeVisible();
 
@@ -633,7 +522,7 @@ test("uses dense Sidequests-style gallery geometry on desktop", async ({ page })
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
-  await page.getByRole("button", { name: "Gallery" }).click();
+  await page.getByRole("button", { name: "By prompt" }).click();
 
   const galleryColumns = await page.locator(".run-grid").first().evaluate((el) =>
     getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
@@ -832,7 +721,7 @@ test("refresh reloads prompt files and saved runs", async ({ page }) => {
   await expect(page.locator("[data-run-id]")).toHaveCount(0);
 });
 
-test("deletes a run folder from the run record after confirmation", async ({ page }) => {
+test("deletes a run folder from the visual detail after confirmation", async ({ page }) => {
   let deletePayload: unknown;
   await mockApi(page, {
     lmStudioOnline: true,
@@ -848,10 +737,10 @@ test("deletes a run folder from the run record after confirmation", async ({ pag
   });
 
   await page.goto("/");
-  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
   await page.getByRole("button", { name: "Table" }).click();
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
   await page.locator("[data-run-id]").first().click();
-  await expect(page.getByRole("dialog", { name: "Run record" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Run detail" })).toBeVisible();
   await page.getByRole("button", { name: "Delete run" }).click();
 
   await expect(page.getByRole("dialog", { name: "Delete run" })).toBeVisible();
@@ -978,7 +867,6 @@ async function mockApi(
     onDelete?: (payload: unknown) => void;
     onCapture?: (payload: unknown) => void | Promise<void>;
     onOpenHtml?: (payload: unknown) => void | Promise<void>;
-    lightEvalResults?: unknown[];
     writesEnabled?: boolean;
   }
 ): Promise<void> {
@@ -1129,15 +1017,6 @@ async function mockApi(
     });
   });
 
-  await page.route("**/api/lighteval-results**", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        results: options.lightEvalResults ?? []
-      })
-    });
-  });
-
   await page.route("**/api/prepare-run", async (route) => {
     const payload = route.request().postDataJSON();
     options.onPrepare?.(payload);
@@ -1145,17 +1024,8 @@ async function mockApi(
       "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z";
     const command = typeof payload.launchCommand === "string" && payload.launchCommand.trim()
       ? payload.launchCommand.trim().replaceAll("<prepared-run-folder>", runDirectory)
-      : payload.kind === "lighteval"
-        ? "lighteval endpoint litellm 'model_name=openai/" + payload.modelId + ",base_url=" + payload.baseUrl + ",provider=openai,api_key=lm-studio,concurrent_requests=1' '" + payload.taskId + "' --max-samples 1 --output-dir " + runDirectory
-        : undefined;
-    const benchmark = payload.kind === "lighteval"
-      ? {
-          id: String(payload.taskId).replace(/[^a-z0-9]+/giu, "-").replace(/^-+|-+$/gu, "") || "lighteval-task",
-          title: "LightEval: " + payload.taskId,
-          description: "LightEval task(s): " + payload.taskId,
-          prompt: payload.taskId
-        }
-      : benchmarks.find((item) => item.id === payload.benchmarkId);
+      : undefined;
+    const benchmark = benchmarks.find((item) => item.id === payload.benchmarkId);
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
@@ -1167,9 +1037,9 @@ async function mockApi(
               id: payload.modelId,
               slug: "google-gemma-4-e4b"
             },
-            kind: payload.kind ?? "visual",
+            kind: "visual",
             runner: {
-              mode: payload.kind === "lighteval" ? "lighteval" : payload.runner === "llama-cpp" ? "openai-compatible" : "manual",
+              mode: payload.runner === "llama-cpp" ? "openai-compatible" : "manual",
               intendedRunner: payload.runner ?? "manual",
               launchCommand: command,
               commandAsset: command ? "command.txt" : undefined
@@ -1178,20 +1048,13 @@ async function mockApi(
             createdAt: "2026-05-07T04:00:32.122Z",
             updatedAt: "2026-05-07T04:00:32.122Z",
             runDirectory,
-            assets: payload.kind === "lighteval" ? {
-              metadata: "metadata.json",
-              command: "command.txt",
-              lightevalResults: "results",
-              lightevalDetails: "details"
-            } : {
+            assets: {
               metadata: "metadata.json",
               prompt: "prompt.md",
               ...(command ? { command: "command.txt" } : {})
             }
           },
-          prompt: payload.kind === "lighteval"
-            ? ""
-            : "Save one complete self-contained HTML document to: " + runDirectory + "/index.html",
+          prompt: "Save one complete self-contained HTML document to: " + runDirectory + "/index.html",
           ...(command ? { command } : {}),
           paths: {
             runDirectory,

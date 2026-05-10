@@ -234,6 +234,36 @@ describe("run metadata helpers", () => {
     });
   });
 
+  it("ignores unsupported non-visual run metadata without deleting folders", async () => {
+    const runsRoot = await createRunsRoot();
+    const visualDirectory = join(runsRoot, "sakura", "model-a", "run-visual");
+    const unsupportedDirectory = join(runsRoot, "boolq", "model-a", "run-quant");
+    await mkdir(visualDirectory, { recursive: true });
+    await mkdir(unsupportedDirectory, { recursive: true });
+    await writeFile(
+      join(visualDirectory, "metadata.json"),
+      JSON.stringify(createMetadata(visualDirectory)),
+      "utf8"
+    );
+    await writeFile(
+      join(unsupportedDirectory, "metadata.json"),
+      JSON.stringify({
+        ...createMetadata(unsupportedDirectory),
+        kind: "lighteval",
+        assets: {
+          metadata: "metadata.json",
+          command: "command.txt"
+        }
+      }),
+      "utf8"
+    );
+
+    const runs = await listRunMetadata(runsRoot);
+
+    expect(runs.map((run) => run.runDirectory)).toEqual([visualDirectory]);
+    await expect(stat(unsupportedDirectory)).resolves.toBeTruthy();
+  });
+
   it("deletes a run directory inside the configured runs root", async () => {
     const runsRoot = await createRunsRoot();
     const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");

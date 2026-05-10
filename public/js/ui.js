@@ -1,13 +1,6 @@
 import { state } from "./state.js";
 import { hasCapturedVideo } from "./runs.js";
 
-export function renderSectionTabs() {
-  document.querySelectorAll("[data-section]").forEach((button) => {
-    const active = button.dataset.section === state.section;
-    button.setAttribute("aria-pressed", String(active));
-  });
-}
-
 export function renderViewTabs() {
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode));
@@ -17,6 +10,10 @@ export function renderViewTabs() {
 export function updateOnboarding() {
   const panel = document.querySelector("#onboardingPanel");
   if (!panel) return;
+  if (state.workspace !== "visual") {
+    panel.hidden = true;
+    return;
+  }
   const dismissed = state.onboardingDismissed || (() => {
     try { return localStorage.getItem("onboardingDismissed") === "1"; } catch { return false; }
   })();

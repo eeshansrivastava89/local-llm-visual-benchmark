@@ -27,7 +27,6 @@ import {
   listRunMetadata as defaultListRunMetadata
 } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
-import { parseLightEvalResults as defaultParseLightEvalResults, type LightEvalSummary } from "../lib/lighteval-results";
 import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunKind, RunMetadata } from "../lib/types";
 import type { PrepareRunRunner } from "../lib/prompt-prep";
 
@@ -45,7 +44,6 @@ export interface ModelsRequest {
 
 export interface PrepareRunRequest {
   benchmarkId?: string;
-  taskId?: string;
   modelId?: string;
   kind?: string;
   runner?: string;
@@ -78,14 +76,6 @@ export interface OpenRunFolderRequest {
   runDirectory?: string;
 }
 
-export interface LightEvalResultsRequest {
-  runDirectory?: string;
-}
-
-export interface LightEvalResultsResponse {
-  results: LightEvalSummary[];
-}
-
 export interface LocalApiDependencies {
   benchmarkDirectory?: string;
   runsRoot?: string;
@@ -104,7 +94,6 @@ export interface LocalApiDependencies {
   mirrorModelsToConfigs?: typeof defaultMirrorModelsToConfigs;
   captureMissingRunMedia?: typeof defaultCaptureMissingRunMedia;
   captureSingleRunMedia?: typeof defaultCaptureSingleRunMedia;
-  parseLightEvalResults?: typeof defaultParseLightEvalResults;
   openFile?: (path: string) => Promise<void>;
 }
 
@@ -121,7 +110,6 @@ export interface LocalApi {
   captureMissingMedia(request?: CaptureMediaRequest): Promise<CaptureMissingRunMediaResult>;
   openRunHtml(request: OpenRunHtmlRequest): Promise<OpenRunHtmlResponse>;
   openRunFolder(request: OpenRunFolderRequest): Promise<OpenRunFolderResponse>;
-  getLightEvalResults(request: LightEvalResultsRequest): Promise<LightEvalResultsResponse>;
 }
 
 export interface StatusResponse {
@@ -218,8 +206,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
     dependencies.captureMissingRunMedia ?? defaultCaptureMissingRunMedia;
   const captureSingleRunMedia =
     dependencies.captureSingleRunMedia ?? defaultCaptureSingleRunMedia;
-  const parseLightEvalResults =
-    dependencies.parseLightEvalResults ?? defaultParseLightEvalResults;
   const openFile = dependencies.openFile ?? defaultOpenFile;
 
   return {
@@ -280,21 +266,18 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
 
     async prepareRun(request) {
       assertWritesEnabled(enableWrites);
-      const kind = readRunKind(request.kind);
+      readRunKind(request.kind);
       const modelId = readRequiredString(request.modelId, "modelId");
-      const runner = readPrepareRunner(request.runner, kind);
-      const benchmark = kind === "lighteval"
-        ? lightEvalBenchmarkFromTask(readRequiredString(request.taskId ?? request.benchmarkId, "taskId"))
-        : selectBenchmark(
-          await loadBenchmarks(benchmarkDirectory),
-          readRequiredString(request.benchmarkId, "benchmarkId")
-        );
+      const runner = readPrepareRunner(request.runner);
+      const benchmark = selectBenchmark(
+        await loadBenchmarks(benchmarkDirectory),
+        readRequiredString(request.benchmarkId, "benchmarkId")
+      );
 
       return {
         preparedRun: await prepareRun({
           benchmark,
           modelId,
-          kind,
           runner,
           baseUrl: readOptionalString(request.baseUrl, "baseUrl"),
           launchCommand: readOptionalString(request.launchCommand, "launchCommand"),
@@ -382,20 +365,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
         mirroredModelCount: result.mirroredModelCount,
         sync: result.state
       };
-    },
-
-    async getLightEvalResults(request) {
-      const runDirectory = readRequiredString(request.runDirectory, "runDirectory");
-      const resolvedRunDirectory = resolve(runDirectory);
-      const resolvedRunsRoot = resolve(runsRoot);
-
-      if (!isPathInside(resolvedRunDirectory, resolvedRunsRoot)) {
-        throw new ApiRequestError(400, "Run directory is outside the configured runs folder.");
-      }
-
-      const results = await parseLightEvalResults(resolvedRunDirectory);
-
-      return { results };
     }
   };
 }
@@ -404,48 +373,25 @@ function readRunKind(value: unknown): RunKind {
   if (value === undefined || value === null || value === "") {
     return "visual";
   }
-  if (value === "visual" || value === "lighteval" || value === "other") {
+  if (value === "visual") {
     return value;
   }
-  throw new ApiRequestError(400, "kind must be visual, lighteval, or other.");
+  throw new ApiRequestError(400, "kind must be visual.");
 }
 
-function lightEvalBenchmarkFromTask(taskId: string): BenchmarkRecord {
-  return {
-    id: slugLightEvalTask(taskId),
-    title: "LightEval: " + taskId,
-    description: "LightEval task(s): " + taskId,
-    prompt: taskId
-  };
-}
-
-function slugLightEvalTask(taskId: string): string {
-  const slug = taskId
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/gu, "-")
-    .replace(/^-+|-+$/gu, "")
-    .replace(/-{2,}/gu, "-")
-    .slice(0, 80)
-    .replace(/^-+|-+$/gu, "");
-  return slug || "lighteval-task";
-}
-
-function readPrepareRunner(value: unknown, kind: RunKind): PrepareRunRunner {
+function readPrepareRunner(value: unknown): PrepareRunRunner {
   if (value === undefined || value === null || value === "") {
-    return kind === "lighteval" ? "lighteval" : "manual";
+    return "manual";
   }
   if (
     value === "manual" ||
     value === "pi" ||
     value === "opencode" ||
-    value === "llama-cpp" ||
-    value === "lighteval"
+    value === "llama-cpp"
   ) {
     return value;
   }
-  throw new ApiRequestError(400, "runner must be manual, pi, opencode, llama-cpp, or lighteval.");
+  throw new ApiRequestError(400, "runner must be manual, pi, opencode, or llama-cpp.");
 }
 
 async function defaultOpenFile(path: string): Promise<void> {

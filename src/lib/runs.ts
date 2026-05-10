@@ -176,6 +176,9 @@ async function readDirentsIfPresent(path: string) {
 async function readMetadataIfPresent(path: string): Promise<RunMetadata | undefined> {
   try {
     const metadata = JSON.parse(await readFile(path, "utf8")) as RunMetadata;
+    if (metadata.kind && metadata.kind !== "visual") {
+      return undefined;
+    }
     return hydrateAssetAvailability(metadata);
   } catch (error) {
     if (isMissingPathError(error) || error instanceof SyntaxError) {
@@ -198,9 +201,7 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
     assetExists(metadata, declared.html),
     assetExists(metadata, declared.preview),
     assetExists(metadata, declared.video),
-    assetExists(metadata, declared.videoMp4),
-    assetExists(metadata, declared.lightevalResults),
-    assetExists(metadata, declared.lightevalDetails)
+    assetExists(metadata, declared.videoMp4)
   ]);
 
   const assets: RunMetadata["assets"] = {
@@ -217,8 +218,6 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
   if (checks[7]) assets.preview = declared.preview;
   if (checks[8]) assets.video = declared.video;
   if (checks[9]) assets.videoMp4 = declared.videoMp4;
-  if (checks[10]) assets.lightevalResults = declared.lightevalResults;
-  if (checks[11]) assets.lightevalDetails = declared.lightevalDetails;
 
   const promptText = assets.prompt
     ? await readAssetTextIfPresent(metadata, assets.prompt)

@@ -11,8 +11,6 @@ export const els = {
   setupToggle: document.querySelector("#setupToggle"),
   runToggle: document.querySelector("#runToggle"),
   // Modals
-  recordBackdrop: document.querySelector("#recordBackdrop"),
-  closeRecord: document.querySelector("#closeRecord"),
   detailBackdrop: document.querySelector("#detailBackdrop"),
   closeDetail: document.querySelector("#closeDetail"),
   prepBackdrop: document.querySelector("#prepBackdrop"),
@@ -49,19 +47,13 @@ export const els = {
   // Filters
   modelFilter: document.querySelector("#modelFilter"),
   benchmarkFilter: document.querySelector("#benchmarkFilter"),
-  runsFilterPanel: document.querySelector("#runsFilterPanel"),
   runsSearch: document.querySelector("#runsSearch"),
-  runKindFilter: document.querySelector("#runKindFilter"),
-  runStatusFilter: document.querySelector("#runStatusFilter"),
-  runnerFilter: document.querySelector("#runnerFilter"),
-  // Section tabs
-  sectionTabs: document.querySelectorAll("[data-section]"),
+  // View tabs
   viewTabs: document.querySelectorAll("[data-mode]"),
   // Onboarding
   onboardingPanel: document.querySelector("#onboardingPanel"),
   dismissOnboarding: document.querySelector("#dismissOnboarding"),
   // Prepare run
-  prepKind: document.querySelector("#prepKind"),
   prepBackendHelperGroup: document.querySelector("#prepBackendHelperGroup"),
   prepRunner: document.querySelector("#prepRunner"),
   prepVisualPromptGroup: document.querySelector("#prepVisualPromptGroup"),
@@ -69,9 +61,6 @@ export const els = {
   prepModelSelectGroup: document.querySelector("#prepModelSelectGroup"),
   prepModelSelectLabel: document.querySelector("#prepModelSelectLabel"),
   prepModelSelect: document.querySelector("#prepModelSelect"),
-  prepLightEvalFields: document.querySelector("#prepLightEvalFields"),
-  prepLightEvalTaskPreset: document.querySelector("#prepLightEvalTaskPreset"),
-  prepLightEvalTasks: document.querySelector("#prepLightEvalTasks"),
   prepBaseUrlGroup: document.querySelector("#prepBaseUrlGroup"),
   prepBaseUrlLabel: document.querySelector("#prepBaseUrlLabel"),
   prepBaseUrl: document.querySelector("#prepBaseUrl"),
@@ -89,29 +78,13 @@ export const els = {
   preparedPaths: document.querySelector("#preparedPaths"),
   copyPrompt: document.querySelector("#copyPrompt"),
   helpTooltip: document.querySelector("#helpTooltip"),
-  // Gallery
+  // Workbench
   viewTitle: document.querySelector("#viewTitle"),
   viewSubtitle: document.querySelector("#viewSubtitle"),
   runSummary: document.querySelector("#runSummary"),
   runCount: document.querySelector("#runCount"),
   runsSurface: document.querySelector("#runsSurface"),
   refreshRuns: document.querySelector("#refreshRuns"),
-  // Run record
-  recordTitle: document.querySelector("#recordTitle"),
-  recordSubtitle: document.querySelector("#recordSubtitle"),
-  openRecordVisual: document.querySelector("#openRecordVisual"),
-  openRecordFolder: document.querySelector("#openRecordFolder"),
-  deleteRecordRun: document.querySelector("#deleteRecordRun"),
-  recordMeta: document.querySelector("#recordMeta"),
-  recordRunnerSection: document.querySelector("#recordRunnerSection"),
-  recordRunnerMeta: document.querySelector("#recordRunnerMeta"),
-  recordPrompt: document.querySelector("#recordPrompt"),
-  recordTextTitle: document.querySelector("#recordTextTitle"),
-  recordPromptLength: document.querySelector("#recordPromptLength"),
-  copyRecordPrompt: document.querySelector("#copyRecordPrompt"),
-  recordArtifacts: document.querySelector("#recordArtifacts"),
-  recordRunFolderPath: document.querySelector("#recordRunFolderPath"),
-  copyRecordRunFolder: document.querySelector("#copyRecordRunFolder"),
   // Llama.cpp status
   llamaCppStatusBar: document.querySelector("#llamaCppStatusBar"),
   llamaCppStatusDot: document.querySelector("#llamaCppStatusDot"),
@@ -131,8 +104,5 @@ export const els = {
   copyDetailPrompt: document.querySelector("#copyDetailPrompt"),
   detailMeta: document.querySelector("#detailMeta"),
   detailRunFolderPath: document.querySelector("#detailRunFolderPath"),
-  copyRunFolder: document.querySelector("#copyRunFolder"),
-  detailArtifacts: document.querySelector("#detailArtifacts"),
-  detailRunnerSection: document.querySelector("#detailRunnerSection"),
-  detailRunnerMeta: document.querySelector("#detailRunnerMeta")
+  copyRunFolder: document.querySelector("#copyRunFolder")
 };

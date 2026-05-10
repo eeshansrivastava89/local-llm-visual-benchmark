@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_LM_STUDIO_BASE_URL,
   DEFAULT_LLAMA_CPP_BASE_URL,
   prepareRun
 } from "../../src/lib/prompt-prep";
@@ -68,7 +67,6 @@ describe("prepareRun", () => {
     const prepared = await prepareRun({
       benchmark,
       modelId: "local/test.gguf",
-      kind: "visual",
       runner: "llama-cpp",
       baseUrl: DEFAULT_LLAMA_CPP_BASE_URL,
       launchCommand: command,
@@ -94,62 +92,18 @@ describe("prepareRun", () => {
     await expect(readFile(prepared.paths.commandPath, "utf8")).resolves.toBe(command + "\n");
   });
 
-  it("creates a LightEval command run without visual artifacts", async () => {
-    const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-lighteval-runs-"));
-    const prepared = await prepareRun({
-      benchmark,
-      modelId: "local-model",
-      kind: "lighteval",
-      runner: "lighteval",
-      baseUrl: DEFAULT_LM_STUDIO_BASE_URL,
-      launchCommand: undefined,
-      runsRoot,
-      now: new Date("2026-05-07T04:00:32.122Z")
-    });
-
-    expect(prepared.prompt).toBe("");
-    expect(prepared.command).toContain("lighteval endpoint litellm");
-    expect(prepared.command).toContain("model_name=openai/local-model");
-    expect(prepared.command).toContain("base_url=" + DEFAULT_LM_STUDIO_BASE_URL);
-    expect(prepared.command).toContain("api_key=lm-studio");
-    expect(prepared.command).toContain("'Animate a cherry blossom tree.'");
-    expect(prepared.command).toContain("--max-samples 1");
-    expect(prepared.command).toContain("--output-dir");
-    expect(prepared.command).toContain("--save-details");
-    expect(prepared.run).toMatchObject({
-      kind: "lighteval",
-      runner: {
-        mode: "lighteval",
-        intendedRunner: "LightEval",
-        baseUrl: DEFAULT_LM_STUDIO_BASE_URL,
-        metricSource: "LightEval",
-        commandAsset: "command.txt"
-      },
-      assets: {
-        metadata: "metadata.json",
-        command: "command.txt",
-        lightevalResults: "results",
-        lightevalDetails: "details"
-      }
-    });
-    expect(prepared.run.assets.html).toBeUndefined();
-    await expect(readFile(prepared.paths.commandPath, "utf8")).resolves.toBe(prepared.command + "\n");
-  });
-
   it("replaces prepared run placeholders in supplied commands", async () => {
     const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-command-placeholder-runs-"));
     const prepared = await prepareRun({
       benchmark,
       modelId: "local-model",
-      kind: "lighteval",
-      runner: "lighteval",
-      baseUrl: DEFAULT_LM_STUDIO_BASE_URL,
-      launchCommand: "lighteval endpoint litellm args boolq|0 --output-dir <prepared-run-folder>",
+      runner: "llama-cpp",
+      launchCommand: "llama-server -m /models/test.gguf --run-folder <prepared-run-folder>",
       runsRoot,
       now: new Date("2026-05-07T04:00:32.122Z")
     });
 
-    expect(prepared.command).toContain("--output-dir " + prepared.paths.runDirectory);
+    expect(prepared.command).toContain("--run-folder " + prepared.paths.runDirectory);
     expect(prepared.command).not.toContain("<prepared-run-folder>");
     await expect(readFile(prepared.paths.commandPath, "utf8")).resolves.toBe(prepared.command + "\n");
   });
@@ -159,7 +113,6 @@ describe("prepareRun", () => {
     const prepared = await prepareRun({
       benchmark,
       modelId: "local/test.gguf",
-      kind: "visual",
       runner: "llama-cpp",
       runsRoot
     });

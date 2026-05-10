@@ -1,17 +1,15 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { buildRunPaths, createRunId } from "./paths";
 import { writePromptMarkdown, writeRunMetadata } from "./runs";
-import type { BenchmarkRecord, PreparedRun, RunKind, RunnerMode, RunMetadata } from "./types";
+import type { BenchmarkRecord, PreparedRun, RunnerMode, RunMetadata } from "./types";
 
 export type PrepareRunRunner =
   | "manual"
   | "pi"
   | "opencode"
-  | "llama-cpp"
-  | "lighteval";
+  | "llama-cpp";
 
 export const DEFAULT_LLAMA_CPP_BASE_URL = "http://127.0.0.1:8080/v1";
-export const DEFAULT_LM_STUDIO_BASE_URL = "http://localhost:1234/v1";
 export const DEFAULT_LLAMA_CPP_COMMAND_TEMPLATE = [
   "llama-server \\",
   "  -m \\",
@@ -24,13 +22,9 @@ export const DEFAULT_LLAMA_CPP_COMMAND_TEMPLATE = [
   "  --parallel 1"
 ].join("\n");
 
-export const DEFAULT_LIGHTEVAL_TASKS = "boolq|0";
-export const DEFAULT_LIGHTEVAL_MODEL_ID = "select-lm-studio-model";
-
 export interface PrepareRunInput {
   benchmark: BenchmarkRecord;
   modelId: string;
-  kind?: RunKind;
   runner?: PrepareRunRunner;
   baseUrl?: string;
   launchCommand?: string;
@@ -41,24 +35,22 @@ export interface PrepareRunInput {
 
 export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
   const now = input.now ?? new Date();
-  const kind = input.kind ?? "visual";
-  const runner = input.runner ?? (kind === "lighteval" ? "lighteval" : "manual");
+  const runner = input.runner ?? "manual";
   const paths = buildRunPaths({
     runsRoot: input.runsRoot,
     benchmarkId: input.benchmark.id,
     modelId: input.modelId,
     runId: createRunId(now)
   });
-  const prompt = kind === "visual" ? buildToolPrompt({
+  const prompt = buildToolPrompt({
     benchmark: input.benchmark,
     modelId: input.modelId,
     runDirectory: paths.runDirectory,
     htmlPath: paths.htmlPath
-  }) : "";
+  });
   const command = buildPreparedCommand({
     benchmark: input.benchmark,
     modelId: input.modelId,
-    kind,
     runner,
     runDirectory: paths.runDirectory,
     baseUrl: input.baseUrl,
@@ -68,7 +60,7 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
   const timestamp = now.toISOString();
   const run: RunMetadata = {
     schemaVersion: 1,
-    kind,
+    kind: "visual",
     runId: paths.runId,
     benchmark: input.benchmark,
     model: {
@@ -80,12 +72,7 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     updatedAt: timestamp,
     preparedAt: timestamp,
     runDirectory: paths.runDirectory,
-    assets: kind === "lighteval" ? {
-      metadata: "metadata.json",
-      command: "command.txt",
-      lightevalResults: "results",
-      lightevalDetails: "details"
-    } : {
+    assets: {
       metadata: "metadata.json",
       prompt: "prompt.md",
       html: "index.html",
@@ -95,18 +82,15 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
       ...(command ? { command: "command.txt" } : {})
     },
     runner: {
-      mode: runnerModeFor(kind, runner),
+      mode: runnerModeFor(runner),
       intendedRunner: runnerLabel(runner),
       backendLabel: runner === "llama-cpp" ? "llama.cpp" : runnerLabel(runner),
       baseUrl: runner === "llama-cpp"
         ? normalizeOptionalString(input.baseUrl) ?? DEFAULT_LLAMA_CPP_BASE_URL
-        : kind === "lighteval"
-          ? normalizeOptionalString(input.baseUrl) ?? DEFAULT_LM_STUDIO_BASE_URL
-          : undefined,
+        : undefined,
       model: input.modelId,
       launchCommand: command,
       commandAsset: command ? "command.txt" : undefined,
-      metricSource: kind === "lighteval" ? "LightEval" : undefined,
       retries: 0,
       tokenMetrics: {
         reported: false
@@ -142,7 +126,6 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
 export function buildPreparedCommand(input: {
   benchmark: BenchmarkRecord;
   modelId: string;
-  kind: RunKind;
   runner: PrepareRunRunner;
   runDirectory: string;
   baseUrl?: string;
@@ -159,42 +142,7 @@ export function buildPreparedCommand(input: {
     return DEFAULT_LLAMA_CPP_COMMAND_TEMPLATE.replaceAll("<model-path>", shellQuote(modelPath));
   }
 
-  if (input.kind === "lighteval") {
-    const tasks = input.benchmark.prompt.trim() || input.benchmark.id;
-    const modelArgs = buildLightEvalLiteLlmArgs({
-      modelId: input.modelId,
-      baseUrl: input.baseUrl
-    });
-    return [
-      "lighteval",
-      "endpoint",
-      "litellm",
-      shellQuote(modelArgs),
-      shellQuote(tasks),
-      "--max-samples 1",
-      "--output-dir " + shellQuote(input.runDirectory),
-      "--save-details"
-    ].join(" ");
-  }
-
   return "";
-}
-
-export function buildLightEvalLiteLlmArgs(input: {
-  modelId: string;
-  baseUrl?: string;
-}): string {
-  const modelId = input.modelId.trim() || DEFAULT_LIGHTEVAL_MODEL_ID;
-  const litellmModel = modelId.startsWith("openai/") ? modelId : "openai/" + modelId;
-  const baseUrl = normalizeOptionalString(input.baseUrl) ?? DEFAULT_LM_STUDIO_BASE_URL;
-
-  return [
-    "model_name=" + litellmModel,
-    "base_url=" + baseUrl,
-    "provider=openai",
-    "api_key=lm-studio",
-    "concurrent_requests=1"
-  ].join(",");
 }
 
 export function buildToolPrompt(input: {
@@ -216,8 +164,7 @@ export function buildToolPrompt(input: {
   ].join("\n");
 }
 
-function runnerModeFor(kind: RunKind, runner: PrepareRunRunner): RunnerMode {
-  if (kind === "lighteval" || runner === "lighteval") return "lighteval";
+function runnerModeFor(runner: PrepareRunRunner): RunnerMode {
   if (runner === "llama-cpp") return "openai-compatible";
   if (runner === "manual") return "manual";
   return "external";
@@ -227,7 +174,6 @@ function runnerLabel(runner: PrepareRunRunner): string {
   if (runner === "llama-cpp") return "llama.cpp";
   if (runner === "opencode") return "OpenCode";
   if (runner === "pi") return "Pi";
-  if (runner === "lighteval") return "LightEval";
   return "manual";
 }
 

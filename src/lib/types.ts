@@ -5,12 +5,11 @@ export type RunStatus =
   | "cancelled"
   | "skipped";
 
-export type RunKind = "visual" | "lighteval" | "other";
+export type RunKind = "visual";
 
 export type RunnerMode =
   | "manual"
   | "openai-compatible"
-  | "lighteval"
   | "external";
 
 export const RUN_STATUSES: readonly RunStatus[] = [
@@ -70,8 +69,6 @@ export interface RunAssets {
   preview?: string;
   video?: string;
   videoMp4?: string;
-  lightevalResults?: string;
-  lightevalDetails?: string;
 }
 
 export interface RunError {

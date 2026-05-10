@@ -1,0 +1,383 @@
+---
+import "../styles/global.css";
+
+const title = "Local LLM Visual Benchmark";
+const basePath = import.meta.env.BASE_URL;
+const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <script is:inline>
+      try {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          document.documentElement.dataset.theme = "dark";
+        }
+      } catch {}
+    </script>
+  </head>
+  <body data-workspace="visual">
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="mx-auto flex min-h-14 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+          <div class="flex min-w-0 flex-1 items-center gap-3">
+            <div class="grid size-8 place-items-center rounded-lg border bg-card text-xs font-semibold shadow-sm">
+              LV
+            </div>
+            <div class="min-w-0">
+              <h1 class="truncate-line text-sm font-semibold tracking-[-0.01em]">
+                Local LLM Visual Benchmark
+              </h1>
+              <p class="muted-copy truncate-line text-xs">{subtitle}</p>
+            </div>
+          </div>
+
+          <a class="sidequest-attribution" href="https://eeshans.com/" target="_blank" rel="noopener">
+            a side quest by <span>eeshans.com</span>
+          </a>
+
+          <div class="flex shrink-0 items-center gap-2">
+            <span class="badge-outline gap-1.5 text-xs operational-control" id="statsPill" title="System stats">
+              <span id="statsDot" class="status-dot" data-state="offline"></span>
+              <span id="statsCompact">Loading…</span>
+            </span>
+            <button type="button" class="btn-sm-outline icon-only-btn" id="themeToggle" aria-label="Use dark theme" title="Use dark theme">
+              <span id="themeIcon" aria-hidden="true">☾</span>
+              <span class="sr-only" id="themeLabel">Dark</span>
+            </button>
+            <button type="button" class="btn-sm-outline operational-control" id="setupToggle">Setup</button>
+            <button type="button" class="btn operational-control" id="runToggle">Prepare run</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8 md:py-5">
+        <div class="grid gap-4">
+          <!-- Onboarding -->
+          <div id="onboardingPanel" class="onboarding-panel" hidden>
+            <div class="onboarding-header">
+              <h2 class="text-sm font-semibold">Welcome — 5 steps to your first benchmark</h2>
+              <button type="button" class="btn-sm-ghost" id="dismissOnboarding">Dismiss</button>
+            </div>
+            <ol class="onboarding-steps">
+              <li data-onboarding-step="1"><span class="step-num">1</span>Start LM Studio</li>
+              <li data-onboarding-step="2"><span class="step-num">2</span>Load a model</li>
+              <li data-onboarding-step="3"><span class="step-num">3</span>Pick a prompt</li>
+              <li data-onboarding-step="4"><span class="step-num">4</span>Generate with your tool</li>
+              <li data-onboarding-step="5"><span class="step-num">5</span>Capture preview</li>
+            </ol>
+          </div>
+
+          <!-- Toolbar -->
+          <div class="toolbar">
+            <div class="view-tabs">
+              <button type="button" class="view-tab" data-mode="benchmark" aria-pressed="true">By prompt</button>
+              <button type="button" class="view-tab" data-mode="model" aria-pressed="false">By model</button>
+              <button type="button" class="view-tab" data-mode="table" aria-pressed="false">Table</button>
+            </div>
+            <div class="toolbar-filters">
+              <div class="dropdown-wrap">
+                <select id="modelFilter" class="input text-sm" aria-label="Filter by model">
+                  <option value="all">All models</option>
+                </select>
+              </div>
+              <div class="dropdown-wrap">
+                <select id="benchmarkFilter" class="input text-sm" aria-label="Filter by prompt">
+                  <option value="all">All prompts</option>
+                </select>
+              </div>
+              <input
+                id="runsSearch"
+                class="input text-sm"
+                type="search"
+                aria-label="Search runs"
+                placeholder="Search runs, models, prompts"
+              />
+              <button type="button" class="btn-sm-outline operational-control" id="refreshRuns">Refresh</button>
+            </div>
+          </div>
+
+          <!-- Summary -->
+          <div class="gallery-summary">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+              <h2 id="viewTitle" class="text-lg font-semibold tracking-[-0.01em]">Prompt comparison</h2>
+                <span class="badge-outline" id="runCount">0</span>
+              </div>
+              <p class="muted-copy mt-0.5 text-sm" id="viewSubtitle">{subtitle}</p>
+              <p class="muted-copy text-sm" id="runSummary">Loading saved runs.</p>
+            </div>
+          </div>
+
+          <!-- Surface -->
+          <div id="runsSurface"></div>
+        </div>
+      </main>
+
+      <div id="helpTooltip" class="help-tooltip-layer" role="tooltip" hidden></div>
+
+      <footer class="footer" role="contentinfo">
+        <span>&copy; 2025&ndash;2026 Eeshan Srivastava</span>
+        <span>Personal project &middot; MIT License &middot; Non-commercial</span>
+        <span class="footer-links">
+          <a href="https://github.com/eeshansrivastava89/local-llm-visual-benchmark" target="_blank" rel="noopener noreferrer">Source</a>
+          <a href="https://www.linkedin.com/in/eeshans/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </span>
+      </footer>
+    </div>
+
+    <!-- Visual Detail Modal -->
+    <div class="detail-backdrop" id="detailBackdrop">
+      <article class="detail-shell" role="dialog" aria-modal="true" aria-label="Run detail">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 id="detailTitle" class="truncate-line text-lg font-semibold">Run detail</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm" id="detailSubtitle"></p>
+          </div>
+          <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <button type="button" class="btn-sm-outline operational-control" id="openHtml" data-operational-available="false">Open HTML</button>
+            <button type="button" class="btn-sm-outline operational-control" id="openRunFolder" data-operational-available="false">Open in Finder</button>
+            <button type="button" class="btn-sm-outline operational-control" id="recaptureRun" data-operational-available="false">Recapture media</button>
+            <button type="button" class="btn-sm-danger operational-control" id="deleteRun" data-operational-available="false">Delete run</button>
+            <button type="button" class="btn-sm-outline" id="closeDetail">Close</button>
+          </div>
+        </header>
+        <div class="detail-body p-5">
+          <div class="grid min-w-0">
+            <div id="detailPreview"></div>
+          </div>
+          <aside class="detail-inspector">
+            <div class="run-identity">
+              <div class="meta-grid" id="detailMeta"></div>
+            </div>
+            <section class="inspector-section">
+              <div class="section-row">
+                <h3 id="detailTextTitle">Prompt</h3>
+                <div class="section-actions">
+                  <span class="badge-outline" id="promptLength">0 chars</span>
+                  <button type="button" class="btn-sm-outline" id="copyDetailPrompt">Copy prompt</button>
+                </div>
+              </div>
+              <pre class="code-block prompt-block" id="detailPrompt"></pre>
+            </section>
+            <section class="inspector-section compact-section run-folder-section">
+              <div class="section-row">
+                <h3>Run folder</h3>
+                <button type="button" class="btn-sm-outline" id="copyRunFolder">Copy path</button>
+              </div>
+              <div class="run-folder-path-wrap">
+                <code class="run-folder-path" id="detailRunFolderPath">-</code>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </article>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="detail-backdrop" id="deleteConfirmBackdrop">
+      <article class="confirm-shell" role="dialog" aria-modal="true" aria-label="Delete run">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 class="truncate-line text-lg font-semibold">Delete run?</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm">This removes the run folder from disk.</p>
+          </div>
+          <button type="button" class="btn-sm-outline" id="closeDeleteConfirm">Close</button>
+        </header>
+        <div class="grid gap-4 p-5">
+          <div class="rounded-lg border border-[oklch(0.78_0.06_28)] bg-[oklch(0.97_0.018_28)] p-3">
+            <p class="text-sm font-medium text-[oklch(0.45_0.12_28)]">This cannot be undone.</p>
+            <p class="muted-copy mt-1 text-sm leading-5">The whole run folder will be deleted, including metadata, prompt, HTML, preview, and raw response files.</p>
+          </div>
+          <div class="grid gap-1">
+            <span class="section-label">Run folder</span>
+            <code class="code-inline-path" id="deleteRunPath"></code>
+          </div>
+          <div class="flex flex-wrap justify-end gap-2">
+            <button type="button" class="btn-sm-outline" id="cancelDeleteRun">Cancel</button>
+            <button type="button" class="btn-sm-danger" id="confirmDeleteRun">Delete folder</button>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Prepare Run Modal -->
+    <div class="detail-backdrop" id="prepBackdrop">
+      <article class="prep-shell" role="dialog" aria-modal="true" aria-label="Prepare run">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 class="truncate-line text-lg font-semibold">Prepare run slot</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm" id="prepSubtitle">Choose a prompt and model to generate a run folder.</p>
+          </div>
+          <div class="prep-header-actions">
+            <button class="btn" type="button" id="prepareRun">Prepare slot</button>
+            <button type="button" class="btn-sm-outline" id="closePrep">Close</button>
+          </div>
+        </header>
+        <div class="prep-body p-5">
+          <div class="prep-layout" id="prepLayout">
+            <section class="prep-form-panel" aria-label="Run slot inputs">
+              <div class="grid gap-2" id="prepBackendHelperGroup">
+                <div class="field-label-row">
+                  <label for="prepRunner">Backend helper</label>
+                  <button type="button" class="help-pill" data-tooltip="Optional starter command for the model server. The app records the command but does not start or stop the server.">?</button>
+                </div>
+                <select id="prepRunner" class="input">
+                  <option value="manual">None</option>
+                  <option value="llama-cpp">llama.cpp server command</option>
+                </select>
+              </div>
+              <div class="grid gap-2" id="prepBaseUrlGroup">
+                <div class="field-label-row">
+                  <label for="prepBaseUrl" id="prepBaseUrlLabel">Base URL</label>
+                  <button type="button" class="help-pill" data-tooltip="OpenAI-compatible endpoint URL. For LM Studio this is usually http://localhost:1234/v1. For llama.cpp this is usually http://127.0.0.1:8080/v1.">?</button>
+                </div>
+                <input id="prepBaseUrl" class="input" value="http://127.0.0.1:8080/v1" />
+              </div>
+              <div class="grid gap-2" id="prepVisualPromptGroup">
+                <div class="field-label-row">
+                  <label for="prepBenchmark">Prompt</label>
+                  <button type="button" class="help-pill" data-tooltip="Visual benchmark prompt. The app writes the exact output path into the generated prompt so external tools save in the right run folder.">?</button>
+                </div>
+                <select id="prepBenchmark" class="input"></select>
+              </div>
+              <div class="grid gap-2" id="prepModelSelectGroup">
+                <div class="field-label-row">
+                  <label for="prepModelSelect" id="prepModelSelectLabel">Discovered model</label>
+                  <button type="button" class="help-pill" data-tooltip="Model discovered from LM Studio. The app records this label in the prepared run metadata.">?</button>
+                </div>
+                <select id="prepModelSelect" class="input"></select>
+              </div>
+            </section>
+
+            <section id="prepResult" class="next-step-panel prep-prompt-panel" aria-label="Generated prompt">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-medium" id="prepResultTitle">Generated prompt</h3>
+                  <p class="muted-copy mt-0.5 text-xs" id="prepResultHint">Copy this into your external tool after preparing the slot.</p>
+                </div>
+              </div>
+              <div class="prep-artifact" id="prepCommandGroup" hidden>
+                <div class="prep-artifact-head">
+                  <div>
+                    <div class="field-label-row">
+                      <label for="prepCommand">llama.cpp server command</label>
+                      <button type="button" class="help-pill" data-tooltip="Editable command to start llama.cpp outside the app. The app saves this exact command in metadata and command.txt when you prepare the run.">?</button>
+                    </div>
+                    <p class="muted-copy mt-0.5 text-xs">Run this in your terminal before using the generated visual prompt.</p>
+                  </div>
+                  <button type="button" class="btn-sm-outline" id="copyPrepCommand">Copy command</button>
+                </div>
+                <textarea id="prepCommand" class="input prep-command-input" rows="9" wrap="off"></textarea>
+                <div id="llamaCppStatusBar" class="llama-cpp-status-bar" hidden>
+                  <span id="llamaCppStatusDot" class="status-dot"></span>
+                  <span id="llamaCppStatusText" class="muted-copy text-xs">Checking server…</span>
+                  <button type="button" class="btn-sm-ghost text-xs" id="checkLlamaCppBtn">Check</button>
+                </div>
+              </div>
+              <div class="prep-artifact prep-output-artifact" id="prepOutputGroup">
+                <div class="prep-artifact-head">
+                  <div>
+                    <div class="field-label-row">
+                      <label for="preparedPrompt" id="prepOutputLabel">Visual prompt</label>
+                      <button type="button" class="help-pill" data-tooltip="Generated prompt for this visual run. Copy it after preparing the slot so the output path is exact.">?</button>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-sm-outline" id="copyPrompt" disabled>Copy prompt</button>
+                </div>
+                <textarea id="preparedPrompt" class="input font-mono text-[0.82rem] leading-5" placeholder="Prepare a run slot to generate the exact prompt and output path."></textarea>
+              </div>
+              <p class="muted-copy text-sm" id="preparedPaths">No run slot prepared yet.</p>
+            </section>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Setup Modal -->
+    <div class="detail-backdrop" id="setupBackdrop">
+      <article class="prep-shell lm-studio-shell" role="dialog" aria-modal="true" aria-label="Setup">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 class="truncate-line text-lg font-semibold">Setup</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm">Configure LM Studio, then prepare runs and save generated artifacts.</p>
+          </div>
+          <button type="button" class="btn-sm-outline" id="closeSetup">Close</button>
+        </header>
+        <div class="prep-body setup-body">
+          <div class="setup-console-layout">
+            <section class="lm-source-panel" aria-labelledby="lmStudioHeading">
+              <div class="lm-source-heading">
+                <div class="min-w-0">
+                  <span class="section-label">Local model source</span>
+                  <h3 id="lmStudioHeading">LM Studio</h3>
+                  <p>Discover live models, then mirror that list into Pi and OpenCode when needed.</p>
+                </div>
+                <span class="badge-outline lm-count-badge"><span id="availableModelCount">0</span> models</span>
+              </div>
+
+              <div class="lm-operations-grid">
+                <div id="lmStep1" class="lm-op-cell lm-connect-cell">
+                  <div class="lm-op-head">
+                    <span class="lm-op-title">Connection</span>
+                    <span class="section-label">LM Studio URL</span>
+                  </div>
+                  <div class="lm-op-control lm-connect-control">
+                    <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
+                    <button type="button" class="btn" id="refreshConnection">Test</button>
+                  </div>
+                  <p class="lm-op-message" id="connectionMessage" aria-live="polite">Waiting for local API.</p>
+                </div>
+
+                <section id="lmStep3" class="lm-sync-cells" aria-labelledby="syncConfigHeading">
+                  <h3 id="syncConfigHeading" class="sr-only">Config sync</h3>
+                  <div class="lm-op-cell sync-target" id="lmConfigPi">
+                    <div class="sync-target-main">
+                      <span class="sync-target-name">Pi config</span>
+                      <span class="lm-config-indicator" id="lmConfigPiStatus">Checking…</span>
+                      <span class="sync-target-path" id="lmConfigPiPath">~/.pi/agent/models.json</span>
+                    </div>
+                    <img class="sync-target-logo sync-target-logo-pi" src={`${basePath}assets/pi-logo.svg`} alt="" aria-hidden="true" />
+                    <button type="button" class="btn-sm-outline" id="syncPiBtn">Sync Pi</button>
+                  </div>
+                  <div class="lm-op-cell sync-target" id="lmConfigOpenCode">
+                    <div class="sync-target-main">
+                      <span class="sync-target-name">OpenCode config</span>
+                      <span class="lm-config-indicator" id="lmConfigOpenCodeStatus">Checking…</span>
+                      <span class="sync-target-path" id="lmConfigOpenCodePath">~/.config/opencode/opencode.json</span>
+                    </div>
+                    <img class="sync-target-logo sync-target-logo-opencode" src={`${basePath}assets/opencode-logo.svg`} alt="" aria-hidden="true" />
+                    <button type="button" class="btn-sm-outline" id="syncOpenCodeBtn">Sync OpenCode</button>
+                  </div>
+                </section>
+              </div>
+              <p class="lm-sync-message" id="syncMessage" aria-live="polite">Start LM Studio, test the URL, then sync discovered models to your tool configs.</p>
+
+              <section id="lmStep2" class="lm-model-section" aria-labelledby="modelInventoryHeading">
+                <div class="lm-model-section-head">
+                  <div>
+                    <h3 id="modelInventoryHeading">Model inventory</h3>
+                    <p>Live LM Studio models plus saved run history.</p>
+                  </div>
+                </div>
+                <div class="lm-model-table-head" id="lmModelHeader">
+                  <span>Model</span>
+                  <span>Source</span>
+                  <span>Config status</span>
+                </div>
+                <div class="available-model-list" id="availableModelChoices"></div>
+              </section>
+            </section>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <script is:inline type="module" src={`${basePath}viewer.js`}></script>
+  </body>
+</html>

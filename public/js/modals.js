@@ -2,7 +2,6 @@ import { els } from "./dom.js";
 
 export function openModal(name) {
   const map = {
-    record: els.recordBackdrop,
     detail: els.detailBackdrop,
     prep: els.prepBackdrop,
     setup: els.setupBackdrop,
@@ -21,7 +20,6 @@ export function openModal(name) {
 
 export function closeModal(name) {
   const map = {
-    record: els.recordBackdrop,
     detail: els.detailBackdrop,
     prep: els.prepBackdrop,
     setup: els.setupBackdrop,
@@ -38,7 +36,6 @@ export function closeModal(name) {
 export function currentModal() {
   const entries = [
     ["deleteConfirm", els.deleteConfirmBackdrop],
-    ["record", els.recordBackdrop],
     ["detail", els.detailBackdrop],
     ["prep", els.prepBackdrop],
     ["setup", els.setupBackdrop]

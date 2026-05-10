@@ -169,7 +169,6 @@ describe("createLocalApi", () => {
     expect(prepareRun).toHaveBeenCalledWith({
       benchmark: benchmarks[0],
       modelId: "model-a",
-      kind: "visual",
       runner: "manual",
       baseUrl: undefined,
       launchCommand: undefined,
@@ -177,77 +176,23 @@ describe("createLocalApi", () => {
     });
   });
 
-  it("prepares a LightEval command run from a task string", async () => {
-    const preparedRun: PreparedRun = {
-      run: {
-        runId: "run-1",
-        benchmark: {
-          id: "mmlu-truthfulqa",
-          title: "LightEval: mmlu,truthfulqa",
-          description: "LightEval task(s): mmlu,truthfulqa",
-          prompt: "mmlu,truthfulqa"
-        },
-        model: {
-          id: "local-model",
-          slug: "local-model"
-        },
-        kind: "lighteval",
-        status: "prepared",
-        createdAt: "2026-05-07T00:00:00.000Z",
-        updatedAt: "2026-05-07T00:00:00.000Z",
-        preparedAt: "2026-05-07T00:00:00.000Z",
-        runDirectory: "/runs/mmlu-truthfulqa/local-model/run-1",
-        assets: {
-          metadata: "metadata.json",
-          command: "command.txt"
-        }
-      },
-      prompt: "",
-      command: "lighteval endpoint litellm 'model_name=openai/local-model,base_url=http://localhost:1234/v1,provider=openai,api_key=lm-studio,concurrent_requests=1' 'mmlu,truthfulqa' --max-samples 1",
-      paths: {
-        runDirectory: "/runs/mmlu-truthfulqa/local-model/run-1",
-        promptPath: "/runs/mmlu-truthfulqa/local-model/run-1/prompt.md",
-        commandPath: "/runs/mmlu-truthfulqa/local-model/run-1/command.txt",
-        htmlPath: "/runs/mmlu-truthfulqa/local-model/run-1/index.html",
-        metadataPath: "/runs/mmlu-truthfulqa/local-model/run-1/metadata.json",
-        previewPath: "/runs/mmlu-truthfulqa/local-model/run-1/preview.png"
-      }
-    };
-    const prepareRun = vi.fn(async () => preparedRun);
-    const loadBenchmarks = vi.fn(async () => benchmarks);
+  it("rejects deprecated non-visual run preparation", async () => {
+    const prepareRun = vi.fn();
     const api = createLocalApi({
       runsRoot: "/runs",
-      loadBenchmarks,
+      loadBenchmarks: vi.fn(async () => benchmarks),
       prepareRun
     });
 
     await expect(
       api.prepareRun({
-        taskId: "mmlu,truthfulqa",
+        benchmarkId: "sakura",
         modelId: "local-model",
         kind: "lighteval",
-        runner: "lighteval",
-        baseUrl: "http://localhost:1234/v1",
-        launchCommand: "lighteval endpoint litellm 'model_name=openai/local-model,base_url=http://localhost:1234/v1,provider=openai,api_key=lm-studio,concurrent_requests=1' 'mmlu,truthfulqa' --max-samples 1"
+        runner: "lighteval"
       })
-    ).resolves.toEqual({
-      preparedRun
-    });
-    expect(loadBenchmarks).not.toHaveBeenCalled();
-    expect(prepareRun).toHaveBeenCalledWith({
-      benchmark: {
-        id: "mmlu-truthfulqa",
-        title: "LightEval: mmlu,truthfulqa",
-        description: "LightEval task(s): mmlu,truthfulqa",
-        prompt: "mmlu,truthfulqa"
-      },
-      modelId: "local-model",
-      kind: "lighteval",
-      runner: "lighteval",
-      baseUrl: "http://localhost:1234/v1",
-      launchCommand: "lighteval endpoint litellm 'model_name=openai/local-model,base_url=http://localhost:1234/v1,provider=openai,api_key=lm-studio,concurrent_requests=1' 'mmlu,truthfulqa' --max-samples 1",
-      runsRoot: "/runs"
-    });
+    ).rejects.toThrow(/kind must be visual/);
+    expect(prepareRun).not.toHaveBeenCalled();
   });
 
   it("captures missing run media through the configured dependency", async () => {

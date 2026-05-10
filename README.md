@@ -10,7 +10,7 @@
 [![typescript](https://img.shields.io/badge/TypeScript-6.x-3178c6)](https://www.typescriptlang.org/)
 [![platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue)]()
 
-[Live Gallery](https://eeshansrivastava89.github.io/local-llm-visual-benchmark/) • [Source](https://github.com/eeshansrivastava89/local-llm-visual-benchmark) • [eeshans.com](https://eeshans.com)
+[Live workbench](https://eeshansrivastava89.github.io/local-llm-visual-benchmark/) • [Source](https://github.com/eeshansrivastava89/local-llm-visual-benchmark) • [eeshans.com](https://eeshans.com)
 
 ```bash
 npm install
@@ -74,18 +74,6 @@ http://localhost:1234/v1
 ```
 
 You can use any runner that can create the requested `index.html` file. Pi and OpenCode work well because the app can sync discovered LM Studio models into their config files.
-
-### Optional LightEval setup
-
-LightEval runs use a separate Python environment so the web app does not pull evaluation tooling into the Node install.
-
-```bash
-uv venv .venv-lighteval --python 3.12
-source .venv-lighteval/bin/activate
-uv pip install -r requirements-lighteval.txt
-```
-
-Then choose `LightEval` in **Prepare run**. The app will create the run folder and generate a command that writes LightEval outputs back into that folder.
 
 ## Publishing your own gallery
 

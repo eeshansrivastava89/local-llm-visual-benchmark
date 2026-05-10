@@ -1,20 +1,20 @@
 import { els } from "./js/dom.js";
 import { state } from "./js/state.js";
-import { DEFAULT_LLAMA_CPP_BASE_URL, DEFAULT_LM_STUDIO_BASE_URL, DEFAULT_LLAMA_CPP_MODEL_PATH, DEFAULT_LIGHTEVAL_TASKS, LIGHTEVAL_TASK_PRESETS } from "./js/constants.js";
-import { clamp, escapeHtml, escapeAttribute, formatBytes, formatDate, formatDateShort, shellQuote, normalizeBaseUrlInput, uniqueBy } from "./js/utils.js";
+import { DEFAULT_LLAMA_CPP_BASE_URL, DEFAULT_LLAMA_CPP_MODEL_PATH } from "./js/constants.js";
+import { clamp, escapeHtml, escapeAttribute, formatBytes, formatDate, formatDateShort, shellQuote, uniqueBy } from "./js/utils.js";
 import { fetchJson, fetchStaticManifest, postJson, deleteJson } from "./js/api.js";
-import { filteredRuns, groupRuns, modelsFromRuns, runsForModel, runSummaryText, runKind, runKindLabel, runnerLabel, runDisplayStatus, runDisplayStatusLabel, hasCapturedVideo, lightEvalHasOutputs, needsMediaCapture, runCardState, displayRunError, runCardMediaMessage, runCardIdentity, runRecordText, runTaskOrPromptMetaValue, canOpenVisualDetail, findRunByDirectoryOrId } from "./js/runs.js";
+import { filteredRuns, groupRuns, modelsFromRuns, runSummaryText, runKind, hasCapturedVideo, needsMediaCapture, runCardState, displayRunError, runCardMediaMessage, runCardIdentity, runRecordText, canOpenVisualDetail, findRunByDirectoryOrId } from "./js/runs.js";
 import { openModal, closeModal, currentModal, handleModalKeydown } from "./js/modals.js";
 import { applyStoredTheme, toggleTheme, setTheme } from "./js/theme.js";
 import { startHtmlPolling } from "./js/polling.js";
-import { renderSectionTabs, renderViewTabs, updateOnboarding, showHtmlDetectToast } from "./js/ui.js";
+import { renderViewTabs, updateOnboarding, showHtmlDetectToast } from "./js/ui.js";
 
 init();
 
 function init() {
+  initWorkspaceState();
   applyStoredTheme();
   wireEvents();
-  renderSectionTabs();
   renderViewTabs();
   updateOnboarding();
   void loadLocalData();
@@ -35,6 +35,11 @@ function init() {
   }, 12000);
 }
 
+function initWorkspaceState() {
+  state.workspace = "visual";
+  state.mode = "benchmark";
+}
+
 function wireEvents() {
   els.refreshConnection.addEventListener("click", () => loadConnection({ manual: true }));
   els.refreshRuns.addEventListener("click", () => refreshRuns());
@@ -48,7 +53,6 @@ function wireEvents() {
     resetPrepareRunModal();
   });
 
-  els.closeRecord.addEventListener("click", () => closeModal("record"));
   els.closeDetail.addEventListener("click", () => closeModal("detail"));
   els.closePrep.addEventListener("click", () => closeModal("prep"));
   els.closeSetup.addEventListener("click", () => closeModal("setup"));
@@ -58,9 +62,6 @@ function wireEvents() {
   document.addEventListener("keydown", handleModalKeydown);
   wireHelpTooltips();
 
-  els.recordBackdrop.addEventListener("click", (event) => {
-    if (event.target === els.recordBackdrop) closeModal("record");
-  });
   els.detailBackdrop.addEventListener("click", (event) => {
     if (event.target === els.detailBackdrop) closeModal("detail");
   });
@@ -74,11 +75,6 @@ function wireEvents() {
     if (event.target === els.deleteConfirmBackdrop) closeModal("deleteConfirm");
   });
 
-  els.openRecordVisual.addEventListener("click", () => openSelectedRunVisualDetail());
-  els.openRecordFolder.addEventListener("click", () => openSelectedRunFolder(els.openRecordFolder, els.recordMeta));
-  els.deleteRecordRun.addEventListener("click", () => requestDeleteSelectedRun());
-  els.copyRecordPrompt.addEventListener("click", () => copyRecordPrompt());
-  els.copyRecordRunFolder.addEventListener("click", () => copySelectedRunFolder(els.copyRecordRunFolder));
   els.deleteRun.addEventListener("click", () => requestDeleteSelectedRun());
   els.openHtml.addEventListener("click", () => openSelectedRunHtml());
   els.openRunFolder.addEventListener("click", () => openSelectedRunFolder(els.openRunFolder, els.detailMeta));
@@ -101,41 +97,11 @@ function wireEvents() {
     resetRunPage();
     renderRuns();
   });
-  els.runKindFilter.addEventListener("change", () => {
-    state.selectedKind = els.runKindFilter.value;
-    resetRunPage();
-    renderRuns();
-  });
-  els.runStatusFilter.addEventListener("change", () => {
-    state.selectedStatus = els.runStatusFilter.value;
-    resetRunPage();
-    renderRuns();
-  });
-  els.runnerFilter.addEventListener("change", () => {
-    state.selectedRunner = els.runnerFilter.value;
-    resetRunPage();
-    renderRuns();
-  });
-
   els.prepareRun.addEventListener("click", () => prepareRunSlot());
   els.copyPrompt.addEventListener("click", () => copyPreparedPrompt());
   els.copyPrepCommand.addEventListener("click", () => copyPrepCommand());
-  els.preparedPrompt.addEventListener("input", () => {
-    if (els.prepKind.value === "lighteval") {
-      state.preparedPrompt = els.preparedPrompt.value;
-      updatePreparedCopyState();
-    }
-  });
-  els.prepKind.addEventListener("change", () => updatePrepareMode());
   els.prepRunner.addEventListener("change", () => updatePrepareMode({ preserveCommand: false }));
   els.prepBenchmark.addEventListener("change", () => updatePrepareMode());
-  els.prepLightEvalTaskPreset.addEventListener("change", () => {
-    if (els.prepLightEvalTaskPreset.value) {
-      els.prepLightEvalTasks.value = els.prepLightEvalTaskPreset.value;
-    }
-    updatePrepareMode({ preserveCommand: false });
-  });
-  els.prepLightEvalTasks.addEventListener("input", () => updatePrepareMode({ preserveCommand: false }));
   els.prepBaseUrl.addEventListener("input", () => updatePrepareMode({ preserveCommand: false }));
   els.prepCommand.addEventListener("input", () => {
     els.copyPrepCommand.disabled = !els.prepCommand.value.trim();
@@ -146,17 +112,6 @@ function wireEvents() {
   if (els.checkLlamaCppBtn) {
     els.checkLlamaCppBtn.addEventListener("click", () => checkLlamaCppServer());
   }
-
-  els.sectionTabs.forEach((button) => {
-    button.addEventListener("click", () => {
-      state.section = button.dataset.section;
-      resetRunPage();
-      renderSectionTabs();
-      renderRuns();
-      renderPrepOptions();
-      updateOnboarding();
-    });
-  });
 
   els.viewTabs.forEach((button) => {
     button.addEventListener("click", () => {
@@ -651,7 +606,6 @@ function updateWriteControls() {
   els.refreshRuns.disabled = !canWrite;
   if (state.selectedRun) {
     updateDetailActions(state.selectedRun);
-    updateRecordActions(state.selectedRun);
   }
 }
 
@@ -738,7 +692,6 @@ async function captureRunMedia(run, options = {}) {
 
 function resetPrepareRunModal() {
   state.preparedPrompt = "";
-  state.prepKind = els.prepKind.value || "visual";
   els.preparedPrompt.value = "";
   els.preparedPaths.textContent = "No run slot prepared yet.";
   els.copyPrompt.disabled = true;
@@ -748,8 +701,6 @@ function resetPrepareRunModal() {
   }
   const firstModel = state.discoveredModels[0]?.id ?? "";
   els.prepModelSelect.value = firstModel;
-  els.prepLightEvalTasks.value = DEFAULT_LIGHTEVAL_TASKS;
-  syncLightEvalTaskPreset();
   els.prepBaseUrl.value = DEFAULT_LLAMA_CPP_BASE_URL;
   updatePrepareMode({ preserveCommand: false });
 
@@ -762,36 +713,22 @@ function resetPrepareRunModal() {
 }
 
 function updatePrepareMode(options = {}) {
-  const kind = els.prepKind.value;
-  const isLightEval = kind === "lighteval";
-  const enteredLightEval = isLightEval && state.prepKind !== "lighteval";
-  const runner = isLightEval ? "lighteval" : els.prepRunner.value;
+  const runner = els.prepRunner.value;
   const commandVisible = runner === "llama-cpp";
-  const workflow = isLightEval ? "lighteval" : commandVisible ? "visual-llama-cpp" : "visual";
-  if (enteredLightEval) {
-    els.prepBaseUrl.value = normalizeBaseUrlInput(els.baseUrl.value || DEFAULT_LM_STUDIO_BASE_URL);
-    resetStaleLightEvalFields();
-  } else if (!isLightEval && state.prepKind === "lighteval") {
-    els.prepBaseUrl.value = DEFAULT_LLAMA_CPP_BASE_URL;
-    state.preparedPrompt = "";
-    els.preparedPrompt.value = "";
-    els.preparedPaths.textContent = "No run slot prepared yet.";
-    els.copyPrompt.disabled = true;
-  }
-  els.prepBackendHelperGroup.hidden = isLightEval;
-  els.prepVisualPromptGroup.hidden = isLightEval;
+  const workflow = commandVisible ? "visual-llama-cpp" : "visual";
+  els.prepBackendHelperGroup.hidden = false;
+  els.prepVisualPromptGroup.hidden = false;
   els.prepModelSelectGroup.hidden = false;
-  els.prepLightEvalFields.hidden = !isLightEval;
-  els.prepBaseUrlGroup.hidden = runner !== "llama-cpp" && !isLightEval;
+  els.prepBaseUrlGroup.hidden = runner !== "llama-cpp";
   els.prepCommandGroup.hidden = !commandVisible;
   if (els.llamaCppStatusBar) {
     els.llamaCppStatusBar.hidden = !commandVisible;
   }
   els.prepLayout.dataset.kind = workflow;
   els.prepResult.dataset.panelMode = workflow;
-  els.preparedPrompt.readOnly = !isLightEval;
-  els.prepModelSelectLabel.textContent = isLightEval ? "LM Studio model" : "Discovered model";
-  els.prepBaseUrlLabel.textContent = isLightEval ? "LM Studio base URL" : "Base URL";
+  els.preparedPrompt.readOnly = true;
+  els.prepModelSelectLabel.textContent = "Discovered model";
+  els.prepBaseUrlLabel.textContent = "Base URL";
 
   if (!options.preserveCommand || !els.prepCommand.value.trim()) {
     els.prepCommand.value = runner === "llama-cpp"
@@ -799,78 +736,20 @@ function updatePrepareMode(options = {}) {
       : "";
   }
   els.copyPrepCommand.disabled = !commandVisible || !els.prepCommand.value.trim();
-  if (isLightEval) {
-    syncLightEvalTaskPreset();
-    const liveCommand = defaultLightEvalCommand();
-    if (!options.preserveCommand || !els.preparedPrompt.value.trim() || !state.preparedPrompt) {
-      state.preparedPrompt = liveCommand;
-      els.preparedPrompt.value = liveCommand;
-    }
-    updatePreparedCopyState();
-  } else if (!state.preparedPrompt) {
+  if (!state.preparedPrompt) {
     els.preparedPrompt.value = "";
     updatePreparedCopyState();
   }
 
-  els.prepResultTitle.textContent = isLightEval
-    ? "Generated command"
-    : commandVisible
-      ? "Generated artifacts"
-      : "Generated prompt";
-  els.prepSubtitle.textContent = isLightEval
-    ? "Choose an LM Studio model and LightEval task to generate a run folder."
-    : "Choose a prompt and model to generate a run folder.";
-  els.prepResultHint.textContent = isLightEval
-    ? "Review or edit this command, then prepare the run folder. Install once with: uv pip install -r requirements-lighteval.txt."
-    : commandVisible
-      ? "Edit the server command, prepare the slot, then copy the prompt into your visual runner."
-      : "Copy this into your external tool after preparing the slot.";
-  els.preparedPrompt.placeholder = isLightEval
-    ? "Generated LightEval command."
-    : "Prepare a run slot to generate the exact prompt and output path.";
-  els.prepOutputLabel.textContent = isLightEval ? "LightEval command" : "Visual prompt";
-  els.copyPrompt.textContent = isLightEval ? "Copy command" : "Copy prompt";
-  els.prepareRun.textContent = isLightEval ? "Prepare command" : "Prepare slot";
-  state.prepKind = kind;
-}
-
-function resetStaleLightEvalFields() {
-  const task = els.prepLightEvalTasks.value.trim();
-  const isVisualPromptId = state.benchmarks.some((benchmark) => benchmark.id === task);
-
-  if (!isLikelyLightEvalTaskString(task) || isVisualPromptId) {
-    els.prepLightEvalTasks.value = DEFAULT_LIGHTEVAL_TASKS;
-  }
-}
-
-function renderLightEvalTaskPresets() {
-  els.prepLightEvalTaskPreset.innerHTML = [
-    ...LIGHTEVAL_TASK_PRESETS.map((preset) =>
-      '<option value="' + escapeAttribute(preset.value) + '">' +
-      escapeHtml(preset.label + " · " + preset.value) +
-      "</option>"
-    ),
-    '<option value="">Custom task string</option>'
-  ].join("");
-  syncLightEvalTaskPreset();
-}
-
-function syncLightEvalTaskPreset() {
-  const task = els.prepLightEvalTasks.value.trim();
-  const preset = LIGHTEVAL_TASK_PRESETS.find((item) => item.value === task);
-  els.prepLightEvalTaskPreset.value = preset?.value ?? "";
-  const matchedDescription = preset
-    ? preset.description
-    : "Custom LightEval task string. Use the task reference link or `lighteval tasks inspect <task>` in your terminal.";
-  els.prepLightEvalTaskPreset.setAttribute("aria-description", matchedDescription);
-}
-
-function isLikelyLightEvalTaskString(value) {
-  const task = value.trim();
-  if (!task) return false;
-  if (/^https?:\/\//iu.test(task) || task.includes("://")) return false;
-  if (/^localhost(?::\d+)?(?:\/|$)/iu.test(task)) return false;
-  return true;
+  els.prepResultTitle.textContent = commandVisible ? "Generated artifacts" : "Generated prompt";
+  els.prepSubtitle.textContent = "Choose a prompt and model to generate a run folder.";
+  els.prepResultHint.textContent = commandVisible
+    ? "Edit the server command, prepare the slot, then copy the prompt into your visual runner."
+    : "Copy this into your external tool after preparing the slot.";
+  els.preparedPrompt.placeholder = "Prepare a run slot to generate the exact prompt and output path.";
+  els.prepOutputLabel.textContent = "Visual prompt";
+  els.copyPrompt.textContent = "Copy prompt";
+  els.prepareRun.textContent = "Prepare slot";
 }
 
 function defaultLlamaCppCommand(modelId) {
@@ -919,76 +798,33 @@ async function checkLlamaCppServer() {
   }
 }
 
-function defaultLightEvalCommand() {
-  const rawTasks = els.prepLightEvalTasks.value.trim();
-  const tasks = isLikelyLightEvalTaskString(rawTasks) ? rawTasks : DEFAULT_LIGHTEVAL_TASKS;
-  if (tasks !== rawTasks) {
-    els.prepLightEvalTasks.value = tasks;
-    syncLightEvalTaskPreset();
-  }
-  const modelArgs = defaultLightEvalModelArgs(els.prepModelSelect.value);
-  return [
-    "lighteval \\",
-    "  endpoint \\",
-    "  litellm \\",
-    "  " + shellQuote(modelArgs) + " \\",
-    "  " + shellQuote(tasks) + " \\",
-    "  --max-samples 1 \\",
-    "  --output-dir <prepared-run-folder> \\",
-    "  --save-details"
-  ].join("\n");
-}
-
-function defaultLightEvalModelArgs(modelId) {
-  const selectedModel = modelId?.trim() || state.discoveredModels[0]?.id || "select-lm-studio-model";
-  const litellmModel = selectedModel.startsWith("openai/") ? selectedModel : "openai/" + selectedModel;
-  const baseUrl = normalizeBaseUrlInput(els.prepBaseUrl.value || els.baseUrl.value || DEFAULT_LM_STUDIO_BASE_URL);
-  return [
-    "model_name=" + litellmModel,
-    "base_url=" + baseUrl,
-    "provider=openai",
-    "api_key=lm-studio",
-    "concurrent_requests=1"
-  ].join(",");
-}
-
 async function prepareRunSlot() {
   if (!canUseOperationalControls()) {
     els.preparedPaths.textContent = "Preparing runs requires the local dev server.";
     return;
   }
-  const kind = els.prepKind.value;
-  const isLightEval = kind === "lighteval";
   const benchmarkId = els.prepBenchmark.value;
-  const taskId = els.prepLightEvalTasks.value.trim();
-  const modelId = isLightEval
-    ? els.prepModelSelect.value.trim()
-    : els.prepModelSelect.value.trim();
-  if ((!isLightEval && !benchmarkId) || !modelId || (isLightEval && !isLikelyLightEvalTaskString(taskId))) {
-    els.preparedPaths.textContent = isLightEval
-      ? "Choose an LM Studio model and LightEval task."
-      : "Choose a prompt and model label.";
+  const modelId = els.prepModelSelect.value.trim();
+  if (!benchmarkId || !modelId) {
+    els.preparedPaths.textContent = "Choose a prompt and model label.";
     return;
   }
-  const runner = isLightEval ? "lighteval" : els.prepRunner.value;
-  const launchCommand = isLightEval ? els.preparedPrompt.value : els.prepCommand.value;
+  const runner = els.prepRunner.value;
+  const launchCommand = els.prepCommand.value;
   const modelPath = runner === "llama-cpp" ? localPathForModel(modelId) : undefined;
   try {
     const data = await postJson("/api/prepare-run", {
-      benchmarkId: isLightEval ? undefined : benchmarkId,
-      taskId: isLightEval ? taskId : undefined,
+      benchmarkId,
       modelId,
-      kind,
+      kind: "visual",
       runner,
       baseUrl: els.prepBaseUrl.value,
       launchCommand,
       modelPath
     });
     const prepared = data.preparedRun;
-    const output = kind === "lighteval" ? (prepared.command ?? "") : prepared.prompt;
-    const statusText = kind === "lighteval"
-      ? "LightEval run prepared. Copy the command into your terminal."
-      : runner === "llama-cpp"
+    const output = prepared.prompt;
+    const statusText = runner === "llama-cpp"
         ? "Run slot prepared. Command saved in metadata and command.txt."
         : "Run slot prepared. Copy the prompt into your external tool.";
     state.preparedPrompt = output;
@@ -1005,7 +841,7 @@ async function prepareRunSlot() {
     renderRuns();
   } catch (error) {
     els.preparedPrompt.value = "";
-    els.preparedPaths.textContent = kind === "lighteval" ? "Prepare failed: " + error.message : "No run slot prepared yet.";
+    els.preparedPaths.textContent = "No run slot prepared yet.";
     els.copyPrompt.disabled = true;
     updatePreparedCopyState();
   }
@@ -1015,15 +851,13 @@ async function copyPreparedPrompt() {
   if (!els.preparedPrompt.value) {
     return;
   }
-  const label = els.prepKind.value === "lighteval" ? "Copy command" : "Copy prompt";
-  await copyTextToClipboard(els.preparedPrompt.value, els.copyPrompt, label);
-  els.preparedPaths.textContent = els.prepKind.value === "lighteval" ? "Command copied." : "Prompt copied.";
+  await copyTextToClipboard(els.preparedPrompt.value, els.copyPrompt, "Copy prompt");
+  els.preparedPaths.textContent = "Prompt copied.";
 }
 
 function updatePreparedCopyState() {
   const value = els.preparedPrompt.value.trim();
-  const hasPlaceholderPath = els.prepKind.value === "lighteval" && value.includes("<prepared-run-folder>");
-  els.copyPrompt.disabled = !value || hasPlaceholderPath;
+  els.copyPrompt.disabled = !value;
 }
 
 async function copyPrepCommand() {
@@ -1036,14 +870,7 @@ async function copyPrepCommand() {
 
 async function copyDetailPrompt() {
   const text = els.detailPrompt.textContent ?? "";
-  const label = state.selectedRun && runKind(state.selectedRun) === "lighteval" ? "Copy task" : "Copy prompt";
-  await copyTextToClipboard(text, els.copyDetailPrompt, label);
-}
-
-async function copyRecordPrompt() {
-  const text = els.recordPrompt.textContent ?? "";
-  const label = state.selectedRun && runKind(state.selectedRun) === "lighteval" ? "Copy task" : "Copy prompt";
-  await copyTextToClipboard(text, els.copyRecordPrompt, label);
+  await copyTextToClipboard(text, els.copyDetailPrompt, "Copy prompt");
 }
 
 async function copySelectedRunFolder(button = els.copyRunFolder) {
@@ -1086,13 +913,11 @@ async function confirmDeleteSelectedRun() {
 
   els.confirmDeleteRun.disabled = true;
   if (els.deleteRun) els.deleteRun.disabled = true;
-  if (els.deleteRecordRun) els.deleteRecordRun.disabled = true;
   try {
     await deleteJson("/api/runs", { runDirectory: run.runDirectory });
     state.runs = state.runs.filter((item) => item.runDirectory !== run.runDirectory);
     closeModal("deleteConfirm");
     closeModal("detail");
-    closeModal("record");
     state.selectedRun = null;
     renderModels();
     renderRunFilters();
@@ -1104,7 +929,6 @@ async function confirmDeleteSelectedRun() {
   } finally {
     els.confirmDeleteRun.disabled = false;
     if (els.deleteRun) els.deleteRun.disabled = false;
-    if (els.deleteRecordRun) els.deleteRecordRun.disabled = false;
   }
 }
 
@@ -1144,23 +968,40 @@ async function openSelectedRunFolder(button = els.openRunFolder, errorTarget = e
       '<span class="meta-label">Open folder</span><strong>' + escapeHtml(error.message) + "</strong>";
   } finally {
     updateDetailActions(run);
-    updateRecordActions(run);
   }
 }
 
 /* ── Rendering ────────────────────────────────────────────── */
 
+function runsForCurrentWorkspace() {
+  return state.runs.filter((run) => runKind(run) === "visual");
+}
+
 function renderBenchmarks() {
+  const allLabel = "All prompts";
+  const optionRuns = runsForCurrentWorkspace();
+  const runOptions = optionRuns
+    .map((run) => ({
+      id: run.benchmark?.id,
+      label: run.benchmark?.title ?? run.benchmark?.id
+    }))
+    .filter((item) => item.id && item.label);
+  const benchmarkOptions = state.benchmarks.map((benchmark) => ({ id: benchmark.id, label: benchmark.title }));
+  const options = uniqueBy([...benchmarkOptions, ...runOptions], (item) => item.id);
+  if (state.selectedBenchmark !== "all" && !options.some((option) => option.id === state.selectedBenchmark)) {
+    state.selectedBenchmark = "all";
+  }
   els.benchmarkFilter.innerHTML = [
-    '<option value="all">All prompts</option>',
-    ...state.benchmarks.map((b) =>
-      '<option value="' + escapeAttribute(b.id) + '">' + escapeHtml(b.title) + "</option>"
+    '<option value="all">' + escapeHtml(allLabel) + "</option>",
+    ...options.map((option) =>
+      '<option value="' + escapeAttribute(option.id) + '">' + escapeHtml(option.label) + "</option>"
     )
   ].join("");
+  els.benchmarkFilter.value = state.selectedBenchmark;
 }
 
 function renderModels() {
-  const runModels = modelsFromRuns(state.runs);
+  const runModels = modelsFromRuns(runsForCurrentWorkspace());
   if (state.selectedModel !== "all" && !runModels.some((m) => m.id === state.selectedModel)) {
     state.selectedModel = "all";
     els.modelFilter.value = "all";
@@ -1174,49 +1015,7 @@ function renderModels() {
 }
 
 function renderRunFilters() {
-  if (state.selectedKind !== "all" && !state.runs.some((run) => runKind(run) === state.selectedKind)) {
-    state.selectedKind = "all";
-  }
-  if (state.selectedStatus !== "all" && !state.runs.some((run) => runDisplayStatus(run) === state.selectedStatus)) {
-    state.selectedStatus = "all";
-  }
-  if (state.selectedRunner !== "all" && !state.runs.some((run) => runnerLabel(run) === state.selectedRunner)) {
-    state.selectedRunner = "all";
-  }
-
-  syncSelectOptions(
-    els.runKindFilter,
-    "all",
-    "All types",
-    uniqueBy(state.runs.map((run) => ({ id: runKind(run), label: runKindLabel(run) })), (item) => item.id),
-    state.selectedKind
-  );
-  syncSelectOptions(
-    els.runStatusFilter,
-    "all",
-    "All statuses",
-    uniqueBy(state.runs.map((run) => ({ id: runDisplayStatus(run), label: runDisplayStatusLabel(run) })), (item) => item.id),
-    state.selectedStatus
-  );
-  syncSelectOptions(
-    els.runnerFilter,
-    "all",
-    "All runners",
-    uniqueBy(state.runs.map((run) => ({ id: runnerLabel(run), label: runnerLabel(run) })), (item) => item.id),
-    state.selectedRunner
-  );
-}
-
-function syncSelectOptions(select, allValue, allLabel, options, selectedValue) {
-  select.innerHTML = [
-    '<option value="' + escapeAttribute(allValue) + '">' + escapeHtml(allLabel) + "</option>",
-    ...options.map((option) =>
-      '<option value="' + escapeAttribute(option.id) + '">' + escapeHtml(option.label) + "</option>"
-    )
-  ].join("");
-  select.value = Array.from(select.options).some((option) => option.value === selectedValue)
-    ? selectedValue
-    : allValue;
+  // The workbench now keeps filters to model, prompt, and search.
 }
 
 function renderModelSources() {
@@ -1224,7 +1023,6 @@ function renderModelSources() {
 }
 
 function renderPrepOptions() {
-  renderLightEvalTaskPresets();
   els.prepBenchmark.innerHTML = state.benchmarks
     .map((b) => '<option value="' + escapeAttribute(b.id) + '">' + escapeHtml(b.title) + "</option>")
     .join("");
@@ -1235,16 +1033,7 @@ function renderPrepOptions() {
   if (!els.prepModelSelect.value && state.discoveredModels[0]) {
     els.prepModelSelect.value = state.discoveredModels[0].id;
   }
-  if (!isLikelyLightEvalTaskString(els.prepLightEvalTasks.value)) {
-    els.prepLightEvalTasks.value = DEFAULT_LIGHTEVAL_TASKS;
-  }
   updatePrepareMode({ preserveCommand: true });
-}
-
-function renderModeButtons() {
-  els.viewTabs.forEach((button) => {
-    button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode));
-  });
 }
 
 function resetRunPage() {
@@ -1253,23 +1042,22 @@ function resetRunPage() {
 
 function renderRuns() {
   const runs = filteredRuns();
-  els.runsFilterPanel.hidden = state.mode !== "runs";
   els.runCount.textContent = String(runs.length);
   els.runSummary.textContent = runSummaryText(runs);
-  els.viewTitle.textContent = state.mode === "runs"
-    ? "Runs"
-    : state.mode === "model"
+  els.viewTitle.textContent = state.mode === "model"
     ? "Model attempts"
+    : state.mode === "table"
+    ? "Table"
     : state.mode === "benchmark"
       ? "Prompt comparison"
-      : "Gallery";
-  els.viewSubtitle.textContent = state.mode === "runs"
-    ? "Folder-backed records from metadata.json."
-    : state.mode === "model"
+      : "Prompt comparison";
+  els.viewSubtitle.textContent = state.mode === "model"
     ? "Group attempts by model and prompt."
+    : state.mode === "table"
+    ? "Scan visual runs in a compact table."
     : state.mode === "benchmark"
       ? "Compare one prompt across models."
-      : "Browse captured previews and videos.";
+      : "Compare one prompt across models.";
 
   if (runs.length === 0) {
     const emptyBase = '<div class="empty">No runs match the current filters.</div>';
@@ -1284,7 +1072,7 @@ function renderRuns() {
     return;
   }
 
-  if (state.mode === "runs") {
+  if (state.mode === "table") {
     renderRunsTable(runs);
     return;
   }
@@ -1304,9 +1092,10 @@ function renderRuns() {
     );
     return;
   }
-
-  els.runsSurface.innerHTML = '<div class="run-grid">' + runs.map((run) => renderRunCard(run, "gallery")).join("") + "</div>";
-  wireRunCards();
+  renderGroupedRuns(
+    groupRuns(runs, (r) => r.benchmark?.title ?? r.benchmark?.id ?? "Unknown prompt", (r) => r.model?.id ?? "Unknown model"),
+    "benchmark"
+  );
 }
 
 function renderRunsTable(runs) {
@@ -1323,10 +1112,7 @@ function renderRunsTable(runs) {
         '<thead>' +
           '<tr>' +
             '<th>Run</th>' +
-            '<th>Kind</th>' +
             '<th>Status</th>' +
-            '<th>Runner</th>' +
-            '<th>Artifacts</th>' +
             '<th>Message</th>' +
             '<th>Actions</th>' +
             '<th>Updated</th>' +
@@ -1349,7 +1135,6 @@ function renderRunsTableRow(run) {
     : runCardState(run);
   const title = run.benchmark?.title ?? run.benchmark?.id ?? run.runner?.metricSource ?? "Untitled run";
   const model = run.model?.id ?? run.runner?.model ?? "Unknown model";
-  const runner = run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.runner?.mode ?? run.tool ?? "manual";
   return (
     '<tr class="run-row" data-open-run data-run-id="' + escapeAttribute(run.runId) + '" tabindex="0" role="button" aria-label="' +
       escapeAttribute(title + " " + model) + '">' +
@@ -1357,10 +1142,7 @@ function renderRunsTableRow(run) {
         '<strong class="truncate-line">' + escapeHtml(title) + "</strong>" +
         '<span class="muted-copy truncate-line">' + escapeHtml(model) + "</span>" +
       "</td>" +
-      '<td><span class="badge-outline">' + escapeHtml(runKindLabel(run)) + "</span></td>" +
       '<td><span class="run-state-pill"><span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' + escapeHtml(stateLabel.label) + "</span></td>" +
-      '<td class="truncate-cell">' + escapeHtml(runner) + "</td>" +
-      '<td>' + renderAssetBadges(run) + "</td>" +
       '<td class="truncate-cell">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</td>" +
       '<td>' + renderRunCaptureAction(run, isCapturing, "table") + "</td>" +
       '<td class="truncate-cell">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</td>" +
@@ -1465,17 +1247,11 @@ function renderRunCaptureAction(run, isCapturing, placement) {
 }
 
 function renderAssetBadges(run) {
-  const badges = runKind(run) === "lighteval"
-    ? [
-        { label: "CMD", ready: Boolean(run.assets?.command) },
-        { label: "RES", ready: Boolean(run.assets?.lightevalResults) },
-        { label: "DTL", ready: Boolean(run.assets?.lightevalDetails) }
-      ]
-    : [
-        { label: "SRC", ready: Boolean(run.assets?.html) },
-        { label: "PNG", ready: Boolean(run.assets?.preview) },
-        { label: "VID", ready: Boolean(run.assets?.video || run.assets?.videoMp4) }
-      ];
+  const badges = [
+    { label: "SRC", ready: Boolean(run.assets?.html) },
+    { label: "PNG", ready: Boolean(run.assets?.preview) },
+    { label: "VID", ready: Boolean(run.assets?.video || run.assets?.videoMp4) }
+  ];
 
   return '<span class="asset-badges">' +
     badges.map((badge) =>
@@ -1495,27 +1271,6 @@ function renderCaptureOverlay(capturing) {
 }
 
 function renderPreview(run, options = {}) {
-  if (runKind(run) === "lighteval") {
-    const title = lightEvalHasOutputs(run)
-      ? "LightEval results"
-      : run.assets?.command
-        ? "Command prepared"
-        : "LightEval slot";
-    const message = lightEvalHasOutputs(run)
-      ? "Open details for parsed scores."
-      : run.assets?.command
-        ? "Run the saved command to write results."
-        : "Waiting for LightEval outputs.";
-    return (
-      '<span class="preview">' +
-        '<span class="preview-placeholder">' +
-          "<strong>" + escapeHtml(title) + "</strong>" +
-          '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(message) + "</span>" +
-        "</span>" +
-      "</span>"
-    );
-  }
-
   const previewHref = assetHref(run, run.assets?.preview);
   if (previewHref) {
     return '<span class="preview"><img src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />' + renderCaptureOverlay(options.capturing) + '</span>';
@@ -1568,17 +1323,7 @@ function wireRunCards() {
 }
 
 function openRunFromCurrentView(run) {
-  if (state.mode === "runs") {
-    openRecord(run);
-    return;
-  }
   openDetail(run);
-}
-
-function openRecord(run) {
-  state.selectedRun = run;
-  renderRecord(run);
-  openModal("record");
 }
 
 function openDetail(run) {
@@ -1587,94 +1332,11 @@ function openDetail(run) {
   openModal("detail");
 }
 
-function renderRecord(run) {
-  const title = run.benchmark?.title ?? run.benchmark?.id ?? run.runner?.metricSource ?? "Run record";
-  const model = run.model?.id ?? run.runner?.model ?? "Unknown model";
-  const textRecord = runRecordText(run);
-  els.recordTitle.textContent = title;
-  els.recordSubtitle.textContent = model + " · " + (run.runId ?? "");
-  els.recordMeta.innerHTML = recordMetadataRowsHtml(run);
-  renderRecordRunner(run);
-  els.recordTextTitle.textContent = textRecord.title;
-  els.recordPrompt.textContent = textRecord.value || textRecord.emptyText;
-  els.recordPromptLength.textContent = textRecord.value ? textRecord.value.length.toLocaleString() + " chars" : "missing";
-  els.copyRecordPrompt.textContent = textRecord.copyLabel;
-  els.copyRecordPrompt.disabled = !textRecord.value;
-  els.recordArtifacts.innerHTML = renderDetailArtifacts(run);
-  els.recordRunFolderPath.textContent = run.runDirectory ?? "Run folder unavailable";
-  els.copyRecordRunFolder.disabled = !run.runDirectory;
-  updateRecordActions(run);
-}
-
-function recordMetadataRowsHtml(run) {
-  const status = runDisplayStatus(run);
-  const taskLabel = runKind(run) === "lighteval" ? "Task" : "Prompt";
-  const rows = [
-    ["Run ID", run.runId],
-    ["Schema", run.schemaVersion ? "v" + String(run.schemaVersion) : "legacy"],
-    ["Kind", runKindLabel(run)],
-    ["Status", status],
-    ...(run.status && run.status !== status ? [["Metadata status", run.status]] : []),
-    ["Model", run.model?.id ?? run.runner?.model],
-    [taskLabel, runTaskOrPromptMetaValue(run)],
-    ["Created", formatDate(run.createdAt)],
-    ["Updated", formatDate(run.updatedAt)],
-    ["Notes", run.notes]
-  ].filter((row) => row[1]);
-
-  return rows.map(([label, value]) =>
-    '<span class="meta-label">' + escapeHtml(label) + "</span><strong>" + escapeHtml(value) + "</strong>"
-  ).join("");
-}
-
-function renderRecordRunner(run) {
-  const rows = runnerMetaRows(run);
-  if (rows.length === 0) {
-    els.recordRunnerSection.hidden = true;
-    els.recordRunnerMeta.innerHTML = "";
-    return;
-  }
-
-  els.recordRunnerSection.hidden = false;
-  els.recordRunnerMeta.innerHTML = rowsToMetaGridHtml(rows);
-}
-
-function updateRecordActions(run) {
-  if (!run) {
-    return;
-  }
-  const canOperate = canUseOperationalControls();
-  const hasVisualDetail = canOpenRunDetailFromRecord(run);
-  els.openRecordVisual.textContent = runKind(run) === "lighteval" ? "Open results" : "Open visual detail";
-  els.openRecordVisual.hidden = !hasVisualDetail;
-  els.openRecordVisual.disabled = !hasVisualDetail;
-  setOperationalAvailability(els.openRecordFolder, Boolean(run.runDirectory));
-  setOperationalAvailability(els.deleteRecordRun, Boolean(run.runDirectory));
-  syncOperationalControls();
-  els.openRecordFolder.disabled = !canOperate || !run.runDirectory;
-  els.deleteRecordRun.disabled = !canOperate || !run.runDirectory;
-}
-
-function openSelectedRunVisualDetail() {
-  const run = state.selectedRun;
-  if (!run || !canOpenRunDetailFromRecord(run)) {
-    return;
-  }
-  closeModal("record");
-  openDetail(run);
-}
-
-function canOpenRunDetailFromRecord(run) {
-  return canOpenVisualDetail(run) || runKind(run) === "lighteval";
-}
-
 function renderDetail(run) {
+  els.detailBackdrop.querySelector(".detail-shell")?.setAttribute("data-detail-kind", "visual");
   els.detailTitle.textContent = run.benchmark?.title ?? "Run detail";
   els.detailSubtitle.textContent = (run.model?.id ?? "Unknown model") + " · " + (run.runId ?? "");
   els.detailPreview.innerHTML = renderDetailArtifact(run);
-  if (runKind(run) === "lighteval" && lightEvalHasOutputs(run)) {
-    void loadLightEvalResults(run);
-  }
   updateDetailActions(run);
   const textRecord = runRecordText(run);
   els.detailTextTitle.textContent = textRecord.title;
@@ -1685,23 +1347,18 @@ function renderDetail(run) {
   els.detailRunFolderPath.textContent = run.runDirectory ?? "Run folder unavailable";
   els.copyRunFolder.disabled = !run.runDirectory;
   const stateLabel = runCardState(run);
-  const taskLabel = runKind(run) === "lighteval" ? "Task" : "Prompt";
   els.detailMeta.innerHTML =
     '<span class="meta-label">State</span><strong>' + escapeHtml(stateLabel.label) + "</strong>" +
-    '<span class="meta-label">Kind</span><strong>' + escapeHtml(runKindLabel(run)) + "</strong>" +
     '<span class="meta-label">Model</span><strong>' + escapeHtml(run.model?.id ?? "-") + "</strong>" +
-    '<span class="meta-label">' + escapeHtml(taskLabel) + '</span><strong>' + escapeHtml(runTaskOrPromptMetaValue(run) ?? "-") + "</strong>" +
-    '<span class="meta-label">Updated</span><strong>' + escapeHtml(formatDate(run.updatedAt)) + "</strong>" +
-    (run.notes ? '<span class="meta-label">Notes</span><strong>' + escapeHtml(run.notes) + "</strong>" : "");
-  els.detailArtifacts.innerHTML = renderDetailArtifacts(run);
-  renderDetailRunner(run);
+    '<span class="meta-label">Updated</span><strong>' + escapeHtml(formatDate(run.updatedAt)) + "</strong>";
 }
 
 function updateDetailActions(run) {
-  setOperationalAvailability(els.openHtml, Boolean(run.runDirectory && run.assets?.html));
+  const isVisualRun = runKind(run) === "visual";
+  setOperationalAvailability(els.openHtml, Boolean(isVisualRun && run.runDirectory && run.assets?.html));
   setOperationalAvailability(els.openRunFolder, Boolean(run.runDirectory));
 
-  const canCapture = Boolean(run.runDirectory && run.assets?.html);
+  const canCapture = Boolean(isVisualRun && run.runDirectory && run.assets?.html);
   setOperationalAvailability(els.recaptureRun, canCapture);
   setOperationalAvailability(els.deleteRun, Boolean(run.runDirectory));
   syncOperationalControls();
@@ -1720,88 +1377,7 @@ function updateDetailActions(run) {
     : "Capture preview";
 }
 
-function renderDetailArtifacts(run) {
-  const artifacts = runKind(run) === "lighteval"
-    ? [
-        ["Metadata", run.assets?.metadata],
-        ["Command", run.assets?.command],
-        ["LightEval results", run.assets?.lightevalResults],
-        ["LightEval details", run.assets?.lightevalDetails]
-      ]
-    : [
-        ["Metadata", run.assets?.metadata],
-        ["Prompt", run.assets?.prompt],
-        ["Command", run.assets?.command],
-        ["Request", run.assets?.request],
-        ["Stream", run.assets?.stream],
-        ["Response", run.assets?.response ?? run.assets?.rawResponse],
-        ["HTML", run.assets?.html],
-        ["Preview", run.assets?.preview],
-        ["Video", run.assets?.videoMp4 ?? run.assets?.video]
-      ];
-
-  return artifacts.map(([label, asset]) =>
-    '<div class="artifact-row" data-ready="' + String(Boolean(asset)) + '">' +
-      '<span>' + escapeHtml(label) + "</span>" +
-      '<code>' + escapeHtml(asset ?? "missing") + "</code>" +
-    "</div>"
-  ).join("");
-}
-
-function renderDetailRunner(run) {
-  const rows = runnerMetaRows(run);
-  if (rows.length === 0) {
-    els.detailRunnerSection.hidden = true;
-    els.detailRunnerMeta.innerHTML = "";
-    return;
-  }
-
-  els.detailRunnerSection.hidden = false;
-  els.detailRunnerMeta.innerHTML = rowsToMetaGridHtml(rows);
-}
-
-function runnerMetaRows(run) {
-  const runner = run.runner ?? {};
-  return [
-    ["Mode", runner.mode ?? run.tool ?? "manual"],
-    ["Intended", runner.intendedRunner],
-    ["Actual", runner.actualRunner],
-    ["Backend", runner.backendLabel],
-    ["Base URL", runner.baseUrl],
-    ["Model", runner.model],
-    ["Metrics", runner.metricSource],
-    ["Retries", Number.isFinite(runner.retries) ? String(runner.retries) : undefined],
-    ["Token metrics", tokenMetricLabel(runner.tokenMetrics)],
-    ["Command", runner.launchCommand, "code"]
-  ].filter((row) => row[1]);
-}
-
-function rowsToMetaGridHtml(rows) {
-  return rows.map(([label, value, style]) =>
-    '<span class="meta-label">' + escapeHtml(label) + "</span><strong>" +
-      (style === "code"
-        ? '<code class="inline-code-wrap">' + escapeHtml(value) + "</code>"
-        : escapeHtml(value)) +
-    "</strong>"
-  ).join("");
-}
-
 function renderDetailArtifact(run) {
-  if (runKind(run) === "lighteval") {
-    if (lightEvalHasOutputs(run)) {
-      return '<div id="lightevalResultsPanel" class="lighteval-results-panel" data-run-directory="' + escapeAttribute(run.runDirectory ?? "") + '">' +
-        '<div class="lighteval-results-loading">' +
-          '<span class="capture-spinner" aria-hidden="true"></span>' +
-          '<span>Loading LightEval results…</span>' +
-        '</div>' +
-      '</div>';
-    }
-    return '<span class="artifact-empty">' +
-      '<strong>' + escapeHtml("LightEval command prepared") + "</strong>" +
-      '<span>' + escapeHtml("Run the saved command in your terminal; LightEval will write results and details into this folder.") + "</span>" +
-      "</span>";
-  }
-
   const videoHref = assetHref(run, run.assets?.video);
   const mp4Href = assetHref(run, run.assets?.videoMp4);
   if (videoHref || mp4Href) {
@@ -1828,56 +1404,6 @@ function renderDetailArtifact(run) {
     "</span>";
 }
 
-async function loadLightEvalResults(run) {
-  const panel = document.querySelector("#lightevalResultsPanel");
-  if (!panel) return;
-
-  try {
-    const data = await fetchJson("/api/lighteval-results?runDirectory=" + encodeURIComponent(run.runDirectory ?? ""));
-    const results = data.results ?? [];
-
-    if (panel.dataset.runDirectory !== (run.runDirectory ?? "")) {
-      return;
-    }
-
-    if (results.length === 0) {
-      panel.innerHTML = '<span class="artifact-empty">' +
-        '<strong>LightEval results folder found</strong>' +
-        '<span>No parseable result JSON files were found in the results directory.</span>' +
-      '</span>';
-      return;
-    }
-
-    panel.innerHTML = results.map((summary) =>
-      '<div class="lighteval-result-card">' +
-        '<div class="lighteval-result-head">' +
-          '<strong>' + escapeHtml(summary.taskName ?? summary.taskId) + '</strong>' +
-          (summary.modelName ? '<span class="muted-copy">' + escapeHtml(summary.modelName) + '</span>' : '') +
-        '</div>' +
-        '<div class="lighteval-metrics">' +
-          summary.metrics.map((metric) =>
-            '<div class="lighteval-metric" data-higher-is-better="' + String(metric.higherIsBetter) + '">' +
-              '<span class="metric-name">' + escapeHtml(metric.metricName) + '</span>' +
-              '<span class="metric-value">' + (typeof metric.value === "number" ? metric.value.toFixed(4) : escapeHtml(String(metric.value))) + '</span>' +
-            '</div>'
-          ).join("") +
-        '</div>' +
-        (summary.totalEvaluationTimeSeconds ?
-          '<div class="lighteval-time muted-copy">Eval time: ' + summary.totalEvaluationTimeSeconds.toFixed(2) + 's</div>'
-          : '') +
-      '</div>'
-    ).join("");
-  } catch (error) {
-    if (panel.dataset.runDirectory !== (run.runDirectory ?? "")) {
-      return;
-    }
-    panel.innerHTML = '<span class="artifact-empty">' +
-      '<strong>Failed to load LightEval results</strong>' +
-      '<span>' + escapeHtml(error.message) + '</span>' +
-    '</span>';
-  }
-}
-
 function setConnection(stateName, label, message) {
   els.connectionMessage.textContent = message;
 }
@@ -1886,13 +1412,6 @@ function groupSummary(group, mode) {
   const count = group.subtitles.length;
   const item = mode === "model" ? "prompt" : "model";
   return String(count) + " " + item + (count === 1 ? "" : "s");
-}
-
-function tokenMetricLabel(metrics) {
-  if (!metrics) return "";
-  if (!metrics.reported) return metrics.estimated ? "estimated" : "unavailable";
-  const total = Number.isFinite(metrics.totalTokens) ? String(metrics.totalTokens) + " tokens" : "reported";
-  return metrics.estimated ? total + " estimated" : total;
 }
 
 function assetPath(run, asset) {
