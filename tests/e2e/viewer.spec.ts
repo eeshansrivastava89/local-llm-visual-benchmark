@@ -116,7 +116,7 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   ).toBeVisible();
   await expect(page.getByText("Browse and collect visual benchmark outputs.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Prepare run" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Capture media" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Setup" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
   await expect(page.getByRole("button", { name: "LM Studio" })).toHaveCount(0);
@@ -125,15 +125,19 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(attribution).toHaveCSS("border-radius", "999px");
   await expect(page.getByLabel("Filter by model")).toBeVisible();
   await expect(page.getByLabel("Filter by prompt")).toBeVisible();
-  await expect(page.locator("[data-mode]")).toHaveText(["Runs", "By model", "By prompt", "Gallery"]);
-  await expect(page.getByRole("button", { name: "Runs" })).toHaveAttribute("aria-pressed", "true");
+  // Phase 2: section tabs
+  await expect(page.locator("[data-section]")).toHaveCount(2);
+  await expect(page.locator("[data-section]").first()).toHaveAttribute("aria-pressed", "true");
+  // Phase 2: view tabs default to Gallery
+  await expect(page.locator("[data-mode]")).toHaveText(["Gallery", "Table", "By model", "By prompt"]);
+  await expect(page.getByRole("button", { name: "Gallery" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Table" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "By model" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "By prompt" })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByRole("button", { name: "Gallery" })).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
-  await expect(page.getByText("1 total, 1 visual, 0 LightEval, 0 failed")).toBeVisible();
-  await expect(page.locator(".runs-table")).toBeVisible();
-  await expect(page.locator(".runs-table")).toContainText("Sakura Particle Field");
+  await expect(page.getByRole("heading", { name: "Gallery" })).toBeVisible();
+  await expect(page.getByText("0 with video, 1 need capture, 0 prepared, 0 failed")).toBeVisible();
+  await expect(page.locator(".run-grid")).toBeVisible();
+  await expect(page.locator("[data-run-id]").first()).toContainText("Sakura Particle Field");
   await expect(page.getByLabel("Search runs")).toBeVisible();
   await expect(page.getByLabel("Filter by run type")).toContainText("Visual");
   await expect(page.getByLabel("Filter by run status")).toContainText("completed");
@@ -142,11 +146,11 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(page.locator("[data-run-id]")).toHaveCount(0);
   await page.getByLabel("Search runs").fill("");
   await page.locator("[data-run-id]").first().click();
-  await expect(page.getByRole("dialog", { name: "Run record" })).toBeVisible();
-  await expect(page.locator("#recordMeta")).toContainText("Run ID");
-  await expect(page.locator("#recordMeta")).toContainText(sampleRun.runId);
-  await expect(page.locator("#recordArtifacts")).toContainText("Metadata");
-  await expect(page.getByRole("button", { name: "Open visual detail" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Run detail" })).toBeVisible();
+  await expect(page.locator("#detailMeta")).toContainText("State");
+  await expect(page.locator("#detailMeta")).toContainText("capture");
+  await expect(page.locator("#detailArtifacts")).toContainText("Metadata");
+  await expect(page.getByRole("button", { name: "Capture preview" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open in Finder" })).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
   await page.getByRole("button", { name: "By model" }).click();
@@ -179,6 +183,7 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(page.locator("#lmConfigOpenCode .sync-target-logo")).toBeVisible();
   await expect(page.getByText("OpenCode Setup")).toHaveCount(0);
   await expect(page.getByText("Pi Setup")).toHaveCount(0);
+  // Phase 2: onboarding uses data-onboarding-step, not data-step
   await expect(page.locator("[data-step]")).toHaveCount(0);
   await expect(page.getByText("Pi synced").first()).toBeVisible();
   await expect(page.getByText("OpenCode synced").first()).toBeVisible();
@@ -219,6 +224,7 @@ test("paginates the Runs table at 25 records", async ({ page }) => {
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await page.getByRole("button", { name: "Table" }).click();
 
   await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(25);
   await expect(page.locator(".runs-pagination")).toContainText("Showing 1-25 of 30");
@@ -448,7 +454,7 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
   await page.locator("[data-run-id]").nth(1).click();
   await expect(page.locator("#detailPreview video")).toHaveCount(0);
   await expect(page.locator("#detailPreview")).toContainText("Video not captured yet");
-  await expect(page.locator("#detailPreview")).toContainText("Use Capture media");
+  await expect(page.locator("#detailPreview")).toContainText("Use Capture preview");
 });
 
 test("shows LightEval runs with task and result artifacts instead of visual prompt/media language", async ({ page }) => {
@@ -469,10 +475,31 @@ test("shows LightEval runs with task and result artifacts instead of visual prom
   });
   await mockApi(page, {
     lmStudioOnline: true,
-    runs: [sampleLightEvalRun]
+    runs: [sampleLightEvalRun],
+    lightEvalResults: [
+      {
+        taskId: "boolq|0",
+        taskName: "boolq",
+        metrics: [
+          {
+            metricName: "em",
+            value: 0.75,
+            higherIsBetter: true
+          }
+        ],
+        totalEvaluationTimeSeconds: 3.71,
+        modelName: "openai/google/gemma-4-e4b"
+      }
+    ]
   });
 
   await page.goto("/");
+  await page.getByRole("button", { name: "Quantitative Benchmark" }).click();
+  await expect(page.getByText("1 with results, 0 command only, 0 failed")).toBeVisible();
+  await expect(page.locator("[data-run-id]").first()).toContainText("LightEval results");
+  await expect(page.locator("[data-run-id]").first()).toContainText("Open details for parsed scores");
+  await expect(page.locator("[data-run-id]").first()).not.toContainText("Paste the prompt into your tool");
+  await page.getByRole("button", { name: "Table" }).click();
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
 
   const row = page.locator("[data-run-id]").first();
@@ -503,6 +530,11 @@ test("shows LightEval runs with task and result artifacts instead of visual prom
   await expect(page.locator("#recordArtifacts")).toContainText("LightEval details");
   await expect(page.locator("#recordArtifacts")).not.toContainText("Prompt");
   await expect(page.locator("#recordArtifacts")).not.toContainText("HTML");
+  await expect(page.getByRole("button", { name: "Open results" })).toBeVisible();
+  await page.getByRole("button", { name: "Open results" }).click();
+  await expect(page.locator("#lightevalResultsPanel")).toContainText("boolq");
+  await expect(page.locator("#lightevalResultsPanel")).toContainText("em");
+  await expect(page.locator("#lightevalResultsPanel")).toContainText("0.7500");
 });
 
 test("recaptures media for the open run detail", async ({ page }) => {
@@ -672,14 +704,65 @@ test("captures missing run media with per-card progress", async ({ page }) => {
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
   await expect(page.locator("[data-run-id]").first()).toContainText("VID —");
 
-  await page.getByRole("button", { name: "Capture media" }).click();
+  await page.getByRole("button", { name: /Capture preview for Sakura Particle Field/ }).click();
 
   await expect.poll(() => captureCalled).toBe(true);
   await expect(page.locator("[data-run-id]").first()).toContainText("Capturing");
-  await expect(page.locator("#runSummary")).toContainText("Capturing 1/1");
 
   releaseCapture();
   await expect(page.locator("[data-run-id]").first()).toContainText("VID ✓");
+});
+
+test("auto-detects newly saved HTML and starts capture from the toast", async ({ page }) => {
+  let capturePayload: unknown;
+  let runsResponse: unknown[] = [
+    {
+      ...sampleRun,
+      status: "prepared",
+      assets: {
+        metadata: "metadata.json",
+        prompt: "prompt.md"
+      }
+    }
+  ];
+
+  await page.addInitScript(() => {
+    const realSetInterval = window.setInterval;
+    window.setInterval = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) =>
+      realSetInterval(handler, timeout === 8000 ? 50 : timeout, ...args)) as typeof window.setInterval;
+  });
+
+  await mockApi(page, {
+    lmStudioOnline: true,
+    runs: () => runsResponse,
+    onCapture: (payload) => {
+      capturePayload = payload;
+      runsResponse = [sampleRunWithVideo];
+    }
+  });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await expect(page.locator("[data-run-id]").first()).toContainText("Waiting for index.html source");
+
+  runsResponse = [
+    {
+      ...sampleRun,
+      status: "prepared",
+      assets: {
+        metadata: "metadata.json",
+        prompt: "prompt.md",
+        html: "index.html"
+      }
+    }
+  ];
+
+  await expect(page.locator(".html-detect-toast")).toContainText("1 run has index.html ready.");
+  await page.getByRole("button", { name: "Capture now" }).click();
+
+  await expect.poll(() => capturePayload).toMatchObject({
+    runDirectory: sampleRun.runDirectory
+  });
 });
 
 test("shows capture quality failures instead of hiding them behind capture prompts", async ({ page }) => {
@@ -766,6 +849,7 @@ test("deletes a run folder from the run record after confirmation", async ({ pag
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await page.getByRole("button", { name: "Table" }).click();
   await page.locator("[data-run-id]").first().click();
   await expect(page.getByRole("dialog", { name: "Run record" })).toBeVisible();
   await page.getByRole("button", { name: "Delete run" }).click();
@@ -876,9 +960,7 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
 
   await page.locator("[data-run-id]").first().click();
-  await expect(page.getByRole("dialog", { name: "Run record" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open visual detail" })).toBeVisible();
-  await page.getByRole("button", { name: "Open visual detail" }).click();
+  await expect(page.getByRole("dialog", { name: "Run detail" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Recapture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
@@ -896,6 +978,7 @@ async function mockApi(
     onDelete?: (payload: unknown) => void;
     onCapture?: (payload: unknown) => void | Promise<void>;
     onOpenHtml?: (payload: unknown) => void | Promise<void>;
+    lightEvalResults?: unknown[];
     writesEnabled?: boolean;
   }
 ): Promise<void> {
@@ -1042,6 +1125,15 @@ async function mockApi(
             }
           }
         }
+      })
+    });
+  });
+
+  await page.route("**/api/lighteval-results**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        results: options.lightEvalResults ?? []
       })
     });
   });

@@ -3,7 +3,7 @@ import node from "@astrojs/node";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  output: "static",
+  output: process.env.ASTRO_OUTPUT ?? "server",
   base: process.env.ASTRO_BASE ?? "/",
   devToolbar: {
     enabled: false

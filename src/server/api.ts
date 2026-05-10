@@ -27,6 +27,7 @@ import {
   listRunMetadata as defaultListRunMetadata
 } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
+import { parseLightEvalResults as defaultParseLightEvalResults, type LightEvalSummary } from "../lib/lighteval-results";
 import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunKind, RunMetadata } from "../lib/types";
 import type { PrepareRunRunner } from "../lib/prompt-prep";
 
@@ -50,6 +51,7 @@ export interface PrepareRunRequest {
   runner?: string;
   baseUrl?: string;
   launchCommand?: string;
+  modelPath?: string;
 }
 
 export interface MirrorModelsRequest {
@@ -76,6 +78,14 @@ export interface OpenRunFolderRequest {
   runDirectory?: string;
 }
 
+export interface LightEvalResultsRequest {
+  runDirectory?: string;
+}
+
+export interface LightEvalResultsResponse {
+  results: LightEvalSummary[];
+}
+
 export interface LocalApiDependencies {
   benchmarkDirectory?: string;
   runsRoot?: string;
@@ -94,6 +104,7 @@ export interface LocalApiDependencies {
   mirrorModelsToConfigs?: typeof defaultMirrorModelsToConfigs;
   captureMissingRunMedia?: typeof defaultCaptureMissingRunMedia;
   captureSingleRunMedia?: typeof defaultCaptureSingleRunMedia;
+  parseLightEvalResults?: typeof defaultParseLightEvalResults;
   openFile?: (path: string) => Promise<void>;
 }
 
@@ -110,6 +121,7 @@ export interface LocalApi {
   captureMissingMedia(request?: CaptureMediaRequest): Promise<CaptureMissingRunMediaResult>;
   openRunHtml(request: OpenRunHtmlRequest): Promise<OpenRunHtmlResponse>;
   openRunFolder(request: OpenRunFolderRequest): Promise<OpenRunFolderResponse>;
+  getLightEvalResults(request: LightEvalResultsRequest): Promise<LightEvalResultsResponse>;
 }
 
 export interface StatusResponse {
@@ -206,6 +218,8 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
     dependencies.captureMissingRunMedia ?? defaultCaptureMissingRunMedia;
   const captureSingleRunMedia =
     dependencies.captureSingleRunMedia ?? defaultCaptureSingleRunMedia;
+  const parseLightEvalResults =
+    dependencies.parseLightEvalResults ?? defaultParseLightEvalResults;
   const openFile = dependencies.openFile ?? defaultOpenFile;
 
   return {
@@ -284,6 +298,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
           runner,
           baseUrl: readOptionalString(request.baseUrl, "baseUrl"),
           launchCommand: readOptionalString(request.launchCommand, "launchCommand"),
+          modelPath: readOptionalString(request.modelPath, "modelPath"),
           runsRoot
         })
       };
@@ -367,6 +382,20 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
         mirroredModelCount: result.mirroredModelCount,
         sync: result.state
       };
+    },
+
+    async getLightEvalResults(request) {
+      const runDirectory = readRequiredString(request.runDirectory, "runDirectory");
+      const resolvedRunDirectory = resolve(runDirectory);
+      const resolvedRunsRoot = resolve(runsRoot);
+
+      if (!isPathInside(resolvedRunDirectory, resolvedRunsRoot)) {
+        throw new ApiRequestError(400, "Run directory is outside the configured runs folder.");
+      }
+
+      const results = await parseLightEvalResults(resolvedRunDirectory);
+
+      return { results };
     }
   };
 }

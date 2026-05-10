@@ -1052,6 +1052,237 @@ html[data-theme="dark"] .sync-target-logo {
   height: 100%;
 }
 
+/* ── Phase 2: Section Tabs ── */
+.section-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.section-tab {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 3.1rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-weight: 500;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+  cursor: pointer;
+}
+
+.section-tab:hover {
+  border-color: color-mix(in srgb, var(--primary), var(--border) 45%);
+  color: var(--foreground);
+}
+
+.section-tab[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 1px 3px oklch(0.2 0.01 255 / 0.08);
+}
+
+.section-tab-label {
+  font-size: 0.82rem;
+  font-weight: 620;
+  line-height: 1.25;
+}
+
+.section-tab-hint {
+  font-size: 0.68rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* ── Phase 2: Toolbar ── */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.view-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.view-tab {
+  min-height: 1.85rem;
+  padding: 0 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  cursor: pointer;
+}
+
+.view-tab:hover {
+  background: var(--muted);
+}
+
+.view-tab[aria-pressed="true"] {
+  border-color: var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px oklch(0.2 0.01 255 / 0.04);
+}
+
+.toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
+.toolbar-filters .dropdown-wrap .input {
+  width: auto;
+  min-width: 8.5rem;
+}
+
+.toolbar-filters #runsSearch {
+  width: 14rem;
+  min-width: 10rem;
+}
+
+/* ── Phase 2: Onboarding ── */
+.onboarding-panel {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: var(--card);
+  padding: 0.85rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+.onboarding-panel[hidden] {
+  display: none;
+}
+
+.onboarding-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.onboarding-header h2 {
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--foreground);
+}
+
+.onboarding-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  margin: 0;
+  padding: 0 0.15rem;
+  list-style: none;
+}
+
+.onboarding-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.onboarding-steps li[data-onboarding-step-completed="true"] {
+  color: var(--green);
+}
+
+.onboarding-steps li[data-onboarding-step-completed="true"] .step-num {
+  background: var(--green);
+  color: white;
+}
+
+.step-num {
+  display: inline-grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* ── Phase 2: Per-run card actions ── */
+.run-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  opacity: 1;
+}
+
+.run-card-actions[data-placement="table"] {
+  justify-content: flex-start;
+}
+
+.run-card-actions[data-placement="card"] {
+  padding-top: 0.05rem;
+}
+
+.run-card-capture,
+.run-capture-btn {
+  min-height: 1.65rem;
+  padding-inline: 0.5rem;
+  font-size: 0.72rem;
+}
+
+/* ── Phase 2: HTML-detected toast ── */
+.html-detect-toast {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid oklch(0.83 0.045 158);
+  border-radius: 0.75rem;
+  background: oklch(0.97 0.025 158);
+  color: oklch(0.25 0.06 158);
+  padding: 0.55rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-hover);
+}
+
+.html-detect-toast button {
+  min-height: 1.6rem;
+  padding: 0 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid oklch(0.75 0.04 158);
+  background: oklch(0.93 0.035 158);
+  color: oklch(0.25 0.06 158);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ── Phase 2: Empty state with action ── */
+.empty-state-action {
+  margin-top: 0.75rem;
+}
+
 .run-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1966,4 +2197,129 @@ html[data-theme="dark"] .sync-target-logo {
   .compact-section {
     display: none;
   }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-filters {
+    margin-left: 0;
+  }
+
+  .section-tabs {
+    width: 100%;
+  }
+
+  .section-tab {
+    flex: 1 1 auto;
+  }
+}
+
+/* Llama.cpp server status */
+.llama-cpp-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--subtle-surface);
+}
+
+.llama-cpp-status-bar .status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.llama-cpp-status-bar .status-dot[data-state="online"] {
+  background: var(--green);
+}
+
+.llama-cpp-status-bar .status-dot[data-state="offline"] {
+  background: var(--destructive);
+}
+
+/* LightEval Results Panel */
+.lighteval-results-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  min-height: 0;
+  overflow: auto;
+}
+
+.lighteval-results-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.lighteval-result-card {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--card);
+  padding: 0.75rem;
+}
+
+.lighteval-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.lighteval-result-head strong {
+  font-size: 0.92rem;
+  font-weight: 680;
+}
+
+.lighteval-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.5rem;
+}
+
+.lighteval-metric {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--subtle-surface);
+  padding: 0.5rem 0.6rem;
+}
+
+.lighteval-metric .metric-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lighteval-metric .metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.lighteval-metric[data-higher-is-better="true"] .metric-value {
+  color: var(--green);
+}
+
+.lighteval-metric[data-higher-is-better="false"] .metric-value {
+  color: var(--destructive);
+}
+
+.lighteval-time {
+  font-size: 0.75rem;
+  padding-top: 0.25rem;
 }

@@ -59,29 +59,59 @@ const basePath = import.meta.env.BASE_URL;
 
       <main class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8 md:py-5">
         <div class="grid gap-4">
-          <div class="flex flex-wrap items-center gap-2">
-            <div class="inline-flex rounded-lg border bg-muted p-0.5">
-              <button type="button" class="btn-sm-ghost" data-mode="runs" aria-pressed="true">Runs</button>
-              <button type="button" class="btn-sm-ghost" data-mode="model" aria-pressed="false">By model</button>
-              <button type="button" class="btn-sm-ghost" data-mode="benchmark" aria-pressed="false">By prompt</button>
-              <button type="button" class="btn-sm-ghost" data-mode="gallery" aria-pressed="false">Gallery</button>
+          <!-- Onboarding -->
+          <div id="onboardingPanel" class="onboarding-panel" hidden>
+            <div class="onboarding-header">
+              <h2 class="text-sm font-semibold">Welcome — 5 steps to your first benchmark</h2>
+              <button type="button" class="btn-sm-ghost" id="dismissOnboarding">Dismiss</button>
             </div>
-            <div class="dropdown-wrap">
-              <select id="modelFilter" class="input text-sm" aria-label="Filter by model">
-                <option value="all">All run models</option>
-              </select>
-            </div>
-            <div class="dropdown-wrap">
-              <select id="benchmarkFilter" class="input text-sm" aria-label="Filter by prompt">
-                <option value="all">All prompts</option>
-              </select>
-            </div>
-            <button type="button" class="btn-sm-outline ml-auto operational-control" id="captureMedia">Capture media</button>
-            <button type="button" class="btn-sm-outline operational-control" id="refreshRuns">Refresh</button>
+            <ol class="onboarding-steps">
+              <li data-onboarding-step="1"><span class="step-num">1</span>Start LM Studio</li>
+              <li data-onboarding-step="2"><span class="step-num">2</span>Load a model</li>
+              <li data-onboarding-step="3"><span class="step-num">3</span>Pick a prompt</li>
+              <li data-onboarding-step="4"><span class="step-num">4</span>Generate with your tool</li>
+              <li data-onboarding-step="5"><span class="step-num">5</span>Capture preview</li>
+            </ol>
           </div>
 
+          <!-- Section Tabs -->
+          <div class="section-tabs">
+            <button type="button" class="section-tab" data-section="visual" aria-pressed="true">
+              <span class="section-tab-label">Visual Benchmark</span>
+              <span class="section-tab-hint">HTML prompts & previews</span>
+            </button>
+            <button type="button" class="section-tab" data-section="quantitative" aria-pressed="false">
+              <span class="section-tab-label">Quantitative Benchmark</span>
+              <span class="section-tab-hint">LightEval tasks & scores</span>
+            </button>
+          </div>
+
+          <!-- Toolbar -->
+          <div class="toolbar">
+            <div class="view-tabs">
+              <button type="button" class="view-tab" data-mode="gallery" aria-pressed="true">Gallery</button>
+              <button type="button" class="view-tab" data-mode="runs" aria-pressed="false">Table</button>
+              <button type="button" class="view-tab" data-mode="model" aria-pressed="false">By model</button>
+              <button type="button" class="view-tab" data-mode="benchmark" aria-pressed="false">By prompt</button>
+            </div>
+            <div class="toolbar-filters">
+              <div class="dropdown-wrap">
+                <select id="modelFilter" class="input text-sm" aria-label="Filter by model">
+                  <option value="all">All models</option>
+                </select>
+              </div>
+              <div class="dropdown-wrap">
+                <select id="benchmarkFilter" class="input text-sm" aria-label="Filter by prompt">
+                  <option value="all">All prompts</option>
+                </select>
+              </div>
+              <input id="runsSearch" class="input text-sm" type="search" aria-label="Search runs" placeholder="Search runs, models, prompts" />
+              <button type="button" class="btn-sm-outline operational-control" id="refreshRuns">Refresh</button>
+            </div>
+          </div>
+
+          <!-- Sub-filters (kind, status, runner) -->
           <div class="runs-filter-panel" id="runsFilterPanel">
-            <input id="runsSearch" class="input text-sm" type="search" aria-label="Search runs" placeholder="Search runs, models, prompts, paths" />
             <div class="dropdown-wrap">
               <select id="runKindFilter" class="input text-sm" aria-label="Filter by run type">
                 <option value="all">All types</option>
@@ -99,17 +129,19 @@ const basePath = import.meta.env.BASE_URL;
             </div>
           </div>
 
+          <!-- Summary -->
           <div class="gallery-summary">
             <div class="min-w-0">
               <div class="flex items-center gap-2">
-                <h2 id="viewTitle" class="text-lg font-semibold tracking-[-0.01em]">Run gallery</h2>
+                <h2 id="viewTitle" class="text-lg font-semibold tracking-[-0.01em]">Gallery</h2>
                 <span class="badge-outline" id="runCount">0</span>
               </div>
-              <p class="muted-copy mt-0.5 text-sm" id="viewSubtitle">Browse saved visual outputs.</p>
+              <p class="muted-copy mt-0.5 text-sm" id="viewSubtitle">Thumbnails of saved visual outputs.</p>
               <p class="muted-copy text-sm" id="runSummary">Loading saved runs.</p>
             </div>
           </div>
 
+          <!-- Surface -->
           <div id="runsSurface"></div>
         </div>
       </main>
@@ -120,16 +152,8 @@ const basePath = import.meta.env.BASE_URL;
         <span>&copy; 2025&ndash;2026 Eeshan Srivastava</span>
         <span>Personal project &middot; MIT License &middot; Non-commercial</span>
         <span class="footer-links">
-          <a
-            href="https://github.com/eeshansrivastava89/local-llm-visual-benchmark"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Source
-          </a>
-          <a href="https://www.linkedin.com/in/eeshans/" target="_blank" rel="noopener noreferrer">
-            LinkedIn
-          </a>
+          <a href="https://github.com/eeshansrivastava89/local-llm-visual-benchmark" target="_blank" rel="noopener noreferrer">Source</a>
+          <a href="https://www.linkedin.com/in/eeshans/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
         </span>
       </footer>
     </div>
@@ -151,15 +175,11 @@ const basePath = import.meta.env.BASE_URL;
         </header>
         <div class="record-body p-5">
           <section class="record-section">
-            <div class="section-row">
-              <h3>Metadata</h3>
-            </div>
+            <div class="section-row"><h3>Metadata</h3></div>
             <div class="meta-grid record-meta-grid" id="recordMeta"></div>
           </section>
           <section class="record-section" id="recordRunnerSection">
-            <div class="section-row">
-              <h3>Runner</h3>
-            </div>
+            <div class="section-row"><h3>Runner</h3></div>
             <div class="meta-grid record-meta-grid" id="recordRunnerMeta"></div>
           </section>
           <section class="record-section">
@@ -173,9 +193,7 @@ const basePath = import.meta.env.BASE_URL;
             <pre class="code-block record-prompt-block" id="recordPrompt"></pre>
           </section>
           <section class="record-section">
-            <div class="section-row">
-              <h3>Artifacts</h3>
-            </div>
+            <div class="section-row"><h3>Artifacts</h3></div>
             <div class="artifact-list record-artifacts" id="recordArtifacts"></div>
           </section>
           <section class="record-section run-folder-section">
@@ -235,15 +253,11 @@ const basePath = import.meta.env.BASE_URL;
               </div>
             </section>
             <section class="inspector-section compact-section">
-              <div class="section-row">
-                <h3>Artifacts</h3>
-              </div>
+              <div class="section-row"><h3>Artifacts</h3></div>
               <div class="artifact-list" id="detailArtifacts"></div>
             </section>
             <section class="inspector-section compact-section" id="detailRunnerSection">
-              <div class="section-row">
-                <h3>Runner</h3>
-              </div>
+              <div class="section-row"><h3>Runner</h3></div>
               <div class="meta-grid" id="detailRunnerMeta"></div>
             </section>
           </aside>
@@ -373,6 +387,11 @@ const basePath = import.meta.env.BASE_URL;
                   <button type="button" class="btn-sm-outline" id="copyPrepCommand">Copy command</button>
                 </div>
                 <textarea id="prepCommand" class="input prep-command-input" rows="9" wrap="off"></textarea>
+                <div id="llamaCppStatusBar" class="llama-cpp-status-bar" hidden>
+                  <span id="llamaCppStatusDot" class="status-dot"></span>
+                  <span id="llamaCppStatusText" class="muted-copy text-xs">Checking server…</span>
+                  <button type="button" class="btn-sm-ghost text-xs" id="checkLlamaCppBtn">Check</button>
+                </div>
               </div>
               <div class="prep-artifact prep-output-artifact" id="prepOutputGroup">
                 <div class="prep-artifact-head">
@@ -384,11 +403,7 @@ const basePath = import.meta.env.BASE_URL;
                   </div>
                   <button type="button" class="btn-sm-outline" id="copyPrompt" disabled>Copy prompt</button>
                 </div>
-                <textarea
-                  id="preparedPrompt"
-                  class="input font-mono text-[0.82rem] leading-5"
-                  placeholder="Prepare a run slot to generate the exact prompt and output path."
-                ></textarea>
+                <textarea id="preparedPrompt" class="input font-mono text-[0.82rem] leading-5" placeholder="Prepare a run slot to generate the exact prompt and output path."></textarea>
               </div>
               <p class="muted-copy text-sm" id="preparedPaths">No run slot prepared yet.</p>
             </section>
@@ -454,9 +469,7 @@ const basePath = import.meta.env.BASE_URL;
                   </div>
                 </section>
               </div>
-              <p class="lm-sync-message" id="syncMessage" aria-live="polite">
-                Start LM Studio, test the URL, then sync discovered models to your tool configs.
-              </p>
+              <p class="lm-sync-message" id="syncMessage" aria-live="polite">Start LM Studio, test the URL, then sync discovered models to your tool configs.</p>
 
               <section id="lmStep2" class="lm-model-section" aria-labelledby="modelInventoryHeading">
                 <div class="lm-model-section-head">
@@ -472,13 +485,12 @@ const basePath = import.meta.env.BASE_URL;
                 </div>
                 <div class="available-model-list" id="availableModelChoices"></div>
               </section>
-
             </section>
           </div>
         </div>
       </article>
     </div>
 
-    <script is:inline src="viewer.js"></script>
+    <script is:inline type="module" src="viewer.js"></script>
   </body>
 </html>

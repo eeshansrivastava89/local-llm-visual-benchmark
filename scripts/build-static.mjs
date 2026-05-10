@@ -45,7 +45,8 @@ async function run(command, args, cwd) {
       stdio: "inherit",
       env: {
         ...process.env,
-        ASTRO_BASE: astroBase
+        ASTRO_BASE: astroBase,
+        ASTRO_OUTPUT: "static"
       }
     });
 

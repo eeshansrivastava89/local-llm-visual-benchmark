@@ -12,10 +12,10 @@ export type PrepareRunRunner =
 
 export const DEFAULT_LLAMA_CPP_BASE_URL = "http://127.0.0.1:8080/v1";
 export const DEFAULT_LM_STUDIO_BASE_URL = "http://localhost:1234/v1";
-export const DEFAULT_LLAMA_CPP_COMMAND = [
+export const DEFAULT_LLAMA_CPP_COMMAND_TEMPLATE = [
   "llama-server \\",
   "  -m \\",
-  "  '/path/to/model.gguf' \\",
+  "  <model-path> \\",
   "  --host 127.0.0.1 \\",
   "  --port 8080 \\",
   "  --ctx-size 8192 \\",
@@ -34,6 +34,7 @@ export interface PrepareRunInput {
   runner?: PrepareRunRunner;
   baseUrl?: string;
   launchCommand?: string;
+  modelPath?: string;
   runsRoot?: string;
   now?: Date;
 }
@@ -61,7 +62,8 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     runner,
     runDirectory: paths.runDirectory,
     baseUrl: input.baseUrl,
-    launchCommand: input.launchCommand
+    launchCommand: input.launchCommand,
+    modelPath: input.modelPath
   });
   const timestamp = now.toISOString();
   const run: RunMetadata = {
@@ -145,6 +147,7 @@ export function buildPreparedCommand(input: {
   runDirectory: string;
   baseUrl?: string;
   launchCommand?: string;
+  modelPath?: string;
 }): string {
   const supplied = normalizeOptionalString(input.launchCommand);
   if (supplied) {
@@ -152,7 +155,8 @@ export function buildPreparedCommand(input: {
   }
 
   if (input.runner === "llama-cpp") {
-    return DEFAULT_LLAMA_CPP_COMMAND;
+    const modelPath = normalizeOptionalString(input.modelPath) ?? "/path/to/model.gguf";
+    return DEFAULT_LLAMA_CPP_COMMAND_TEMPLATE.replaceAll("<model-path>", shellQuote(modelPath));
   }
 
   if (input.kind === "lighteval") {

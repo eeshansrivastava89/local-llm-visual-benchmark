@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LM_STUDIO_BASE_URL,
   DEFAULT_LLAMA_CPP_BASE_URL,
-  DEFAULT_LLAMA_CPP_COMMAND,
   prepareRun
 } from "../../src/lib/prompt-prep";
 import type { BenchmarkRecord } from "../../src/lib/types";
@@ -165,6 +164,7 @@ describe("prepareRun", () => {
       runsRoot
     });
 
-    expect(prepared.command).toBe(DEFAULT_LLAMA_CPP_COMMAND);
+    expect(prepared.command).toContain("llama-server");
+    expect(prepared.command).toContain("-m");
   });
 });

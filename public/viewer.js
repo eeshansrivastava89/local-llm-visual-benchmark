@@ -1,212 +1,22 @@
-const state = {
-  staticMode: false,
-  benchmarks: [],
-  discoveredModels: [],
-  modelSync: {
-    enabled: false,
-    paths: {
-      opencode: "",
-      pi: ""
-    },
-    files: {
-      opencode: {
-        exists: false,
-        modelIds: []
-      },
-      pi: {
-        exists: false,
-        modelIds: []
-      }
-    }
-  },
-  lmConnected: false,
-  writesEnabled: true,
-  syncBusy: false,
-  captureBusy: false,
-  runs: [],
-  stats: null,
-  selectedModel: "all",
-  selectedBenchmark: "all",
-  selectedKind: "all",
-  selectedStatus: "all",
-  selectedRunner: "all",
-  runsSearch: "",
-  runPage: 1,
-  runsPerPage: 25,
-  mode: "runs",
-  preparedPrompt: "",
-  selectedRun: null,
-  captureRunDirectory: "",
-  prepKind: "visual",
-  modalFocusReturn: {}
-};
-
-const DEFAULT_LLAMA_CPP_BASE_URL = "http://127.0.0.1:8080/v1";
-const DEFAULT_LM_STUDIO_BASE_URL = "http://localhost:1234/v1";
-const DEFAULT_LLAMA_CPP_MODEL_PATH = "/path/to/model.gguf";
-const DEFAULT_LIGHTEVAL_TASKS = "boolq|0";
-const LIGHTEVAL_TASK_PRESETS = [
-  {
-    value: "boolq|0",
-    label: "BoolQ smoke test",
-    description: "Short yes/no reading-comprehension task. Good first dry run."
-  },
-  {
-    value: "arc:easy|0",
-    label: "ARC Easy",
-    description: "Grade-school science multiple choice."
-  },
-  {
-    value: "piqa|0",
-    label: "PIQA",
-    description: "Physical commonsense multiple choice."
-  },
-  {
-    value: "hellaswag|0",
-    label: "HellaSwag",
-    description: "Commonsense sentence-completion task."
-  },
-  {
-    value: "gsm8k|0",
-    label: "GSM8K",
-    description: "Math word problems. Useful after the smoke test."
-  }
-];
-
-const els = {
-  // Header / system
-  statsPill: document.querySelector("#statsPill"),
-  statsDot: document.querySelector("#statsDot"),
-  statsCompact: document.querySelector("#statsCompact"),
-  operationalControls: document.querySelectorAll(".operational-control"),
-  // Toggles
-  themeToggle: document.querySelector("#themeToggle"),
-  themeIcon: document.querySelector("#themeIcon"),
-  themeLabel: document.querySelector("#themeLabel"),
-  setupToggle: document.querySelector("#setupToggle"),
-  runToggle: document.querySelector("#runToggle"),
-  // Modals
-  recordBackdrop: document.querySelector("#recordBackdrop"),
-  closeRecord: document.querySelector("#closeRecord"),
-  detailBackdrop: document.querySelector("#detailBackdrop"),
-  closeDetail: document.querySelector("#closeDetail"),
-  prepBackdrop: document.querySelector("#prepBackdrop"),
-  closePrep: document.querySelector("#closePrep"),
-  setupBackdrop: document.querySelector("#setupBackdrop"),
-  closeSetup: document.querySelector("#closeSetup"),
-  deleteConfirmBackdrop: document.querySelector("#deleteConfirmBackdrop"),
-  closeDeleteConfirm: document.querySelector("#closeDeleteConfirm"),
-  cancelDeleteRun: document.querySelector("#cancelDeleteRun"),
-  confirmDeleteRun: document.querySelector("#confirmDeleteRun"),
-  deleteRunPath: document.querySelector("#deleteRunPath"),
-  // LM Studio step sections
-  lmStep1: document.querySelector("#lmStep1"),
-  lmStep2: document.querySelector("#lmStep2"),
-  lmStep3: document.querySelector("#lmStep3"),
-  // LM Studio step 1: Connect
-  baseUrl: document.querySelector("#baseUrl"),
-  refreshConnection: document.querySelector("#refreshConnection"),
-  connectionMessage: document.querySelector("#connectionMessage"),
-  // LM Studio step 2: Discover
-  availableModelChoices: document.querySelector("#availableModelChoices"),
-  availableModelCount: document.querySelector("#availableModelCount"),
-  lmModelHeader: document.querySelector("#lmModelHeader"),
-  // LM Studio step 3: Sync
-  lmConfigPi: document.querySelector("#lmConfigPi"),
-  lmConfigPiPath: document.querySelector("#lmConfigPiPath"),
-  lmConfigPiStatus: document.querySelector("#lmConfigPiStatus"),
-  lmConfigOpenCode: document.querySelector("#lmConfigOpenCode"),
-  lmConfigOpenCodePath: document.querySelector("#lmConfigOpenCodePath"),
-  lmConfigOpenCodeStatus: document.querySelector("#lmConfigOpenCodeStatus"),
-  syncPiBtn: document.querySelector("#syncPiBtn"),
-  syncOpenCodeBtn: document.querySelector("#syncOpenCodeBtn"),
-  syncMessage: document.querySelector("#syncMessage"),
-  // Filters
-  modelFilter: document.querySelector("#modelFilter"),
-  benchmarkFilter: document.querySelector("#benchmarkFilter"),
-  runsFilterPanel: document.querySelector("#runsFilterPanel"),
-  runsSearch: document.querySelector("#runsSearch"),
-  runKindFilter: document.querySelector("#runKindFilter"),
-  runStatusFilter: document.querySelector("#runStatusFilter"),
-  runnerFilter: document.querySelector("#runnerFilter"),
-  // Prepare run
-  prepKind: document.querySelector("#prepKind"),
-  prepBackendHelperGroup: document.querySelector("#prepBackendHelperGroup"),
-  prepRunner: document.querySelector("#prepRunner"),
-  prepVisualPromptGroup: document.querySelector("#prepVisualPromptGroup"),
-  prepBenchmark: document.querySelector("#prepBenchmark"),
-  prepModelSelectGroup: document.querySelector("#prepModelSelectGroup"),
-  prepModelSelectLabel: document.querySelector("#prepModelSelectLabel"),
-  prepModelSelect: document.querySelector("#prepModelSelect"),
-  prepLightEvalFields: document.querySelector("#prepLightEvalFields"),
-  prepLightEvalTaskPreset: document.querySelector("#prepLightEvalTaskPreset"),
-  prepLightEvalTasks: document.querySelector("#prepLightEvalTasks"),
-  prepBaseUrlGroup: document.querySelector("#prepBaseUrlGroup"),
-  prepBaseUrlLabel: document.querySelector("#prepBaseUrlLabel"),
-  prepBaseUrl: document.querySelector("#prepBaseUrl"),
-  prepCommandGroup: document.querySelector("#prepCommandGroup"),
-  prepCommand: document.querySelector("#prepCommand"),
-  copyPrepCommand: document.querySelector("#copyPrepCommand"),
-  prepareRun: document.querySelector("#prepareRun"),
-  prepSubtitle: document.querySelector("#prepSubtitle"),
-  prepLayout: document.querySelector("#prepLayout"),
-  prepResult: document.querySelector("#prepResult"),
-  prepResultTitle: document.querySelector("#prepResultTitle"),
-  prepResultHint: document.querySelector("#prepResultHint"),
-  prepOutputLabel: document.querySelector("#prepOutputLabel"),
-  preparedPrompt: document.querySelector("#preparedPrompt"),
-  preparedPaths: document.querySelector("#preparedPaths"),
-  copyPrompt: document.querySelector("#copyPrompt"),
-  helpTooltip: document.querySelector("#helpTooltip"),
-  // Gallery
-  viewTitle: document.querySelector("#viewTitle"),
-  viewSubtitle: document.querySelector("#viewSubtitle"),
-  runSummary: document.querySelector("#runSummary"),
-  runCount: document.querySelector("#runCount"),
-  runsSurface: document.querySelector("#runsSurface"),
-  refreshRuns: document.querySelector("#refreshRuns"),
-  captureMedia: document.querySelector("#captureMedia"),
-  // Run record
-  recordTitle: document.querySelector("#recordTitle"),
-  recordSubtitle: document.querySelector("#recordSubtitle"),
-  openRecordVisual: document.querySelector("#openRecordVisual"),
-  openRecordFolder: document.querySelector("#openRecordFolder"),
-  deleteRecordRun: document.querySelector("#deleteRecordRun"),
-  recordMeta: document.querySelector("#recordMeta"),
-  recordRunnerSection: document.querySelector("#recordRunnerSection"),
-  recordRunnerMeta: document.querySelector("#recordRunnerMeta"),
-  recordPrompt: document.querySelector("#recordPrompt"),
-  recordTextTitle: document.querySelector("#recordTextTitle"),
-  recordPromptLength: document.querySelector("#recordPromptLength"),
-  copyRecordPrompt: document.querySelector("#copyRecordPrompt"),
-  recordArtifacts: document.querySelector("#recordArtifacts"),
-  recordRunFolderPath: document.querySelector("#recordRunFolderPath"),
-  copyRecordRunFolder: document.querySelector("#copyRecordRunFolder"),
-  // Detail
-  detailTitle: document.querySelector("#detailTitle"),
-  detailSubtitle: document.querySelector("#detailSubtitle"),
-  detailPreview: document.querySelector("#detailPreview"),
-  openHtml: document.querySelector("#openHtml"),
-  openRunFolder: document.querySelector("#openRunFolder"),
-  recaptureRun: document.querySelector("#recaptureRun"),
-  deleteRun: document.querySelector("#deleteRun"),
-  detailPrompt: document.querySelector("#detailPrompt"),
-  detailTextTitle: document.querySelector("#detailTextTitle"),
-  promptLength: document.querySelector("#promptLength"),
-  copyDetailPrompt: document.querySelector("#copyDetailPrompt"),
-  detailMeta: document.querySelector("#detailMeta"),
-  detailRunFolderPath: document.querySelector("#detailRunFolderPath"),
-  copyRunFolder: document.querySelector("#copyRunFolder"),
-  detailArtifacts: document.querySelector("#detailArtifacts"),
-  detailRunnerSection: document.querySelector("#detailRunnerSection"),
-  detailRunnerMeta: document.querySelector("#detailRunnerMeta")
-};
+import { els } from "./js/dom.js";
+import { state } from "./js/state.js";
+import { DEFAULT_LLAMA_CPP_BASE_URL, DEFAULT_LM_STUDIO_BASE_URL, DEFAULT_LLAMA_CPP_MODEL_PATH, DEFAULT_LIGHTEVAL_TASKS, LIGHTEVAL_TASK_PRESETS } from "./js/constants.js";
+import { clamp, escapeHtml, escapeAttribute, formatBytes, formatDate, formatDateShort, shellQuote, normalizeBaseUrlInput, uniqueBy } from "./js/utils.js";
+import { fetchJson, fetchStaticManifest, postJson, deleteJson } from "./js/api.js";
+import { filteredRuns, groupRuns, modelsFromRuns, runsForModel, runSummaryText, runKind, runKindLabel, runnerLabel, runDisplayStatus, runDisplayStatusLabel, hasCapturedVideo, lightEvalHasOutputs, needsMediaCapture, runCardState, displayRunError, runCardMediaMessage, runCardIdentity, runRecordText, runTaskOrPromptMetaValue, canOpenVisualDetail, findRunByDirectoryOrId } from "./js/runs.js";
+import { openModal, closeModal, currentModal, handleModalKeydown } from "./js/modals.js";
+import { applyStoredTheme, toggleTheme, setTheme } from "./js/theme.js";
+import { startHtmlPolling } from "./js/polling.js";
+import { renderSectionTabs, renderViewTabs, updateOnboarding, showHtmlDetectToast } from "./js/ui.js";
 
 init();
 
 function init() {
   applyStoredTheme();
   wireEvents();
+  renderSectionTabs();
+  renderViewTabs();
+  updateOnboarding();
   void loadLocalData();
   setInterval(() => {
     if (!state.staticMode) {
@@ -228,13 +38,15 @@ function init() {
 function wireEvents() {
   els.refreshConnection.addEventListener("click", () => loadConnection({ manual: true }));
   els.refreshRuns.addEventListener("click", () => refreshRuns());
-  els.captureMedia.addEventListener("click", () => captureMissingMedia());
   els.syncPiBtn.addEventListener("click", () => syncModels(["pi"]));
   els.syncOpenCodeBtn.addEventListener("click", () => syncModels(["opencode"]));
 
   els.themeToggle.addEventListener("click", () => toggleTheme());
   els.setupToggle.addEventListener("click", () => openModal("setup"));
-  els.runToggle.addEventListener("click", () => openModal("prep"));
+  els.runToggle.addEventListener("click", () => {
+    openModal("prep");
+    resetPrepareRunModal();
+  });
 
   els.closeRecord.addEventListener("click", () => closeModal("record"));
   els.closeDetail.addEventListener("click", () => closeModal("detail"));
@@ -331,14 +143,40 @@ function wireEvents() {
   els.prepModelSelect.addEventListener("change", () => {
     updatePrepareMode({ preserveCommand: false });
   });
+  if (els.checkLlamaCppBtn) {
+    els.checkLlamaCppBtn.addEventListener("click", () => checkLlamaCppServer());
+  }
 
-  document.querySelectorAll("[data-mode]").forEach((button) => {
+  els.sectionTabs.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.section = button.dataset.section;
+      resetRunPage();
+      renderSectionTabs();
+      renderRuns();
+      renderPrepOptions();
+      updateOnboarding();
+    });
+  });
+
+  els.viewTabs.forEach((button) => {
     button.addEventListener("click", () => {
       state.mode = button.dataset.mode;
       resetRunPage();
-      renderModeButtons();
+      renderViewTabs();
       renderRuns();
     });
+  });
+
+  if (els.dismissOnboarding) {
+    els.dismissOnboarding.addEventListener("click", () => {
+      state.onboardingDismissed = true;
+      try { localStorage.setItem("onboardingDismissed", "1"); } catch {}
+      if (els.onboardingPanel) els.onboardingPanel.hidden = true;
+    });
+  }
+
+  document.addEventListener("capture-pending", () => {
+    void captureMissingMedia();
   });
 }
 
@@ -378,33 +216,6 @@ function showHelpTooltip(anchor) {
 
 function hideHelpTooltip() {
   els.helpTooltip.hidden = true;
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function applyStoredTheme() {
-  const theme = localStorage.getItem("theme") === "dark" ? "dark" : "light";
-  setTheme(theme);
-}
-
-function toggleTheme() {
-  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  localStorage.setItem("theme", next);
-  setTheme(next);
-}
-
-function setTheme(theme) {
-  const isDark = theme === "dark";
-  document.documentElement.toggleAttribute("data-theme", isDark);
-  if (isDark) {
-    document.documentElement.dataset.theme = "dark";
-  }
-  els.themeToggle.setAttribute("aria-label", isDark ? "Use light theme" : "Use dark theme");
-  els.themeToggle.title = isDark ? "Use light theme" : "Use dark theme";
-  els.themeIcon.textContent = isDark ? "☼" : "☾";
-  els.themeLabel.textContent = isDark ? "Light" : "Dark";
 }
 
 /* ── Setup panel state ──────────────────────────────────────── */
@@ -497,7 +308,7 @@ function renderModelInventory() {
 
       return (
         '<div class="lm-model-row">' +
-          '<span class="lm-model-name" title="' + escapeHtml(model.id) + '">' +
+          '<span class="lm-model-name" title="' + escapeAttribute(model.id) + '">' +
             escapeHtml(model.id) +
           "</span>" +
           '<span class="lm-source-pill" data-source="' + source + '">' + source + "</span>" +
@@ -578,135 +389,6 @@ async function syncModels(targets) {
   }
 }
 
-/* ── Modal open/close ────────────────────────────────────── */
-
-function openModal(name) {
-  const map = {
-    record: els.recordBackdrop,
-    detail: els.detailBackdrop,
-    prep: els.prepBackdrop,
-    setup: els.setupBackdrop,
-    deleteConfirm: els.deleteConfirmBackdrop
-  };
-  const el = map[name];
-  if (el) {
-    state.modalFocusReturn[name] = document.activeElement;
-    el.setAttribute("open", "");
-    syncBodyOverflow();
-    queueMicrotask(() => focusFirstModalControl(el));
-  }
-  if (name === "prep" && !canUseOperationalControls()) {
-    els.prepareRun.disabled = true;
-    els.preparedPaths.textContent = "Preparing runs requires the local dev server.";
-  } else if (name === "prep") {
-    els.prepareRun.disabled = false;
-  }
-  if (name === "setup") {
-    updateLmStepStates();
-    updateConfigPresence();
-    updateSyncButtons();
-  }
-}
-
-function closeModal(name) {
-  const map = {
-    record: els.recordBackdrop,
-    detail: els.detailBackdrop,
-    prep: els.prepBackdrop,
-    setup: els.setupBackdrop,
-    deleteConfirm: els.deleteConfirmBackdrop
-  };
-  const el = map[name];
-  if (el) {
-    el.removeAttribute("open");
-    syncBodyOverflow();
-    restoreModalFocus(name);
-  }
-  if (name === "record") {
-    state.selectedRun = null;
-  }
-  if (name === "detail") {
-    els.detailPreview.replaceChildren();
-    state.selectedRun = null;
-  }
-  if (name === "prep") {
-    resetPrepareRunModal();
-  }
-}
-
-function handleModalKeydown(event) {
-  const modal = currentModal();
-  if (!modal) {
-    return;
-  }
-
-  if (event.key === "Escape") {
-    event.preventDefault();
-    closeModal(modal.name);
-    return;
-  }
-
-  if (event.key === "Tab") {
-    trapModalFocus(event, modal.element);
-  }
-}
-
-function currentModal() {
-  const entries = [
-    ["deleteConfirm", els.deleteConfirmBackdrop],
-    ["record", els.recordBackdrop],
-    ["detail", els.detailBackdrop],
-    ["prep", els.prepBackdrop],
-    ["setup", els.setupBackdrop]
-  ];
-  const entry = entries.find(([, element]) => element?.hasAttribute("open"));
-  return entry ? { name: entry[0], element: entry[1] } : null;
-}
-
-function syncBodyOverflow() {
-  document.body.style.overflow = currentModal() ? "hidden" : "";
-}
-
-function focusFirstModalControl(modal) {
-  const focusable = modalFocusableElements(modal);
-  (focusable[0] ?? modal).focus();
-}
-
-function restoreModalFocus(name) {
-  const target = state.modalFocusReturn[name];
-  delete state.modalFocusReturn[name];
-  if (target && typeof target.focus === "function" && !currentModal()) {
-    target.focus();
-  }
-}
-
-function trapModalFocus(event, modal) {
-  const focusable = modalFocusableElements(modal);
-  if (focusable.length === 0) {
-    event.preventDefault();
-    modal.focus();
-    return;
-  }
-
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
-function modalFocusableElements(modal) {
-  return Array.from(
-    modal.querySelectorAll(
-      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    )
-  ).filter((element) => !element.hidden && element.offsetParent !== null);
-}
-
 /* ── Data loading ────────────────────────────────────────── */
 
 async function loadLocalData() {
@@ -724,6 +406,10 @@ async function loadLocalData() {
     renderModelSources();
     renderRuns();
     renderPrepOptions();
+    startHtmlPolling({
+      onRefresh: refreshRunsForPolling,
+      onDetect: showHtmlDetectToast
+    });
     await Promise.allSettled([loadConnection(), loadStats(), loadModelSyncState()]);
   } catch (error) {
     await enterStaticMode(error);
@@ -889,6 +575,20 @@ async function refreshRuns() {
   renderRuns();
 }
 
+async function refreshRunsForPolling() {
+  if (state.staticMode || state.captureBusy) {
+    return;
+  }
+
+  const runs = await fetchJson("/api/runs");
+  state.runs = runs.runs ?? [];
+  renderModels();
+  renderRunFilters();
+  renderModelSources();
+  renderRuns();
+  updateOnboarding();
+}
+
 async function captureMissingMedia() {
   if (!canUseOperationalControls() || state.captureBusy) {
     els.runSummary.textContent = "Capture requires the local dev server.";
@@ -948,9 +648,7 @@ async function captureMissingMedia() {
 function updateWriteControls() {
   const canWrite = canUseOperationalControls();
   syncOperationalControls();
-  els.captureMedia.disabled = !canWrite || state.captureBusy;
   els.refreshRuns.disabled = !canWrite;
-  els.captureMedia.textContent = state.captureBusy ? "Capturing…" : "Capture media";
   if (state.selectedRun) {
     updateDetailActions(state.selectedRun);
     updateRecordActions(state.selectedRun);
@@ -963,7 +661,7 @@ function canUseOperationalControls() {
 
 function syncOperationalControls() {
   const canShow = canUseOperationalControls();
-  els.operationalControls.forEach((control) => {
+  document.querySelectorAll(".operational-control").forEach((control) => {
     const available = control.dataset.operationalAvailable !== "false";
     control.hidden = !(canShow && available);
   });
@@ -977,14 +675,29 @@ function setOperationalAvailability(control, available) {
 
 async function captureSelectedRunMedia(options = {}) {
   const run = state.selectedRun;
+  if (!run) {
+    return;
+  }
+
+  await captureRunMedia(run, options);
+}
+
+async function captureRunMedia(run, options = {}) {
   if (!run?.runDirectory || !canUseOperationalControls() || state.captureBusy) {
     return;
   }
 
+  const wasSelected = state.selectedRun &&
+    ((state.selectedRun.runDirectory && state.selectedRun.runDirectory === run.runDirectory) ||
+      (state.selectedRun.runId && state.selectedRun.runId === run.runId));
+
   state.captureBusy = true;
   state.captureRunDirectory = run.runDirectory;
   updateWriteControls();
-  els.recaptureRun.textContent = "Capturing…";
+  renderRuns();
+  if (wasSelected) {
+    els.recaptureRun.textContent = "Capturing…";
+  }
 
   try {
     const data = await postJson("/api/capture-media", {
@@ -993,21 +706,30 @@ async function captureSelectedRunMedia(options = {}) {
     });
     state.runs = data.runs ?? state.runs;
     const nextRun = findRunByDirectoryOrId(run) ?? run;
-    state.selectedRun = nextRun;
+    if (wasSelected) {
+      state.selectedRun = nextRun;
+    }
     renderModels();
     renderRunFilters();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
-    renderDetail(nextRun);
+    updateOnboarding();
+    if (wasSelected) {
+      renderDetail(nextRun);
+    }
   } catch (error) {
-    els.detailMeta.innerHTML +=
-      '<span class="meta-label">Capture</span><strong>' + escapeHtml(error.message) + "</strong>";
+    if (wasSelected) {
+      els.detailMeta.innerHTML +=
+        '<span class="meta-label">Capture</span><strong>' + escapeHtml(error.message) + "</strong>";
+    } else {
+      els.runSummary.textContent = "Capture failed: " + error.message;
+    }
   } finally {
     state.captureBusy = false;
     state.captureRunDirectory = "";
     renderRuns();
-    if (state.selectedRun) {
+    if (wasSelected && state.selectedRun) {
       renderDetail(state.selectedRun);
     }
     updateWriteControls();
@@ -1062,6 +784,9 @@ function updatePrepareMode(options = {}) {
   els.prepLightEvalFields.hidden = !isLightEval;
   els.prepBaseUrlGroup.hidden = runner !== "llama-cpp" && !isLightEval;
   els.prepCommandGroup.hidden = !commandVisible;
+  if (els.llamaCppStatusBar) {
+    els.llamaCppStatusBar.hidden = !commandVisible;
+  }
   els.prepLayout.dataset.kind = workflow;
   els.prepResult.dataset.panelMode = workflow;
   els.preparedPrompt.readOnly = !isLightEval;
@@ -1167,6 +892,33 @@ function localPathForModel(modelId) {
   return state.discoveredModels.find((model) => model.id === modelId)?.localPath ?? "";
 }
 
+async function checkLlamaCppServer() {
+  if (!els.llamaCppStatusBar || !els.llamaCppStatusDot || !els.llamaCppStatusText) return;
+
+  els.llamaCppStatusBar.hidden = false;
+  els.llamaCppStatusDot.dataset.state = "checking";
+  els.llamaCppStatusText.textContent = "Checking server…";
+  if (els.checkLlamaCppBtn) els.checkLlamaCppBtn.disabled = true;
+
+  const baseUrl = els.prepBaseUrl.value || DEFAULT_LLAMA_CPP_BASE_URL;
+
+  try {
+    const data = await fetchJson("/api/llama-cpp/status?baseUrl=" + encodeURIComponent(baseUrl));
+    if (data.ok) {
+      els.llamaCppStatusDot.dataset.state = "online";
+      els.llamaCppStatusText.textContent = "Server online · " + (data.modelCount ?? 0) + " model(s)";
+    } else {
+      els.llamaCppStatusDot.dataset.state = "offline";
+      els.llamaCppStatusText.textContent = "Server offline · " + (data.error ?? "Not reachable");
+    }
+  } catch (error) {
+    els.llamaCppStatusDot.dataset.state = "offline";
+    els.llamaCppStatusText.textContent = "Server offline · " + error.message;
+  } finally {
+    if (els.checkLlamaCppBtn) els.checkLlamaCppBtn.disabled = false;
+  }
+}
+
 function defaultLightEvalCommand() {
   const rawTasks = els.prepLightEvalTasks.value.trim();
   const tasks = isLikelyLightEvalTaskString(rawTasks) ? rawTasks : DEFAULT_LIGHTEVAL_TASKS;
@@ -1220,6 +972,7 @@ async function prepareRunSlot() {
   }
   const runner = isLightEval ? "lighteval" : els.prepRunner.value;
   const launchCommand = isLightEval ? els.preparedPrompt.value : els.prepCommand.value;
+  const modelPath = runner === "llama-cpp" ? localPathForModel(modelId) : undefined;
   try {
     const data = await postJson("/api/prepare-run", {
       benchmarkId: isLightEval ? undefined : benchmarkId,
@@ -1228,7 +981,8 @@ async function prepareRunSlot() {
       kind,
       runner,
       baseUrl: els.prepBaseUrl.value,
-      launchCommand
+      launchCommand,
+      modelPath
     });
     const prepared = data.preparedRun;
     const output = kind === "lighteval" ? (prepared.command ?? "") : prepared.prompt;
@@ -1488,7 +1242,7 @@ function renderPrepOptions() {
 }
 
 function renderModeButtons() {
-  document.querySelectorAll("[data-mode]").forEach((button) => {
+  els.viewTabs.forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode));
   });
 }
@@ -1508,7 +1262,7 @@ function renderRuns() {
     ? "Model attempts"
     : state.mode === "benchmark"
       ? "Prompt comparison"
-      : "Run gallery";
+      : "Gallery";
   els.viewSubtitle.textContent = state.mode === "runs"
     ? "Folder-backed records from metadata.json."
     : state.mode === "model"
@@ -1518,9 +1272,11 @@ function renderRuns() {
       : "Browse captured previews and videos.";
 
   if (runs.length === 0) {
-    els.runsSurface.innerHTML = !canUseOperationalControls()
-      ? '<div class="empty">No runs match the current filters.</div>'
-      : '<div class="empty">No runs match the current filters. <button type="button" class="btn-sm-ghost" id="emptyPrepRun">Prepare a run</button> or refresh after your external tool writes files.</div>';
+    const emptyBase = '<div class="empty">No runs match the current filters.</div>';
+    const emptyWithAction = !canUseOperationalControls()
+      ? emptyBase
+      : '<div class="empty">No runs match the current filters.<div class="empty-state-action"><button type="button" class="btn-sm-ghost" id="emptyPrepRun">Prepare a run</button></div></div>';
+    els.runsSurface.innerHTML = emptyWithAction;
     const emptyPrep = document.querySelector("#emptyPrepRun");
     if (emptyPrep) {
       emptyPrep.addEventListener("click", () => openModal("prep"));
@@ -1572,6 +1328,7 @@ function renderRunsTable(runs) {
             '<th>Runner</th>' +
             '<th>Artifacts</th>' +
             '<th>Message</th>' +
+            '<th>Actions</th>' +
             '<th>Updated</th>' +
           '</tr>' +
         '</thead>' +
@@ -1594,7 +1351,7 @@ function renderRunsTableRow(run) {
   const model = run.model?.id ?? run.runner?.model ?? "Unknown model";
   const runner = run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.runner?.mode ?? run.tool ?? "manual";
   return (
-    '<tr class="run-row" data-run-id="' + escapeAttribute(run.runId) + '" tabindex="0" role="button" aria-label="' +
+    '<tr class="run-row" data-open-run data-run-id="' + escapeAttribute(run.runId) + '" tabindex="0" role="button" aria-label="' +
       escapeAttribute(title + " " + model) + '">' +
       '<td>' +
         '<strong class="truncate-line">' + escapeHtml(title) + "</strong>" +
@@ -1605,6 +1362,7 @@ function renderRunsTableRow(run) {
       '<td class="truncate-cell">' + escapeHtml(runner) + "</td>" +
       '<td>' + renderAssetBadges(run) + "</td>" +
       '<td class="truncate-cell">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</td>" +
+      '<td>' + renderRunCaptureAction(run, isCapturing, "table") + "</td>" +
       '<td class="truncate-cell">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</td>" +
     "</tr>"
   );
@@ -1659,7 +1417,7 @@ function renderRunCard(run, mode = "gallery") {
   const stateLabel = runCardState(run);
   const identity = runCardIdentity(run, mode);
   return (
-    '<button class="run-card" type="button" data-run-id="' + escapeAttribute(run.runId) + '" aria-label="' +
+    '<article class="run-card" data-open-run data-run-id="' + escapeAttribute(run.runId) + '" tabindex="0" role="button" aria-label="' +
     escapeAttribute(run.benchmark?.title ?? "Run") + " " + escapeAttribute(run.model?.id ?? "") + '">' +
       renderPreview(run, { capturing: isCapturing }) +
       '<span class="run-card-body">' +
@@ -1676,8 +1434,33 @@ function renderRunCard(run, mode = "gallery") {
           renderAssetBadges(run) +
         "</span>" +
         '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</span>" +
+        renderRunCaptureAction(run, isCapturing, "card") +
       "</span>" +
-    "</button>"
+    "</article>"
+  );
+}
+
+function renderRunCaptureAction(run, isCapturing, placement) {
+  const canCapture = canUseOperationalControls() &&
+    runKind(run) === "visual" &&
+    needsMediaCapture(run);
+  if (!canCapture) {
+    return "";
+  }
+
+  const label = "Capture preview";
+  const title = run.benchmark?.title ?? run.benchmark?.id ?? "run";
+  const model = run.model?.id ?? "unknown model";
+  const className = placement === "table" ? "btn-sm-outline run-capture-btn" : "btn-sm-outline run-card-capture";
+
+  return (
+    '<span class="run-card-actions" data-placement="' + escapeAttribute(placement) + '">' +
+      '<button type="button" class="' + className + ' operational-control" data-capture-run-id="' + escapeAttribute(run.runId) + '" ' +
+        'aria-label="' + escapeAttribute(label + " for " + title + " on " + model) + '"' +
+        (isCapturing || state.captureBusy ? " disabled" : "") + ">" +
+        escapeHtml(isCapturing ? "Capturing..." : label) +
+      "</button>" +
+    "</span>"
   );
 }
 
@@ -1711,40 +1494,28 @@ function renderCaptureOverlay(capturing) {
   return '<span class="capture-overlay" aria-live="polite"><span class="capture-spinner" aria-hidden="true"></span><strong>Capturing</strong></span>';
 }
 
-function runCardMediaMessage(run, isCapturing) {
-  if (runKind(run) === "lighteval") {
-    if (run.status === "failed" || run.status === "cancelled") {
-      return displayRunError(run) ?? "LightEval failed";
-    }
-    if (lightEvalHasOutputs(run)) return "LightEval results ready";
-    if (run.assets?.command) return "Run the saved LightEval command";
-    return "Waiting for LightEval outputs";
-  }
-  if (isCapturing) return "Capturing preview media";
-  if (hasCapturedVideo(run)) return "Video ready";
-  if (run.status === "failed" || run.capture?.video?.status === "failed") {
-    return displayRunError(run) ?? "Capture failed";
-  }
-  if (run.assets?.html) return "Needs media capture";
-  return "Waiting for index.html source";
-}
-
-function runCardIdentity(run, mode) {
-  const promptTitle = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
-  const modelId = run.model?.id ?? "Unknown model";
-
-  if (mode === "benchmark") {
-    return { primary: modelId, secondary: "" };
-  }
-
-  if (mode === "model") {
-    return { primary: promptTitle, secondary: "" };
-  }
-
-  return { primary: promptTitle, secondary: modelId };
-}
-
 function renderPreview(run, options = {}) {
+  if (runKind(run) === "lighteval") {
+    const title = lightEvalHasOutputs(run)
+      ? "LightEval results"
+      : run.assets?.command
+        ? "Command prepared"
+        : "LightEval slot";
+    const message = lightEvalHasOutputs(run)
+      ? "Open details for parsed scores."
+      : run.assets?.command
+        ? "Run the saved command to write results."
+        : "Waiting for LightEval outputs.";
+    return (
+      '<span class="preview">' +
+        '<span class="preview-placeholder">' +
+          "<strong>" + escapeHtml(title) + "</strong>" +
+          '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(message) + "</span>" +
+        "</span>" +
+      "</span>"
+    );
+  }
+
   const previewHref = assetHref(run, run.assets?.preview);
   if (previewHref) {
     return '<span class="preview"><img src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />' + renderCaptureOverlay(options.capturing) + '</span>';
@@ -1761,18 +1532,32 @@ function renderPreview(run, options = {}) {
 }
 
 function wireRunCards() {
-  els.runsSurface.querySelectorAll("[data-run-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const runId = button.dataset.runId;
+  els.runsSurface.querySelectorAll("[data-capture-run-id]").forEach((button) => {
+    button.addEventListener("keydown", (event) => {
+      event.stopPropagation();
+    });
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const runId = button.dataset.captureRunId;
+      const run = state.runs.find((r) => r.runId === runId);
+      if (run) {
+        void captureRunMedia(run);
+      }
+    });
+  });
+
+  els.runsSurface.querySelectorAll("[data-open-run]").forEach((card) => {
+    card.addEventListener("click", () => {
+      const runId = card.dataset.runId;
       const run = state.runs.find((r) => r.runId === runId);
       if (run) {
         openRunFromCurrentView(run);
       }
     });
-    button.addEventListener("keydown", (event) => {
+    card.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        const runId = button.dataset.runId;
+        const runId = card.dataset.runId;
         const run = state.runs.find((r) => r.runId === runId);
         if (run) {
           openRunFromCurrentView(run);
@@ -1842,30 +1627,6 @@ function recordMetadataRowsHtml(run) {
   ).join("");
 }
 
-function runRecordText(run) {
-  if (runKind(run) === "lighteval") {
-    return {
-      title: "Task",
-      value: run.benchmark?.prompt ?? run.benchmark?.id ?? "",
-      emptyText: "LightEval task unavailable in metadata.",
-      copyLabel: "Copy task"
-    };
-  }
-
-  return {
-    title: "Prompt",
-    value: run.promptText ?? run.benchmark?.prompt ?? "",
-    emptyText: "Prompt unavailable in run folder.",
-    copyLabel: "Copy prompt"
-  };
-}
-
-function runTaskOrPromptMetaValue(run) {
-  return runKind(run) === "lighteval"
-    ? (run.benchmark?.prompt ?? run.benchmark?.id ?? run.benchmark?.title)
-    : (run.benchmark?.id ?? run.benchmark?.title);
-}
-
 function renderRecordRunner(run) {
   const rows = runnerMetaRows(run);
   if (rows.length === 0) {
@@ -1883,7 +1644,8 @@ function updateRecordActions(run) {
     return;
   }
   const canOperate = canUseOperationalControls();
-  const hasVisualDetail = canOpenVisualDetail(run);
+  const hasVisualDetail = canOpenRunDetailFromRecord(run);
+  els.openRecordVisual.textContent = runKind(run) === "lighteval" ? "Open results" : "Open visual detail";
   els.openRecordVisual.hidden = !hasVisualDetail;
   els.openRecordVisual.disabled = !hasVisualDetail;
   setOperationalAvailability(els.openRecordFolder, Boolean(run.runDirectory));
@@ -1893,23 +1655,26 @@ function updateRecordActions(run) {
   els.deleteRecordRun.disabled = !canOperate || !run.runDirectory;
 }
 
-function canOpenVisualDetail(run) {
-  return runKind(run) === "visual" || Boolean(run.assets?.html || run.assets?.preview || hasCapturedVideo(run));
-}
-
 function openSelectedRunVisualDetail() {
   const run = state.selectedRun;
-  if (!run || !canOpenVisualDetail(run)) {
+  if (!run || !canOpenRunDetailFromRecord(run)) {
     return;
   }
   closeModal("record");
   openDetail(run);
 }
 
+function canOpenRunDetailFromRecord(run) {
+  return canOpenVisualDetail(run) || runKind(run) === "lighteval";
+}
+
 function renderDetail(run) {
   els.detailTitle.textContent = run.benchmark?.title ?? "Run detail";
   els.detailSubtitle.textContent = (run.model?.id ?? "Unknown model") + " · " + (run.runId ?? "");
   els.detailPreview.innerHTML = renderDetailArtifact(run);
+  if (runKind(run) === "lighteval" && lightEvalHasOutputs(run)) {
+    void loadLightEvalResults(run);
+  }
   updateDetailActions(run);
   const textRecord = runRecordText(run);
   els.detailTextTitle.textContent = textRecord.title;
@@ -1952,7 +1717,7 @@ function updateDetailActions(run) {
   }
   els.recaptureRun.textContent = run.assets?.preview || hasCapturedVideo(run)
     ? "Recapture media"
-    : "Capture media";
+    : "Capture preview";
 }
 
 function renderDetailArtifacts(run) {
@@ -2021,20 +1786,19 @@ function rowsToMetaGridHtml(rows) {
   ).join("");
 }
 
-function findRunByDirectoryOrId(run) {
-  return state.runs.find((candidate) =>
-    (run.runDirectory && candidate.runDirectory === run.runDirectory) ||
-    (run.runId && candidate.runId === run.runId)
-  );
-}
-
 function renderDetailArtifact(run) {
   if (runKind(run) === "lighteval") {
+    if (lightEvalHasOutputs(run)) {
+      return '<div id="lightevalResultsPanel" class="lighteval-results-panel" data-run-directory="' + escapeAttribute(run.runDirectory ?? "") + '">' +
+        '<div class="lighteval-results-loading">' +
+          '<span class="capture-spinner" aria-hidden="true"></span>' +
+          '<span>Loading LightEval results…</span>' +
+        '</div>' +
+      '</div>';
+    }
     return '<span class="artifact-empty">' +
-      '<strong>' + escapeHtml(lightEvalHasOutputs(run) ? "LightEval outputs found" : "LightEval command prepared") + "</strong>" +
-      '<span>' + escapeHtml(lightEvalHasOutputs(run)
-        ? "Review the metadata, command, results, and details artifacts in this run folder."
-        : "Run the saved command in your terminal; LightEval will write results and details into this folder.") + "</span>" +
+      '<strong>' + escapeHtml("LightEval command prepared") + "</strong>" +
+      '<span>' + escapeHtml("Run the saved command in your terminal; LightEval will write results and details into this folder.") + "</span>" +
       "</span>";
   }
 
@@ -2054,62 +1818,68 @@ function renderDetailArtifact(run) {
   if (run.assets?.html) {
     return '<span class="artifact-empty">' +
       '<strong>Video not captured yet</strong>' +
-      '<span>Use Capture media in server mode to generate preview.png and preview video from the saved index.html source.</span>' +
+      '<span>Use Capture preview in server mode to generate preview.png and preview video from the saved index.html source.</span>' +
       "</span>";
   }
 
   return '<span class="artifact-empty">' +
     '<strong>' + escapeHtml(run.status === "prepared" ? "Run slot prepared" : "Artifact unavailable") + "</strong>" +
-    '<span>' + escapeHtml(run.status === "prepared" ? "Save index.html into the run folder, then run Capture media." : displayRunError(run) ?? "No captured video is available for this run.") + "</span>" +
+    '<span>' + escapeHtml(run.status === "prepared" ? "Save index.html into the run folder, then run Capture preview." : displayRunError(run) ?? "No captured video is available for this run.") + "</span>" +
     "</span>";
+}
+
+async function loadLightEvalResults(run) {
+  const panel = document.querySelector("#lightevalResultsPanel");
+  if (!panel) return;
+
+  try {
+    const data = await fetchJson("/api/lighteval-results?runDirectory=" + encodeURIComponent(run.runDirectory ?? ""));
+    const results = data.results ?? [];
+
+    if (panel.dataset.runDirectory !== (run.runDirectory ?? "")) {
+      return;
+    }
+
+    if (results.length === 0) {
+      panel.innerHTML = '<span class="artifact-empty">' +
+        '<strong>LightEval results folder found</strong>' +
+        '<span>No parseable result JSON files were found in the results directory.</span>' +
+      '</span>';
+      return;
+    }
+
+    panel.innerHTML = results.map((summary) =>
+      '<div class="lighteval-result-card">' +
+        '<div class="lighteval-result-head">' +
+          '<strong>' + escapeHtml(summary.taskName ?? summary.taskId) + '</strong>' +
+          (summary.modelName ? '<span class="muted-copy">' + escapeHtml(summary.modelName) + '</span>' : '') +
+        '</div>' +
+        '<div class="lighteval-metrics">' +
+          summary.metrics.map((metric) =>
+            '<div class="lighteval-metric" data-higher-is-better="' + String(metric.higherIsBetter) + '">' +
+              '<span class="metric-name">' + escapeHtml(metric.metricName) + '</span>' +
+              '<span class="metric-value">' + (typeof metric.value === "number" ? metric.value.toFixed(4) : escapeHtml(String(metric.value))) + '</span>' +
+            '</div>'
+          ).join("") +
+        '</div>' +
+        (summary.totalEvaluationTimeSeconds ?
+          '<div class="lighteval-time muted-copy">Eval time: ' + summary.totalEvaluationTimeSeconds.toFixed(2) + 's</div>'
+          : '') +
+      '</div>'
+    ).join("");
+  } catch (error) {
+    if (panel.dataset.runDirectory !== (run.runDirectory ?? "")) {
+      return;
+    }
+    panel.innerHTML = '<span class="artifact-empty">' +
+      '<strong>Failed to load LightEval results</strong>' +
+      '<span>' + escapeHtml(error.message) + '</span>' +
+    '</span>';
+  }
 }
 
 function setConnection(stateName, label, message) {
   els.connectionMessage.textContent = message;
-}
-
-function setLink(link, href) {
-  if (href) {
-    link.href = href;
-    link.hidden = false;
-    link.removeAttribute("aria-disabled");
-    return true;
-  } else {
-    link.href = "#";
-    link.hidden = true;
-    link.setAttribute("aria-disabled", "true");
-    return false;
-  }
-}
-
-/* ── Helpers ──────────────────────────────────────────────── */
-
-function filteredRuns() {
-  return state.runs.filter((run) => {
-    const modelMatch = state.selectedModel === "all" || run.model?.id === state.selectedModel;
-    const benchmarkMatch = state.selectedBenchmark === "all" || run.benchmark?.id === state.selectedBenchmark;
-    const kindMatch = state.selectedKind === "all" || runKind(run) === state.selectedKind;
-    const statusMatch = state.selectedStatus === "all" || runDisplayStatus(run) === state.selectedStatus;
-    const runnerMatch = state.selectedRunner === "all" || runnerLabel(run) === state.selectedRunner;
-    const searchMatch = !state.runsSearch.trim() || searchableRunText(run).includes(state.runsSearch.trim().toLowerCase());
-    return modelMatch && benchmarkMatch && kindMatch && statusMatch && runnerMatch && searchMatch;
-  });
-}
-
-function groupRuns(runs, titleForRun, subtitleForRun) {
-  const groups = new Map();
-  for (const run of runs) {
-    const title = titleForRun(run);
-    const group = groups.get(title) ?? { title, subtitles: new Set(), runs: [] };
-    group.subtitles.add(subtitleForRun(run));
-    group.runs.push(run);
-    groups.set(title, group);
-  }
-  return Array.from(groups.values()).map((g) => ({
-    title: g.title,
-    subtitles: Array.from(g.subtitles),
-    runs: g.runs
-  }));
 }
 
 function groupSummary(group, mode) {
@@ -2118,184 +1888,11 @@ function groupSummary(group, mode) {
   return String(count) + " " + item + (count === 1 ? "" : "s");
 }
 
-function modelsFromRuns(runs) {
-  return uniqueBy(
-    runs
-      .map((run) => run.model?.id)
-      .filter(Boolean)
-      .map((id) => ({ id })),
-    (m) => m.id
-  );
-}
-
-function runsForModel(modelId) {
-  return state.runs.filter((run) => run.model?.id === modelId);
-}
-
-function runSummaryText(runs) {
-  const prepared = runs.filter((r) => r.status === "prepared" && !hasCapturedVideo(r)).length;
-  const videoReady = runs.filter((r) => hasCapturedVideo(r)).length;
-  const needsCapture = runs.filter((r) => needsMediaCapture(r)).length;
-  const failed = runs.filter((r) => r.status === "failed").length;
-  if (state.mode === "runs") {
-    const visual = runs.filter((r) => runKind(r) === "visual").length;
-    const lighteval = runs.filter((r) => runKind(r) === "lighteval").length;
-    return String(runs.length) + " total, " + visual + " visual, " + lighteval + " LightEval, " + failed + " failed";
-  }
-  return videoReady + " with video, " + needsCapture + " need capture, " + prepared + " prepared, " + failed + " failed";
-}
-
-function runCardState(run) {
-  if (runKind(run) === "lighteval") {
-    if (run.status === "failed" || run.status === "cancelled") {
-      return { status: run.status, label: run.status };
-    }
-    if (lightEvalHasOutputs(run)) {
-      return { status: "completed", label: "results" };
-    }
-    if (run.assets?.command) {
-      return { status: "prepared", label: "command" };
-    }
-    return { status: "prepared", label: "slot" };
-  }
-  if (hasCapturedVideo(run)) {
-    return { status: "completed", label: "video" };
-  }
-  if (run.status === "failed" || run.status === "cancelled") {
-    return { status: run.status, label: run.status };
-  }
-  if (run.assets?.html) {
-    return { status: "prepared", label: "capture" };
-  }
-  return { status: "prepared", label: "slot" };
-}
-
-function hasCapturedVideo(run) {
-  return Boolean(run.assets?.video || run.assets?.videoMp4);
-}
-
-function lightEvalHasOutputs(run) {
-  return Boolean(run.assets?.lightevalResults || run.assets?.lightevalDetails);
-}
-
-function runDisplayStatus(run) {
-  if (run.status === "completed") return "completed";
-  return runCardState(run).status ?? run.status ?? "unknown";
-}
-
-function runDisplayStatusLabel(run) {
-  const displayStatus = runDisplayStatus(run);
-  if (displayStatus === "completed") return "completed";
-  return displayStatus;
-}
-
-function needsMediaCapture(run) {
-  return Boolean(run.runDirectory && run.assets?.html && (!run.assets?.preview || !hasCapturedVideo(run)));
-}
-
-function displayRunError(run) {
-  const message = run.capture?.video?.error?.message ?? run.error?.message;
-  if (!message) return null;
-  if (/rendered too slowly/iu.test(message)) return message;
-  if (/chat completion timed out/iu.test(message)) return "External tool timed out before writing an artifact.";
-  if (/LM Studio.*chat completion/iu.test(message)) return "External tool failed to produce an artifact.";
-  if (/LM Studio/iu.test(message)) return "External tool error. Open details for the original message.";
-  return message;
-}
-
-function runKind(run) {
-  return run.kind ?? "visual";
-}
-
-function runKindLabel(run) {
-  const kind = runKind(run);
-  if (kind === "lighteval") return "LightEval";
-  if (kind === "visual") return "Visual";
-  return kind;
-}
-
-function runnerLabel(run) {
-  return run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.runner?.mode ?? run.tool ?? "manual";
-}
-
-function searchableRunText(run) {
-  return [
-    run.runId,
-    runKindLabel(run),
-    run.status,
-    runnerLabel(run),
-    run.benchmark?.id,
-    run.benchmark?.title,
-    run.benchmark?.description,
-    run.benchmark?.prompt,
-    run.model?.id,
-    run.model?.slug,
-    run.runner?.backendLabel,
-    run.runner?.baseUrl,
-    run.runner?.launchCommand,
-    run.runner?.metricSource,
-    run.runDirectory,
-    run.notes,
-    ...Object.values(run.assets ?? {})
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-}
-
 function tokenMetricLabel(metrics) {
   if (!metrics) return "";
   if (!metrics.reported) return metrics.estimated ? "estimated" : "unavailable";
   const total = Number.isFinite(metrics.totalTokens) ? String(metrics.totalTokens) + " tokens" : "reported";
   return metrics.estimated ? total + " estimated" : total;
-}
-
-function shellQuote(value) {
-  return "'" + String(value).replace(/'/g, "'\\''") + "'";
-}
-
-function normalizeBaseUrlInput(value) {
-  const trimmed = String(value || "").trim().replace(/\/+$/u, "");
-  if (!trimmed) return DEFAULT_LM_STUDIO_BASE_URL;
-  return trimmed.endsWith("/v1") ? trimmed : trimmed + "/v1";
-}
-
-async function fetchJson(url) {
-  const response = await fetch(url);
-  return readJsonResponse(response);
-}
-
-async function fetchStaticManifest() {
-  try {
-    return await fetchJson("export/manifest.json");
-  } catch {
-    return fetchJson("/export/manifest.json");
-  }
-}
-
-async function postJson(url, body) {
-  return sendJson(url, "POST", body);
-}
-
-async function deleteJson(url, body) {
-  return sendJson(url, "DELETE", body);
-}
-
-async function sendJson(url, method, body) {
-  const response = await fetch(url, {
-    method,
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  return readJsonResponse(response);
-}
-
-async function readJsonResponse(response) {
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error?.message ?? "Request failed with HTTP " + response.status + ".");
-  }
-  return data;
 }
 
 function assetPath(run, asset) {
@@ -2340,49 +1937,4 @@ function availablePreparedRun(run) {
       ...(run.assets?.prompt ? { prompt: run.assets.prompt } : {})
     }
   };
-}
-
-function uniqueBy(items, keyForItem) {
-  const seen = new Set();
-  return items.filter((item) => {
-    const key = keyForItem(item);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function formatBytes(value) {
-  if (!Number.isFinite(value)) return "Unavailable";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = value;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex += 1;
-  }
-  return size.toFixed(unitIndex === 0 ? 0 : 1) + " " + units[unitIndex];
-}
-
-function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : "-";
-}
-
-function formatDateShort(value) {
-  return value
-    ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-    : "-";
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/gu, "&amp;")
-    .replace(/</gu, "&lt;")
-    .replace(/>/gu, "&gt;")
-    .replace(/"/gu, "&quot;")
-    .replace(/'/gu, "&#39;");
-}
-
-function escapeAttribute(value) {
-  return escapeHtml(value);
 }
