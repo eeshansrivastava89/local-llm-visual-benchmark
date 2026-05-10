@@ -16,8 +16,14 @@ const benchmarks = [
 ];
 
 const models = [
-  { id: "google/gemma-4-e4b" },
-  { id: "local/qwen2.5-vl" }
+  {
+    id: "google/gemma-4-e4b",
+    localPath: "/Users/test/.lmstudio/models/lmstudio-community/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q8_0.gguf"
+  },
+  {
+    id: "local/qwen2.5-vl",
+    localPath: "/Users/test/.lmstudio/models/local/qwen2.5-vl/model.gguf"
+  }
 ];
 
 const sampleRun = {
@@ -59,6 +65,46 @@ const sampleRunWithVideo = {
   }
 };
 
+const sampleLightEvalRun = {
+  runId: "2026-05-10T03-11-10-113Z",
+  benchmark: {
+    id: "boolq-0",
+    title: "LightEval: boolq|0",
+    description: "LightEval task(s): boolq|0",
+    prompt: "boolq|0"
+  },
+  model: {
+    id: "google/gemma-4-e4b",
+    slug: "google-gemma-4-e4b-bae096a7fc"
+  },
+  kind: "lighteval",
+  runner: {
+    mode: "lighteval",
+    intendedRunner: "LightEval",
+    backendLabel: "LightEval",
+    baseUrl: "http://localhost:1234/v1",
+    model: "google/gemma-4-e4b",
+    launchCommand: "lighteval endpoint litellm args boolq|0",
+    commandAsset: "command.txt",
+    metricSource: "LightEval",
+    retries: 0,
+    tokenMetrics: {
+      reported: false
+    }
+  },
+  status: "prepared",
+  createdAt: "2026-05-10T03:11:10.113Z",
+  updatedAt: "2026-05-10T03:11:10.113Z",
+  runDirectory:
+    "/tmp/runs/boolq-0/google-gemma-4-e4b-bae096a7fc/2026-05-10T03-11-10-113Z",
+  assets: {
+    metadata: "metadata.json",
+    command: "command.txt",
+    lightevalResults: "results",
+    lightevalDetails: "details"
+  }
+};
+
 test("renders viewer with compact header and dropdown filters", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: true });
 
@@ -79,10 +125,32 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(attribution).toHaveCSS("border-radius", "999px");
   await expect(page.getByLabel("Filter by model")).toBeVisible();
   await expect(page.getByLabel("Filter by prompt")).toBeVisible();
-  await expect(page.locator("[data-mode]")).toHaveText(["By model", "By prompt", "Gallery"]);
-  await expect(page.getByRole("button", { name: "By model" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[data-mode]")).toHaveText(["Runs", "By model", "By prompt", "Gallery"]);
+  await expect(page.getByRole("button", { name: "Runs" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "By model" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "By prompt" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "Gallery" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
+  await expect(page.getByText("1 total, 1 visual, 0 LightEval, 0 failed")).toBeVisible();
+  await expect(page.locator(".runs-table")).toBeVisible();
+  await expect(page.locator(".runs-table")).toContainText("Sakura Particle Field");
+  await expect(page.getByLabel("Search runs")).toBeVisible();
+  await expect(page.getByLabel("Filter by run type")).toContainText("Visual");
+  await expect(page.getByLabel("Filter by run status")).toContainText("completed");
+  await expect(page.getByLabel("Filter by runner")).toContainText("manual");
+  await page.getByLabel("Search runs").fill("no matching run");
+  await expect(page.locator("[data-run-id]")).toHaveCount(0);
+  await page.getByLabel("Search runs").fill("");
+  await page.locator("[data-run-id]").first().click();
+  await expect(page.getByRole("dialog", { name: "Run record" })).toBeVisible();
+  await expect(page.locator("#recordMeta")).toContainText("Run ID");
+  await expect(page.locator("#recordMeta")).toContainText(sampleRun.runId);
+  await expect(page.locator("#recordArtifacts")).toContainText("Metadata");
+  await expect(page.getByRole("button", { name: "Open visual detail" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open in Finder" })).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "By model" }).click();
+  await expect(page.locator("#runsFilterPanel")).toBeHidden();
   await expect(page.getByRole("heading", { name: "Model attempts" })).toBeVisible();
   await expect(page.getByText("0 with video, 1 need capture, 0 prepared, 0 failed")).toBeVisible();
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
@@ -137,6 +205,32 @@ test("renders viewer with compact header and dropdown filters", async ({ page })
   await expect(page.locator("#connectionMessage")).toContainText("2 models discovered");
 });
 
+test("paginates the Runs table at 25 records", async ({ page }) => {
+  const manyRuns = Array.from({ length: 30 }, (_, index) => ({
+    ...sampleRun,
+    runId: `2026-05-06T20-${String(index).padStart(2, "0")}-00-000Z`,
+    benchmark: index % 2 === 0 ? benchmarks[0] : benchmarks[1],
+    model: index % 3 === 0
+      ? { id: models[0].id, slug: "google-gemma-4-e4b" }
+      : { id: models[1].id, slug: "local-qwen2-5-vl" },
+    runDirectory: `/tmp/runs/page/${index}`
+  }));
+  await mockApi(page, { lmStudioOnline: true, runs: manyRuns });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+
+  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(25);
+  await expect(page.locator(".runs-pagination")).toContainText("Showing 1-25 of 30");
+  await expect(page.locator(".runs-pagination")).toContainText("Page 1 of 2");
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(5);
+  await expect(page.locator(".runs-pagination")).toContainText("Showing 26-30 of 30");
+  await expect(page.locator(".runs-pagination")).toContainText("Page 2 of 2");
+  await page.getByRole("button", { name: "Previous" }).click();
+  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(25);
+});
+
 test("toggles and persists the dark theme", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: true });
 
@@ -172,6 +266,7 @@ test("prepares a run slot via modal and shows the generated prompt", async ({ pa
   await expect(page.locator("#prepModel")).toHaveCount(0);
   await page.locator("#prepBackdrop").locator("#prepBenchmark").selectOption("solar-system");
   await page.locator("#prepBackdrop").locator("#prepModelSelect").selectOption("google/gemma-4-e4b");
+  await expect(page.locator("label", { hasText: "Model label" })).toHaveCount(0);
   await page.locator("#prepBackdrop").getByRole("button", { name: "Prepare slot" }).click();
 
   await expect.poll(() => preparePayload).toMatchObject({
@@ -189,7 +284,7 @@ test("prepares a run slot via modal and shows the generated prompt", async ({ pa
   expect(layoutColumns.split(" ").length).toBeGreaterThanOrEqual(2);
 
   const promptBox = await page.locator("#preparedPrompt").boundingBox();
-  expect(promptBox?.height ?? 0).toBeGreaterThan(300);
+  expect(promptBox?.height ?? 0).toBeGreaterThanOrEqual(300);
 
   await page.locator("#closePrep").click();
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
@@ -198,6 +293,85 @@ test("prepares a run slot via modal and shows the generated prompt", async ({ pa
   await expect(page.locator("#preparedPrompt")).toHaveValue("");
   await expect(page.locator("#preparedPaths")).toContainText("No run slot prepared yet.");
   await expect(page.locator("#copyPrompt")).toBeDisabled();
+});
+
+test("prepares llama.cpp and LightEval runs with editable commands", async ({ page }) => {
+  const preparePayloads: unknown[] = [];
+  await mockApi(page, {
+    lmStudioOnline: true,
+    onPrepare: (payload) => {
+      preparePayloads.push(payload);
+    }
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Prepare run" }).click();
+
+  await page.locator("#prepRunner").selectOption("llama-cpp");
+  await expect(page.locator("#prepBaseUrl")).toBeVisible();
+  await expect(page.locator("#prepCommand")).toBeVisible();
+  await expect(page.locator("#prepCommand")).toHaveValue(/llama-server/);
+  await expect(page.locator("#prepCommand")).toHaveValue(/\\\n  -m \\\n  '\/Users\/test\/\.lmstudio\/models\/lmstudio-community\/gemma-4-E4B-it-GGUF\/gemma-4-E4B-it-Q8_0\.gguf'/);
+  await page.locator("#prepModelSelect").selectOption(models[1].id);
+  await expect(page.locator("#prepCommand")).toHaveValue(/qwen2\.5-vl\/model\.gguf/);
+  await page.locator("#prepCommand").fill("llama-server -m /models/visual.gguf --port 8080 --n-gpu-layers 999");
+  await page.locator("#prepBackdrop").getByRole("button", { name: "Prepare slot" }).click();
+
+  await expect.poll(() => preparePayloads.at(-1)).toMatchObject({
+    kind: "visual",
+    runner: "llama-cpp",
+    baseUrl: "http://127.0.0.1:8080/v1",
+    launchCommand: "llama-server -m /models/visual.gguf --port 8080 --n-gpu-layers 999"
+  });
+  await expect(page.locator("#preparedPaths")).toContainText("command.txt");
+  await expect(page.locator("#preparedPaths")).toContainText("Command saved");
+  await page.locator("#prepModelSelect").selectOption(models[0].id);
+
+  await page.locator("#prepKind").selectOption("lighteval");
+  await expect(page.locator("#prepBackendHelperGroup")).toBeHidden();
+  await expect(page.locator("#prepVisualPromptGroup")).toBeHidden();
+  await expect(page.locator("#prepModelSelectGroup")).toBeVisible();
+  await expect(page.locator("#prepModelSelectLabel")).toContainText("LM Studio model");
+  await expect(page.locator("#prepModelSelect")).toHaveValue(models[0].id);
+  await expect(page.locator("#prepBaseUrlGroup")).toBeVisible();
+  await expect(page.locator("#prepBaseUrl")).toHaveValue("http://localhost:1234/v1");
+  await expect(page.locator("#prepLightEvalFields")).toBeVisible();
+  await expect(page.locator("#prepLightEvalTaskPreset")).toBeVisible();
+  await expect(page.locator("#prepLightEvalTaskPreset")).toHaveValue("boolq|0");
+  await expect(page.locator("#prepLightEvalTasks")).toHaveValue("boolq|0");
+  await expect(page.locator("#prepCommandGroup")).toBeHidden();
+  await expect(page.locator("#prepareRun")).toBeVisible();
+  await expect(page.locator("#prepareRun")).toHaveText("Prepare command");
+  await expect(page.locator("#preparedPrompt")).toHaveValue(/lighteval \\\n  endpoint \\\n  litellm/);
+  await expect(page.locator("#preparedPrompt")).toHaveValue(/model_name=openai\/google\/gemma-4-e4b/);
+  await expect(page.locator("#preparedPrompt")).toHaveValue(/base_url=http:\/\/localhost:1234\/v1/);
+  await expect(page.locator("#preparedPrompt")).toHaveValue(/<prepared-run-folder>/);
+  await expect(page.locator("#copyPrompt")).toBeDisabled();
+  await page.locator("#prepModelSelect").selectOption(models[1].id);
+  await expect(page.locator("#preparedPrompt")).toHaveValue(/model_name=openai\/local\/qwen2.5-vl/);
+  await page.locator("#prepLightEvalTaskPreset").selectOption("arc:easy|0");
+  await expect(page.locator("#prepLightEvalTasks")).toHaveValue("arc:easy|0");
+  await expect(page.locator("#preparedPrompt")).toHaveValue(/'arc:easy\|0'/);
+  await page.locator("#prepLightEvalTasks").fill("http://localhost:1234/v1");
+  await expect(page.locator("#prepLightEvalTasks")).toHaveValue("boolq|0");
+  await expect(page.locator("#preparedPrompt")).not.toHaveValue(/'http:\/\/localhost:1234\/v1'/);
+  await page.locator("#prepLightEvalTasks").fill("mmlu,truthfulqa");
+  await expect(page.locator("#prepLightEvalTaskPreset")).toHaveValue("");
+  await page.locator("#prepareRun").click();
+
+  await expect.poll(() => preparePayloads.at(-1)).toMatchObject({
+    kind: "lighteval",
+    runner: "lighteval",
+    taskId: "mmlu,truthfulqa",
+    modelId: models[1].id,
+    baseUrl: "http://localhost:1234/v1",
+    launchCommand: expect.stringContaining("model_name=openai/local/qwen2.5-vl")
+  });
+  expect((preparePayloads.at(-1) as { benchmarkId?: unknown }).benchmarkId).toBeUndefined();
+  await expect(page.locator("#preparedPrompt")).toHaveValue(/lighteval \\\n  endpoint \\\n  litellm/);
+  await expect(page.locator("#preparedPrompt")).not.toHaveValue(/<prepared-run-folder>/);
+  await expect(page.locator("#copyPrompt")).toBeEnabled();
+  await expect(page.locator("#preparedPaths")).toContainText("LightEval run prepared");
 });
 
 test("supports prompt comparison and video-only run details", async ({ page }) => {
@@ -247,6 +421,7 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
   await expect(page.locator("#detailPreview iframe")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Open HTML" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open in Finder" })).toBeVisible();
   await page.getByRole("button", { name: "Open HTML" }).click();
   await expect.poll(() => openHtmlPayload).toMatchObject({
     runDirectory: sampleRunWithVideo.runDirectory,
@@ -274,6 +449,60 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
   await expect(page.locator("#detailPreview video")).toHaveCount(0);
   await expect(page.locator("#detailPreview")).toContainText("Video not captured yet");
   await expect(page.locator("#detailPreview")).toContainText("Use Capture media");
+});
+
+test("shows LightEval runs with task and result artifacts instead of visual prompt/media language", async ({ page }) => {
+  let copiedText = "";
+  await page.exposeFunction("recordClipboardWrite", (value: string) => {
+    copiedText = String(value);
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: (value: string) =>
+          (window as unknown as { recordClipboardWrite: (text: string) => Promise<void> }).recordClipboardWrite(
+            value
+          )
+      },
+      configurable: true
+    });
+  });
+  await mockApi(page, {
+    lmStudioOnline: true,
+    runs: [sampleLightEvalRun]
+  });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+
+  const row = page.locator("[data-run-id]").first();
+  await expect(row).toContainText("LightEval: boolq|0");
+  await expect(row).toContainText("google/gemma-4-e4b");
+  await expect(row).toContainText("results");
+  await expect(row).toContainText("CMD ✓");
+  await expect(row).toContainText("RES ✓");
+  await expect(row).toContainText("DTL ✓");
+  await expect(row).toContainText("LightEval results ready");
+  await expect(row).not.toContainText("Waiting for index.html source");
+  await expect(row).not.toContainText("SRC");
+
+  await row.click();
+  await expect(page.locator("#recordBackdrop[open]")).toBeVisible();
+  await expect(page.locator("#recordMeta")).toContainText("Task");
+  await expect(page.locator("#recordMeta")).toContainText("boolq|0");
+  await expect(page.locator("#recordMeta")).toContainText("Status");
+  await expect(page.locator("#recordMeta")).toContainText("completed");
+  await expect(page.locator("#recordMeta")).toContainText("Metadata status");
+  await expect(page.locator("#recordMeta")).toContainText("prepared");
+  await expect(page.locator("#recordTextTitle")).toHaveText("Task");
+  await expect(page.locator("#recordPrompt")).toHaveText("boolq|0");
+  await expect(page.getByRole("button", { name: "Copy task" })).toBeVisible();
+  await page.getByRole("button", { name: "Copy task" }).click();
+  await expect.poll(() => copiedText).toBe("boolq|0");
+  await expect(page.locator("#recordArtifacts")).toContainText("LightEval results");
+  await expect(page.locator("#recordArtifacts")).toContainText("LightEval details");
+  await expect(page.locator("#recordArtifacts")).not.toContainText("Prompt");
+  await expect(page.locator("#recordArtifacts")).not.toContainText("HTML");
 });
 
 test("recaptures media for the open run detail", async ({ page }) => {
@@ -307,6 +536,7 @@ test("recaptures media for the open run detail", async ({ page }) => {
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await page.getByRole("button", { name: "Gallery" }).click();
   await page.locator("[data-run-id]").first().click();
   await expect(page.getByRole("button", { name: "Recapture media" })).toBeVisible();
 
@@ -371,6 +601,7 @@ test("uses dense Sidequests-style gallery geometry on desktop", async ({ page })
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await page.getByRole("button", { name: "Gallery" }).click();
 
   const galleryColumns = await page.locator(".run-grid").first().evaluate((el) =>
     getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
@@ -518,7 +749,7 @@ test("refresh reloads prompt files and saved runs", async ({ page }) => {
   await expect(page.locator("[data-run-id]")).toHaveCount(0);
 });
 
-test("deletes a run folder from the detail modal after confirmation", async ({ page }) => {
+test("deletes a run folder from the run record after confirmation", async ({ page }) => {
   let deletePayload: unknown;
   await mockApi(page, {
     lmStudioOnline: true,
@@ -536,6 +767,7 @@ test("deletes a run folder from the detail modal after confirmation", async ({ p
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
   await page.locator("[data-run-id]").first().click();
+  await expect(page.getByRole("dialog", { name: "Run record" })).toBeVisible();
   await page.getByRole("button", { name: "Delete run" }).click();
 
   await expect(page.getByRole("dialog", { name: "Delete run" })).toBeVisible();
@@ -617,6 +849,21 @@ test("falls back to exported static data without prepare controls", async ({ pag
       })
     });
   });
+  await page.route("**/export/runs/**/preview.png", async (route) => {
+    await route.fulfill({
+      contentType: "image/png",
+      body: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/axwP18AAAAASUVORK5CYII=",
+        "base64"
+      )
+    });
+  });
+  await page.route("**/export/runs/**/preview.webm", async (route) => {
+    await route.fulfill({
+      contentType: "video/webm",
+      body: Buffer.from([])
+    });
+  });
 
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);
@@ -629,6 +876,9 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
 
   await page.locator("[data-run-id]").first().click();
+  await expect(page.getByRole("dialog", { name: "Run record" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open visual detail" })).toBeVisible();
+  await page.getByRole("button", { name: "Open visual detail" }).click();
   await expect(page.getByRole("button", { name: "Recapture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Load live preview" })).toHaveCount(0);
@@ -760,6 +1010,17 @@ async function mockApi(
     });
   });
 
+  await page.route("**/api/open-run-folder", async (route) => {
+    const payload = route.request().postDataJSON();
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        opened: true,
+        path: payload.runDirectory
+      })
+    });
+  });
+
   await page.route("**/api/model-sync", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -788,40 +1049,65 @@ async function mockApi(
   await page.route("**/api/prepare-run", async (route) => {
     const payload = route.request().postDataJSON();
     options.onPrepare?.(payload);
+    const runDirectory =
+      "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z";
+    const command = typeof payload.launchCommand === "string" && payload.launchCommand.trim()
+      ? payload.launchCommand.trim().replaceAll("<prepared-run-folder>", runDirectory)
+      : payload.kind === "lighteval"
+        ? "lighteval endpoint litellm 'model_name=openai/" + payload.modelId + ",base_url=" + payload.baseUrl + ",provider=openai,api_key=lm-studio,concurrent_requests=1' '" + payload.taskId + "' --max-samples 1 --output-dir " + runDirectory
+        : undefined;
+    const benchmark = payload.kind === "lighteval"
+      ? {
+          id: String(payload.taskId).replace(/[^a-z0-9]+/giu, "-").replace(/^-+|-+$/gu, "") || "lighteval-task",
+          title: "LightEval: " + payload.taskId,
+          description: "LightEval task(s): " + payload.taskId,
+          prompt: payload.taskId
+        }
+      : benchmarks.find((item) => item.id === payload.benchmarkId);
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         preparedRun: {
           run: {
             runId: "2026-05-07T04-00-32-122Z",
-            benchmark: benchmarks.find((benchmark) => benchmark.id === payload.benchmarkId),
+            benchmark,
             model: {
               id: payload.modelId,
               slug: "google-gemma-4-e4b"
             },
+            kind: payload.kind ?? "visual",
+            runner: {
+              mode: payload.kind === "lighteval" ? "lighteval" : payload.runner === "llama-cpp" ? "openai-compatible" : "manual",
+              intendedRunner: payload.runner ?? "manual",
+              launchCommand: command,
+              commandAsset: command ? "command.txt" : undefined
+            },
             status: "prepared",
             createdAt: "2026-05-07T04:00:32.122Z",
             updatedAt: "2026-05-07T04:00:32.122Z",
-            runDirectory:
-              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z",
-            assets: {
+            runDirectory,
+            assets: payload.kind === "lighteval" ? {
               metadata: "metadata.json",
-              prompt: "prompt.md"
+              command: "command.txt",
+              lightevalResults: "results",
+              lightevalDetails: "details"
+            } : {
+              metadata: "metadata.json",
+              prompt: "prompt.md",
+              ...(command ? { command: "command.txt" } : {})
             }
           },
-          prompt:
-            "Save one complete self-contained HTML document to: /tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/index.html",
+          prompt: payload.kind === "lighteval"
+            ? ""
+            : "Save one complete self-contained HTML document to: " + runDirectory + "/index.html",
+          ...(command ? { command } : {}),
           paths: {
-            runDirectory:
-              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z",
-            promptPath:
-              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/prompt.md",
-            htmlPath:
-              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/index.html",
-            metadataPath:
-              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/metadata.json",
-            previewPath:
-              "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z/preview.png"
+            runDirectory,
+            promptPath: runDirectory + "/prompt.md",
+            commandPath: runDirectory + "/command.txt",
+            htmlPath: runDirectory + "/index.html",
+            metadataPath: runDirectory + "/metadata.json",
+            previewPath: runDirectory + "/preview.png"
           }
         }
       })

@@ -75,6 +75,18 @@ http://localhost:1234/v1
 
 You can use any runner that can create the requested `index.html` file. Pi and OpenCode work well because the app can sync discovered LM Studio models into their config files.
 
+### Optional LightEval setup
+
+LightEval runs use a separate Python environment so the web app does not pull evaluation tooling into the Node install.
+
+```bash
+uv venv .venv-lighteval --python 3.12
+source .venv-lighteval/bin/activate
+uv pip install -r requirements-lighteval.txt
+```
+
+Then choose `LightEval` in **Prepare run**. The app will create the run folder and generate a command that writes LightEval outputs back into that folder.
+
 ## Publishing your own gallery
 
 After you capture some runs locally:

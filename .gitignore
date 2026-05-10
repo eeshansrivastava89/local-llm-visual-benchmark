@@ -8,6 +8,7 @@ public/export/
 runs/
 test-results/
 playwright-report/
+.litellm_cache/
 internal-docs/
 
 # Local recording scratch

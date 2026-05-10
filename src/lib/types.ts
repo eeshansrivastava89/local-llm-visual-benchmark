@@ -5,6 +5,14 @@ export type RunStatus =
   | "cancelled"
   | "skipped";
 
+export type RunKind = "visual" | "lighteval" | "other";
+
+export type RunnerMode =
+  | "manual"
+  | "openai-compatible"
+  | "lighteval"
+  | "external";
+
 export const RUN_STATUSES: readonly RunStatus[] = [
   "prepared",
   "completed",
@@ -26,6 +34,7 @@ export interface LMStudioModel {
   object?: string;
   created?: number;
   owned_by?: string;
+  localPath?: string;
 }
 
 export interface RunModelRecord {
@@ -53,10 +62,16 @@ export interface RunAssets {
   metadata: string;
   prompt?: string;
   rawResponse?: string;
+  request?: string;
+  stream?: string;
+  response?: string;
+  command?: string;
   html?: string;
   preview?: string;
   video?: string;
   videoMp4?: string;
+  lightevalResults?: string;
+  lightevalDetails?: string;
 }
 
 export interface RunError {
@@ -87,7 +102,35 @@ export interface RunCaptureMetadata {
   video?: RunCaptureAsset;
 }
 
+export interface RunTokenMetrics {
+  reported: boolean;
+  estimated?: boolean;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+export interface RunRunnerMetadata {
+  mode: RunnerMode;
+  intendedRunner?: string;
+  actualRunner?: string;
+  backendLabel?: string;
+  baseUrl?: string;
+  model?: string;
+  launchCommand?: string;
+  requestAsset?: string;
+  streamAsset?: string;
+  responseAsset?: string;
+  commandAsset?: string;
+  metricSource?: string;
+  retries?: number;
+  fallbacksUsed?: string[];
+  tokenMetrics?: RunTokenMetrics;
+}
+
 export interface RunMetadata {
+  schemaVersion?: number;
+  kind?: RunKind;
   runId: string;
   benchmark: BenchmarkRecord;
   model: RunModelRecord;
@@ -106,14 +149,18 @@ export interface RunMetadata {
   skippedAt?: string;
   error?: RunError;
   capture?: RunCaptureMetadata;
+  runner?: RunRunnerMetadata;
+  notes?: string;
 }
 
 export interface PreparedRun {
   run: RunMetadata;
   prompt: string;
+  command?: string;
   paths: {
     runDirectory: string;
     promptPath: string;
+    commandPath: string;
     htmlPath: string;
     metadataPath: string;
     previewPath: string;

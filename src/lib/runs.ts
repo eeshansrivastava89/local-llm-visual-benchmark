@@ -1,5 +1,5 @@
-import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { join, resolve, sep } from "node:path";
+import { mkdir, readdir, readFile, rm, rmdir, stat, writeFile } from "node:fs/promises";
+import { dirname, join, resolve, sep } from "node:path";
 import type { RunPaths } from "./paths";
 import type { RunError, RunMetadata } from "./types";
 
@@ -52,32 +52,16 @@ export async function deleteRunDirectory(input: DeleteRunDirectoryInput): Promis
   }
 
   await rm(runDirectory, { recursive: true, force: false });
+  await pruneEmptyParents(dirname(runDirectory), runsRoot);
 }
 
 export async function listRunMetadata(
   runsRoot = join(process.cwd(), "runs")
 ): Promise<RunMetadata[]> {
-  const runMetadata: RunMetadata[] = [];
-  const benchmarkDirectories = await readDirectoriesIfPresent(runsRoot);
-
-  for (const benchmarkDirectory of benchmarkDirectories) {
-    const benchmarkPath = join(runsRoot, benchmarkDirectory);
-    const modelDirectories = await readDirectoriesIfPresent(benchmarkPath);
-
-    for (const modelDirectory of modelDirectories) {
-      const modelPath = join(benchmarkPath, modelDirectory);
-      const runDirectories = await readDirectoriesIfPresent(modelPath);
-
-      for (const runDirectory of runDirectories) {
-        const metadataPath = join(modelPath, runDirectory, "metadata.json");
-        const metadata = await readMetadataIfPresent(metadataPath);
-
-        if (metadata) {
-          runMetadata.push(metadata);
-        }
-      }
-    }
-  }
+  const metadataPaths = await findMetadataFiles(runsRoot);
+  const runMetadata = (
+    await Promise.all(metadataPaths.map((path) => readMetadataIfPresent(path)))
+  ).filter((metadata): metadata is RunMetadata => Boolean(metadata));
 
   return runMetadata.sort((left, right) =>
     sortTimestamp(right).localeCompare(sortTimestamp(left))
@@ -145,13 +129,41 @@ async function writePrettyJson(path: string, value: unknown): Promise<void> {
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-async function readDirectoriesIfPresent(path: string): Promise<string[]> {
+async function findMetadataFiles(root: string): Promise<string[]> {
+  const result: string[] = [];
+  await collectMetadataFiles(root, result, 0);
+  return result.sort((left, right) => left.localeCompare(right));
+}
+
+async function collectMetadataFiles(
+  directory: string,
+  result: string[],
+  depth: number
+): Promise<void> {
+  const entries = await readDirentsIfPresent(directory);
+  const hasMetadata = entries.some(
+    (entry) => entry.isFile() && entry.name === "metadata.json"
+  );
+
+  if (hasMetadata) {
+    result.push(join(directory, "metadata.json"));
+    return;
+  }
+
+  if (depth >= 5) {
+    return;
+  }
+
+  for (const entry of entries) {
+    if (entry.isDirectory() && !entry.name.startsWith(".")) {
+      await collectMetadataFiles(join(directory, entry.name), result, depth + 1);
+    }
+  }
+}
+
+async function readDirentsIfPresent(path: string) {
   try {
-    const entries = await readdir(path, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .sort((left, right) => left.localeCompare(right));
+    return await readdir(path, { withFileTypes: true });
   } catch (error) {
     if (isMissingPathError(error)) {
       return [];
@@ -179,10 +191,16 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
   const checks = await Promise.all([
     assetExists(metadata, declared.prompt),
     assetExists(metadata, declared.rawResponse),
+    assetExists(metadata, declared.request),
+    assetExists(metadata, declared.stream),
+    assetExists(metadata, declared.response),
+    assetExists(metadata, declared.command),
     assetExists(metadata, declared.html),
     assetExists(metadata, declared.preview),
     assetExists(metadata, declared.video),
-    assetExists(metadata, declared.videoMp4)
+    assetExists(metadata, declared.videoMp4),
+    assetExists(metadata, declared.lightevalResults),
+    assetExists(metadata, declared.lightevalDetails)
   ]);
 
   const assets: RunMetadata["assets"] = {
@@ -191,10 +209,16 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
 
   if (checks[0]) assets.prompt = declared.prompt;
   if (checks[1]) assets.rawResponse = declared.rawResponse;
-  if (checks[2]) assets.html = declared.html;
-  if (checks[3]) assets.preview = declared.preview;
-  if (checks[4]) assets.video = declared.video;
-  if (checks[5]) assets.videoMp4 = declared.videoMp4;
+  if (checks[2]) assets.request = declared.request;
+  if (checks[3]) assets.stream = declared.stream;
+  if (checks[4]) assets.response = declared.response;
+  if (checks[5]) assets.command = declared.command;
+  if (checks[6]) assets.html = declared.html;
+  if (checks[7]) assets.preview = declared.preview;
+  if (checks[8]) assets.video = declared.video;
+  if (checks[9]) assets.videoMp4 = declared.videoMp4;
+  if (checks[10]) assets.lightevalResults = declared.lightevalResults;
+  if (checks[11]) assets.lightevalDetails = declared.lightevalDetails;
 
   const promptText = assets.prompt
     ? await readAssetTextIfPresent(metadata, assets.prompt)
@@ -202,6 +226,7 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
 
   return {
     ...metadata,
+    kind: metadata.kind ?? "visual",
     assets,
     ...(promptText !== undefined ? { promptText } : {})
   };
@@ -229,7 +254,7 @@ async function assetExists(metadata: RunMetadata, asset?: string): Promise<boole
 
   try {
     const result = await stat(join(metadata.runDirectory, asset));
-    return result.isFile();
+    return result.isFile() || result.isDirectory();
   } catch (error) {
     if (isMissingPathError(error)) {
       return false;
@@ -253,5 +278,32 @@ function isMissingPathError(error: unknown): boolean {
     error !== null &&
     "code" in error &&
     error.code === "ENOENT"
+  );
+}
+
+async function pruneEmptyParents(directory: string, stopAt: string): Promise<void> {
+  let current = resolve(directory);
+
+  while (current !== stopAt && isPathInside(current, stopAt)) {
+    try {
+      await rmdir(current);
+    } catch (error) {
+      if (isNonEmptyDirectoryError(error) || isMissingPathError(error)) {
+        return;
+      }
+
+      throw error;
+    }
+
+    current = dirname(current);
+  }
+}
+
+function isNonEmptyDirectoryError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "ENOTEMPTY" || error.code === "EEXIST")
   );
 }

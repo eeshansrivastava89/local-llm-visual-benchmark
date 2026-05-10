@@ -24,6 +24,10 @@ export interface RunPaths {
   metadataPath: string;
   promptPath: string;
   rawResponsePath: string;
+  requestPath: string;
+  streamPath: string;
+  responsePath: string;
+  commandPath: string;
   htmlPath: string;
   previewPath: string;
   videoPath: string;
@@ -84,6 +88,10 @@ export function buildRunPaths(input: BuildRunPathsInput): RunPaths {
     metadataPath: join(runDirectory, "metadata.json"),
     promptPath: join(runDirectory, "prompt.md"),
     rawResponsePath: join(runDirectory, "response.raw.txt"),
+    requestPath: join(runDirectory, "request.json"),
+    streamPath: join(runDirectory, "stream.ndjson"),
+    responsePath: join(runDirectory, "response.txt"),
+    commandPath: join(runDirectory, "command.txt"),
     htmlPath: join(runDirectory, "index.html"),
     previewPath: join(runDirectory, "preview.png"),
     videoPath: join(runDirectory, "preview.webm")

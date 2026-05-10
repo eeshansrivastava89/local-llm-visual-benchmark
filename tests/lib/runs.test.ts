@@ -173,6 +173,67 @@ describe("run metadata helpers", () => {
     expect(run.promptText).toBe("filesystem prompt text");
   });
 
+  it("discovers future kind-based run folders and hydrates runner artifacts", async () => {
+    const runsRoot = await createRunsRoot();
+    const runDirectory = join(
+      runsRoot,
+      "visual",
+      "sakura",
+      "model-a",
+      "2026-05-06T01-02-03-004Z"
+    );
+    const metadata: RunMetadata = {
+      ...createMetadata(runDirectory),
+      schemaVersion: 2,
+      kind: "visual",
+      runner: {
+        mode: "openai-compatible",
+        backendLabel: "llama.cpp",
+        baseUrl: "http://127.0.0.1:8080/v1",
+        launchCommand: "llama-server -m model.gguf --port 8080",
+        requestAsset: "request.json",
+        responseAsset: "response.txt",
+        commandAsset: "command.txt",
+        tokenMetrics: {
+          reported: false
+        }
+      },
+      assets: {
+        metadata: "metadata.json",
+        prompt: "prompt.md",
+        request: "request.json",
+        response: "response.txt",
+        command: "command.txt",
+        html: "index.html"
+      }
+    };
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(metadata), "utf8");
+    await writeFile(join(runDirectory, "prompt.md"), "prompt", "utf8");
+    await writeFile(join(runDirectory, "request.json"), "{}", "utf8");
+    await writeFile(join(runDirectory, "response.txt"), "response", "utf8");
+    await writeFile(join(runDirectory, "command.txt"), "llama-server", "utf8");
+    await writeFile(join(runDirectory, "index.html"), "<!doctype html>", "utf8");
+
+    const [run] = await listRunMetadata(runsRoot);
+
+    expect(run).toMatchObject({
+      schemaVersion: 2,
+      kind: "visual",
+      runner: {
+        mode: "openai-compatible",
+        backendLabel: "llama.cpp"
+      },
+      assets: {
+        request: "request.json",
+        response: "response.txt",
+        command: "command.txt",
+        html: "index.html"
+      },
+      promptText: "prompt"
+    });
+  });
+
   it("deletes a run directory inside the configured runs root", async () => {
     const runsRoot = await createRunsRoot();
     const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
@@ -182,6 +243,24 @@ describe("run metadata helpers", () => {
     await deleteRunDirectory({ runsRoot, runDirectory });
 
     await expect(stat(runDirectory)).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(join(runsRoot, "sakura"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(runsRoot)).resolves.toBeTruthy();
+  });
+
+  it("keeps non-empty parent folders when deleting one run", async () => {
+    const runsRoot = await createRunsRoot();
+    const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
+    const siblingDirectory = join(runsRoot, "sakura", "model-a", "run-2");
+    await mkdir(runDirectory, { recursive: true });
+    await mkdir(siblingDirectory, { recursive: true });
+    await writeFile(join(runDirectory, "metadata.json"), "{}", "utf8");
+    await writeFile(join(siblingDirectory, "metadata.json"), "{}", "utf8");
+
+    await deleteRunDirectory({ runsRoot, runDirectory });
+
+    await expect(stat(runDirectory)).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(siblingDirectory)).resolves.toBeTruthy();
+    await expect(stat(join(runsRoot, "sakura", "model-a"))).resolves.toBeTruthy();
   });
 
   it("rejects deleting outside the configured runs root", async () => {

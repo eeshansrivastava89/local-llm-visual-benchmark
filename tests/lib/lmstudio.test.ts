@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import {
   checkLmStudioConnection,
+  discoverLocalGgufModels,
   listLmStudioModels,
   normalizeLmStudioBaseUrl
 } from "../../src/lib/lmstudio";
@@ -83,10 +87,58 @@ describe("listLmStudioModels", () => {
       })
     );
 
-    await expect(listLmStudioModels("http://localhost:1234")).resolves.toEqual([
+    await expect(listLmStudioModels("http://localhost:1234", { localModelRoot: false })).resolves.toEqual([
       { id: "lmstudio-community/Qwen2.5 Coder:7B Instruct" },
       { id: "second-model" }
     ]);
+  });
+
+  it("adds a local GGUF path only when there is one clear model match", async () => {
+    const root = await mkdtemp(join(tmpdir(), "lmstudio-models-"));
+    const modelDir = join(root, "lmstudio-community", "gemma-4-E4B-it-GGUF");
+    await mkdir(modelDir, { recursive: true });
+    await writeFile(join(modelDir, "gemma-4-E4B-it-Q8_0.gguf"), "");
+    await writeFile(join(modelDir, "mmproj-gemma-4-E4B-it.gguf"), "");
+    mockFetch(() =>
+      jsonResponse({
+        data: [{ id: "google/gemma-4-e4b" }]
+      })
+    );
+
+    try {
+      await expect(listLmStudioModels(undefined, { localModelRoot: root })).resolves.toEqual([
+        {
+          id: "google/gemma-4-e4b",
+          localPath: join(modelDir, "gemma-4-E4B-it-Q8_0.gguf")
+        }
+      ]);
+      await expect(discoverLocalGgufModels(root)).resolves.toEqual([
+        join(modelDir, "gemma-4-E4B-it-Q8_0.gguf")
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not attach a local path when matching is ambiguous", async () => {
+    const root = await mkdtemp(join(tmpdir(), "lmstudio-models-"));
+    await mkdir(join(root, "a"), { recursive: true });
+    await mkdir(join(root, "b"), { recursive: true });
+    await writeFile(join(root, "a", "qwen2-5-vl-q8.gguf"), "");
+    await writeFile(join(root, "b", "qwen2-5-vl-q4.gguf"), "");
+    mockFetch(() =>
+      jsonResponse({
+        data: [{ id: "local/qwen2.5-vl" }]
+      })
+    );
+
+    try {
+      await expect(listLmStudioModels(undefined, { localModelRoot: root })).resolves.toEqual([
+        { id: "local/qwen2.5-vl" }
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("rejects malformed model responses clearly", async () => {

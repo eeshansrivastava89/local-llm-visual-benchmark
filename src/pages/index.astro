@@ -61,7 +61,8 @@ const basePath = import.meta.env.BASE_URL;
         <div class="grid gap-4">
           <div class="flex flex-wrap items-center gap-2">
             <div class="inline-flex rounded-lg border bg-muted p-0.5">
-              <button type="button" class="btn-sm-ghost" data-mode="model" aria-pressed="true">By model</button>
+              <button type="button" class="btn-sm-ghost" data-mode="runs" aria-pressed="true">Runs</button>
+              <button type="button" class="btn-sm-ghost" data-mode="model" aria-pressed="false">By model</button>
               <button type="button" class="btn-sm-ghost" data-mode="benchmark" aria-pressed="false">By prompt</button>
               <button type="button" class="btn-sm-ghost" data-mode="gallery" aria-pressed="false">Gallery</button>
             </div>
@@ -79,6 +80,25 @@ const basePath = import.meta.env.BASE_URL;
             <button type="button" class="btn-sm-outline operational-control" id="refreshRuns">Refresh</button>
           </div>
 
+          <div class="runs-filter-panel" id="runsFilterPanel">
+            <input id="runsSearch" class="input text-sm" type="search" aria-label="Search runs" placeholder="Search runs, models, prompts, paths" />
+            <div class="dropdown-wrap">
+              <select id="runKindFilter" class="input text-sm" aria-label="Filter by run type">
+                <option value="all">All types</option>
+              </select>
+            </div>
+            <div class="dropdown-wrap">
+              <select id="runStatusFilter" class="input text-sm" aria-label="Filter by run status">
+                <option value="all">All statuses</option>
+              </select>
+            </div>
+            <div class="dropdown-wrap">
+              <select id="runnerFilter" class="input text-sm" aria-label="Filter by runner">
+                <option value="all">All runners</option>
+              </select>
+            </div>
+          </div>
+
           <div class="gallery-summary">
             <div class="min-w-0">
               <div class="flex items-center gap-2">
@@ -93,6 +113,8 @@ const basePath = import.meta.env.BASE_URL;
           <div id="runsSurface"></div>
         </div>
       </main>
+
+      <div id="helpTooltip" class="help-tooltip-layer" role="tooltip" hidden></div>
 
       <footer class="footer" role="contentinfo">
         <span>&copy; 2025&ndash;2026 Eeshan Srivastava</span>
@@ -112,7 +134,64 @@ const basePath = import.meta.env.BASE_URL;
       </footer>
     </div>
 
-    <!-- Detail Modal -->
+    <!-- Run Record Modal -->
+    <div class="detail-backdrop" id="recordBackdrop">
+      <article class="record-shell" role="dialog" aria-modal="true" aria-label="Run record">
+        <header class="detail-header">
+          <div class="min-w-0">
+            <h2 id="recordTitle" class="truncate-line text-lg font-semibold">Run record</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm" id="recordSubtitle"></p>
+          </div>
+          <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <button type="button" class="btn-sm-outline" id="openRecordVisual">Open visual detail</button>
+            <button type="button" class="btn-sm-outline operational-control" id="openRecordFolder" data-operational-available="false">Open in Finder</button>
+            <button type="button" class="btn-sm-danger operational-control" id="deleteRecordRun" data-operational-available="false">Delete run</button>
+            <button type="button" class="btn-sm-outline" id="closeRecord">Close</button>
+          </div>
+        </header>
+        <div class="record-body p-5">
+          <section class="record-section">
+            <div class="section-row">
+              <h3>Metadata</h3>
+            </div>
+            <div class="meta-grid record-meta-grid" id="recordMeta"></div>
+          </section>
+          <section class="record-section" id="recordRunnerSection">
+            <div class="section-row">
+              <h3>Runner</h3>
+            </div>
+            <div class="meta-grid record-meta-grid" id="recordRunnerMeta"></div>
+          </section>
+          <section class="record-section">
+            <div class="section-row">
+              <h3 id="recordTextTitle">Prompt</h3>
+              <div class="section-actions">
+                <span class="badge-outline" id="recordPromptLength">0 chars</span>
+                <button type="button" class="btn-sm-outline" id="copyRecordPrompt">Copy prompt</button>
+              </div>
+            </div>
+            <pre class="code-block record-prompt-block" id="recordPrompt"></pre>
+          </section>
+          <section class="record-section">
+            <div class="section-row">
+              <h3>Artifacts</h3>
+            </div>
+            <div class="artifact-list record-artifacts" id="recordArtifacts"></div>
+          </section>
+          <section class="record-section run-folder-section">
+            <div class="section-row">
+              <h3>Run folder</h3>
+              <button type="button" class="btn-sm-outline" id="copyRecordRunFolder">Copy path</button>
+            </div>
+            <div class="run-folder-path-wrap">
+              <code class="run-folder-path" id="recordRunFolderPath">-</code>
+            </div>
+          </section>
+        </div>
+      </article>
+    </div>
+
+    <!-- Visual Detail Modal -->
     <div class="detail-backdrop" id="detailBackdrop">
       <article class="detail-shell" role="dialog" aria-modal="true" aria-label="Run detail">
         <header class="detail-header">
@@ -122,6 +201,7 @@ const basePath = import.meta.env.BASE_URL;
           </div>
           <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <button type="button" class="btn-sm-outline operational-control" id="openHtml" data-operational-available="false">Open HTML</button>
+            <button type="button" class="btn-sm-outline operational-control" id="openRunFolder" data-operational-available="false">Open in Finder</button>
             <button type="button" class="btn-sm-outline operational-control" id="recaptureRun" data-operational-available="false">Recapture media</button>
             <button type="button" class="btn-sm-danger operational-control" id="deleteRun" data-operational-available="false">Delete run</button>
             <button type="button" class="btn-sm-outline" id="closeDetail">Close</button>
@@ -137,7 +217,7 @@ const basePath = import.meta.env.BASE_URL;
             </div>
             <section class="inspector-section">
               <div class="section-row">
-                <h3>Prompt</h3>
+                <h3 id="detailTextTitle">Prompt</h3>
                 <div class="section-actions">
                   <span class="badge-outline" id="promptLength">0 chars</span>
                   <button type="button" class="btn-sm-outline" id="copyDetailPrompt">Copy prompt</button>
@@ -153,6 +233,18 @@ const basePath = import.meta.env.BASE_URL;
               <div class="run-folder-path-wrap">
                 <code class="run-folder-path" id="detailRunFolderPath">-</code>
               </div>
+            </section>
+            <section class="inspector-section compact-section">
+              <div class="section-row">
+                <h3>Artifacts</h3>
+              </div>
+              <div class="artifact-list" id="detailArtifacts"></div>
+            </section>
+            <section class="inspector-section compact-section" id="detailRunnerSection">
+              <div class="section-row">
+                <h3>Runner</h3>
+              </div>
+              <div class="meta-grid" id="detailRunnerMeta"></div>
             </section>
           </aside>
         </div>
@@ -192,39 +284,112 @@ const basePath = import.meta.env.BASE_URL;
         <header class="detail-header">
           <div class="min-w-0">
             <h2 class="truncate-line text-lg font-semibold">Prepare run slot</h2>
-            <p class="muted-copy truncate-line mt-1 text-sm">Choose a prompt and model to generate a run folder.</p>
+            <p class="muted-copy truncate-line mt-1 text-sm" id="prepSubtitle">Choose a prompt and model to generate a run folder.</p>
           </div>
-          <button type="button" class="btn-sm-outline" id="closePrep">Close</button>
+          <div class="prep-header-actions">
+            <button class="btn" type="button" id="prepareRun">Prepare slot</button>
+            <button type="button" class="btn-sm-outline" id="closePrep">Close</button>
+          </div>
         </header>
         <div class="prep-body p-5">
           <div class="prep-layout" id="prepLayout">
             <section class="prep-form-panel" aria-label="Run slot inputs">
               <div class="grid gap-2">
-                <label for="prepBenchmark">Prompt</label>
+                <div class="field-label-row">
+                  <label for="prepKind">Run type</label>
+                  <button type="button" class="help-pill" data-tooltip="Choose the workflow. Visual benchmark prepares a prompt and output folder. LightEval prepares a quantitative eval command and records the run folder.">?</button>
+                </div>
+                <select id="prepKind" class="input">
+                  <option value="visual">Visual benchmark</option>
+                  <option value="lighteval">LightEval</option>
+                </select>
+              </div>
+              <div class="grid gap-2" id="prepBackendHelperGroup">
+                <div class="field-label-row">
+                  <label for="prepRunner">Backend helper</label>
+                  <button type="button" class="help-pill" data-tooltip="Optional starter command for the model server. The app records the command but does not start or stop the server.">?</button>
+                </div>
+                <select id="prepRunner" class="input">
+                  <option value="manual">None</option>
+                  <option value="llama-cpp">llama.cpp server command</option>
+                </select>
+              </div>
+              <div class="grid gap-2" id="prepBaseUrlGroup">
+                <div class="field-label-row">
+                  <label for="prepBaseUrl" id="prepBaseUrlLabel">Base URL</label>
+                  <button type="button" class="help-pill" data-tooltip="OpenAI-compatible endpoint URL. For LM Studio this is usually http://localhost:1234/v1. For llama.cpp this is usually http://127.0.0.1:8080/v1.">?</button>
+                </div>
+                <input id="prepBaseUrl" class="input" value="http://127.0.0.1:8080/v1" />
+              </div>
+              <div class="grid gap-2" id="prepVisualPromptGroup">
+                <div class="field-label-row">
+                  <label for="prepBenchmark">Prompt</label>
+                  <button type="button" class="help-pill" data-tooltip="Visual benchmark prompt. The app writes the exact output path into the generated prompt so external tools save in the right run folder.">?</button>
+                </div>
                 <select id="prepBenchmark" class="input"></select>
               </div>
-              <div class="grid gap-2">
-                <label for="prepModelSelect">Discovered model</label>
+              <div class="grid gap-2" id="prepModelSelectGroup">
+                <div class="field-label-row">
+                  <label for="prepModelSelect" id="prepModelSelectLabel">Discovered model</label>
+                  <button type="button" class="help-pill" data-tooltip="Model discovered from LM Studio. For LightEval, changing this updates the generated LiteLLM endpoint command.">?</button>
+                </div>
                 <select id="prepModelSelect" class="input"></select>
               </div>
-              <button class="btn w-full" type="button" id="prepareRun">Prepare slot</button>
-              <p class="muted-copy text-sm leading-5" id="prepMessage">The app will create the folder, metadata.json, and prompt.md.</p>
+              <div class="grid gap-3" id="prepLightEvalFields" hidden>
+                <div class="grid gap-2">
+                  <div class="field-label-row">
+                    <label for="prepLightEvalTaskPreset">Task preset</label>
+                    <button type="button" class="help-pill" data-tooltip="Start with a known LightEval task. Pick Custom if you want to paste a task from the LightEval docs or from lighteval tasks inspect.">?</button>
+                  </div>
+                  <select id="prepLightEvalTaskPreset" class="input"></select>
+                </div>
+                <div class="grid gap-2">
+                  <div class="field-label-row">
+                    <label for="prepLightEvalTasks">LightEval task string</label>
+                    <button type="button" class="help-pill" data-tooltip="Task id plus few-shot count, for example boolq|0. Multiple tasks can be comma-separated. Use --max-samples 1 for a small dry run.">?</button>
+                    <a class="help-link-pill" href="https://huggingface.co/docs/lighteval/available-tasks" target="_blank" rel="noreferrer">Task reference</a>
+                  </div>
+                  <input id="prepLightEvalTasks" class="input" placeholder="boolq|0" />
+                </div>
+              </div>
             </section>
 
             <section id="prepResult" class="next-step-panel prep-prompt-panel" aria-label="Generated prompt">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <h3 class="text-sm font-medium">Generated prompt</h3>
-                  <p class="muted-copy mt-0.5 text-xs">Copy this into your external tool after preparing the slot.</p>
+                  <h3 class="text-sm font-medium" id="prepResultTitle">Generated prompt</h3>
+                  <p class="muted-copy mt-0.5 text-xs" id="prepResultHint">Copy this into your external tool after preparing the slot.</p>
                 </div>
-                <button type="button" class="btn-sm-outline" id="copyPrompt" disabled>Copy</button>
               </div>
-              <textarea
-                id="preparedPrompt"
-                class="input font-mono text-[0.82rem] leading-5"
-                placeholder="Prepare a run slot to generate the exact prompt and output path."
-                readonly
-              ></textarea>
+              <div class="prep-artifact" id="prepCommandGroup" hidden>
+                <div class="prep-artifact-head">
+                  <div>
+                    <div class="field-label-row">
+                      <label for="prepCommand">llama.cpp server command</label>
+                      <button type="button" class="help-pill" data-tooltip="Editable command to start llama.cpp outside the app. The app saves this exact command in metadata and command.txt when you prepare the run.">?</button>
+                    </div>
+                    <p class="muted-copy mt-0.5 text-xs">Run this in your terminal before using the generated visual prompt.</p>
+                  </div>
+                  <button type="button" class="btn-sm-outline" id="copyPrepCommand">Copy command</button>
+                </div>
+                <textarea id="prepCommand" class="input prep-command-input" rows="9" wrap="off"></textarea>
+              </div>
+              <div class="prep-artifact prep-output-artifact" id="prepOutputGroup">
+                <div class="prep-artifact-head">
+                  <div>
+                    <div class="field-label-row">
+                      <label for="preparedPrompt" id="prepOutputLabel">Visual prompt</label>
+                      <button type="button" class="help-pill" data-tooltip="Generated artifact for this run. For visual benchmarks, copy the prompt after preparing the slot. For LightEval, copy the command after preparing the run folder.">?</button>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-sm-outline" id="copyPrompt" disabled>Copy prompt</button>
+                </div>
+                <textarea
+                  id="preparedPrompt"
+                  class="input font-mono text-[0.82rem] leading-5"
+                  placeholder="Prepare a run slot to generate the exact prompt and output path."
+                ></textarea>
+              </div>
               <p class="muted-copy text-sm" id="preparedPaths">No run slot prepared yet.</p>
             </section>
           </div>

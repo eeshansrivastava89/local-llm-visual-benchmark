@@ -1,10 +1,14 @@
 import type { LMStudioModel } from "./types";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 const DEFAULT_BASE_URL = "http://localhost:1234/v1";
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 export interface LMStudioRequestOptions {
   baseUrl?: string;
+  localModelRoot?: string | false;
   signal?: AbortSignal;
   timeoutMs?: number;
 }
@@ -81,6 +85,10 @@ export async function listLmStudioModels(
     throw new Error("Malformed LM Studio /models response: expected data array.");
   }
 
+  const localModels = options.localModelRoot === false
+    ? []
+    : await discoverLocalGgufModels(options.localModelRoot);
+
   return body.data.map((model, index) => {
     if (!isRecord(model) || typeof model.id !== "string") {
       throw new Error(
@@ -88,10 +96,74 @@ export async function listLmStudioModels(
       );
     }
 
+    const localPath = matchLocalGgufPath(model.id, localModels);
+
     return {
-      id: model.id
+      id: model.id,
+      ...(localPath ? { localPath } : {})
     };
   });
+}
+
+export async function discoverLocalGgufModels(
+  root = join(homedir(), ".lmstudio", "models")
+): Promise<string[]> {
+  const matches: string[] = [];
+
+  async function visit(directory: string, depth: number): Promise<void> {
+    if (depth > 5) return;
+
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    await Promise.all(entries.map(async (entry) => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await visit(path, depth + 1);
+        return;
+      }
+      if (entry.isFile() && entry.name.toLowerCase().endsWith(".gguf") && !entry.name.toLowerCase().startsWith("mmproj")) {
+        matches.push(path);
+      }
+    }));
+  }
+
+  await visit(root, 0);
+  return matches.sort((a, b) => a.localeCompare(b));
+}
+
+function matchLocalGgufPath(modelId: string, paths: string[]): string | undefined {
+  const tokens = modelTokens(modelId);
+  if (tokens.length === 0) return undefined;
+
+  const ranked: Array<{ path: string; score: number }> = [];
+  for (const path of paths) {
+    const haystack = normalizeForModelMatch(path);
+    const score = tokens.filter((token) => haystack.includes(token)).length;
+    ranked.push({ path, score });
+  }
+
+  const requiredScore = Math.max(2, Math.ceil(tokens.length * 0.75));
+  ranked.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
+  const [best, second] = ranked;
+  if (!best || best.score < requiredScore) return undefined;
+  if (second && second.score === best.score) return undefined;
+  return best.path;
+}
+
+function modelTokens(modelId: string): string[] {
+  const vendorNoise = new Set(["google", "zai", "org", "lmstudio", "community", "local", "unsloth"]);
+  return normalizeForModelMatch(modelId)
+    .split(" ")
+    .filter((token) => token.length > 1 && !vendorNoise.has(token));
+}
+
+function normalizeForModelMatch(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/gu, " ").trim();
 }
 
 async function fetchJson(

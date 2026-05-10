@@ -27,7 +27,8 @@ import {
   listRunMetadata as defaultListRunMetadata
 } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
-import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../lib/types";
+import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunKind, RunMetadata } from "../lib/types";
+import type { PrepareRunRunner } from "../lib/prompt-prep";
 
 const STATUS_TIMEOUT_MS = 2000;
 const MODEL_LIST_TIMEOUT_MS = 10000;
@@ -43,7 +44,12 @@ export interface ModelsRequest {
 
 export interface PrepareRunRequest {
   benchmarkId?: string;
+  taskId?: string;
   modelId?: string;
+  kind?: string;
+  runner?: string;
+  baseUrl?: string;
+  launchCommand?: string;
 }
 
 export interface MirrorModelsRequest {
@@ -64,6 +70,10 @@ export interface CaptureMediaRequest {
 export interface OpenRunHtmlRequest {
   runDirectory?: string;
   asset?: string;
+}
+
+export interface OpenRunFolderRequest {
+  runDirectory?: string;
 }
 
 export interface LocalApiDependencies {
@@ -99,6 +109,7 @@ export interface LocalApi {
   mirrorModels(request: MirrorModelsRequest): Promise<MirrorModelsResponse>;
   captureMissingMedia(request?: CaptureMediaRequest): Promise<CaptureMissingRunMediaResult>;
   openRunHtml(request: OpenRunHtmlRequest): Promise<OpenRunHtmlResponse>;
+  openRunFolder(request: OpenRunFolderRequest): Promise<OpenRunFolderResponse>;
 }
 
 export interface StatusResponse {
@@ -149,6 +160,11 @@ export interface MirrorModelsResponse {
 }
 
 export interface OpenRunHtmlResponse {
+  opened: true;
+  path: string;
+}
+
+export interface OpenRunFolderResponse {
   opened: true;
   path: string;
 }
@@ -250,17 +266,24 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
 
     async prepareRun(request) {
       assertWritesEnabled(enableWrites);
-      const benchmarkId = readRequiredString(request.benchmarkId, "benchmarkId");
+      const kind = readRunKind(request.kind);
       const modelId = readRequiredString(request.modelId, "modelId");
-      const benchmark = selectBenchmark(
-        await loadBenchmarks(benchmarkDirectory),
-        benchmarkId
-      );
+      const runner = readPrepareRunner(request.runner, kind);
+      const benchmark = kind === "lighteval"
+        ? lightEvalBenchmarkFromTask(readRequiredString(request.taskId ?? request.benchmarkId, "taskId"))
+        : selectBenchmark(
+          await loadBenchmarks(benchmarkDirectory),
+          readRequiredString(request.benchmarkId, "benchmarkId")
+        );
 
       return {
         preparedRun: await prepareRun({
           benchmark,
           modelId,
+          kind,
+          runner,
+          baseUrl: readOptionalString(request.baseUrl, "baseUrl"),
+          launchCommand: readOptionalString(request.launchCommand, "launchCommand"),
           runsRoot
         })
       };
@@ -289,6 +312,20 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
         runsRoot,
         runDirectory: readRequiredString(request.runDirectory, "runDirectory"),
         asset: request.asset ?? "index.html"
+      });
+      await openFile(path);
+
+      return {
+        opened: true,
+        path
+      };
+    },
+
+    async openRunFolder(request) {
+      assertWritesEnabled(enableWrites);
+      const path = await resolveRunDirectoryPath({
+        runsRoot,
+        runDirectory: readRequiredString(request.runDirectory, "runDirectory")
       });
       await openFile(path);
 
@@ -334,6 +371,54 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   };
 }
 
+function readRunKind(value: unknown): RunKind {
+  if (value === undefined || value === null || value === "") {
+    return "visual";
+  }
+  if (value === "visual" || value === "lighteval" || value === "other") {
+    return value;
+  }
+  throw new ApiRequestError(400, "kind must be visual, lighteval, or other.");
+}
+
+function lightEvalBenchmarkFromTask(taskId: string): BenchmarkRecord {
+  return {
+    id: slugLightEvalTask(taskId),
+    title: "LightEval: " + taskId,
+    description: "LightEval task(s): " + taskId,
+    prompt: taskId
+  };
+}
+
+function slugLightEvalTask(taskId: string): string {
+  const slug = taskId
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .replace(/-{2,}/gu, "-")
+    .slice(0, 80)
+    .replace(/^-+|-+$/gu, "");
+  return slug || "lighteval-task";
+}
+
+function readPrepareRunner(value: unknown, kind: RunKind): PrepareRunRunner {
+  if (value === undefined || value === null || value === "") {
+    return kind === "lighteval" ? "lighteval" : "manual";
+  }
+  if (
+    value === "manual" ||
+    value === "pi" ||
+    value === "opencode" ||
+    value === "llama-cpp" ||
+    value === "lighteval"
+  ) {
+    return value;
+  }
+  throw new ApiRequestError(400, "runner must be manual, pi, opencode, llama-cpp, or lighteval.");
+}
+
 async function defaultOpenFile(path: string): Promise<void> {
   await execFileAsync("open", [path]);
 }
@@ -362,6 +447,25 @@ async function resolveRunHtmlPath(input: {
   }
 
   return path;
+}
+
+async function resolveRunDirectoryPath(input: {
+  runsRoot: string;
+  runDirectory: string;
+}): Promise<string> {
+  const runsRoot = resolve(input.runsRoot);
+  const runDirectory = resolve(input.runDirectory);
+
+  if (!isPathInside(runDirectory, runsRoot)) {
+    throw new ApiRequestError(400, "Run directory is outside the configured runs folder.");
+  }
+
+  const result = await stat(runDirectory);
+  if (!result.isDirectory()) {
+    throw new ApiRequestError(400, "Run path does not point to a directory.");
+  }
+
+  return runDirectory;
 }
 
 export async function apiJsonResponse<T>(
@@ -475,6 +579,17 @@ function readRequiredString(value: unknown, field: string): string {
   }
 
   return value.trim();
+}
+
+function readOptionalString(value: unknown, field: string): string | undefined {
+  if (typeof value === "undefined" || value === null) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw new ApiRequestError(400, `${field} must be a string.`);
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 function readOptionalBoolean(value: unknown, field: string): boolean | undefined {
