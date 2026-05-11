@@ -443,8 +443,8 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
 
   await page.locator("[data-run-id]").nth(1).click();
   await expect(page.locator("#detailPreview video")).toHaveCount(0);
-  await expect(page.locator("#detailPreview")).toContainText("Video not captured yet");
-  await expect(page.locator("#detailPreview")).toContainText("Use Capture preview");
+  await expect(page.locator("#detailPreview img")).toHaveAttribute("src", /preview\.png.*v=2026-05-06T19%3A13%3A00\.000Z/);
+  await expect(page.locator("#detailPreview")).not.toContainText("Video not captured yet");
 });
 
 test("hides unsupported non-visual runs from visual workspaces", async ({ page }) => {
@@ -809,6 +809,60 @@ test("keeps the viewer usable on mobile widths", async ({ page }) => {
   expect(overflow).toBe(false);
 });
 
+test("keeps visual detail prompt and run folder usable on mobile widths", async ({ page }) => {
+  let copiedText = "";
+  const longPrompt = Array.from({ length: 24 }, (_item, index) =>
+    `Prompt instruction ${index + 1}: Create a sakura animation with layered petals and keep the full tree visible.`
+  ).join("\n");
+  const mobileRun = {
+    ...sampleRunWithVideo,
+    benchmark: {
+      ...sampleRunWithVideo.benchmark,
+      prompt: longPrompt
+    }
+  };
+  await page.exposeFunction("recordClipboardWrite", (value: string) => {
+    copiedText = String(value);
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: (value: string) =>
+          (window as unknown as { recordClipboardWrite: (text: string) => Promise<void> }).recordClipboardWrite(
+            value
+          )
+      },
+      configurable: true
+    });
+  });
+  await mockApi(page, { lmStudioOnline: true, runs: [mobileRun] });
+  await page.setViewportSize({ width: 390, height: 900 });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-run-id]", { timeout: 5000 });
+  await expect(page.locator("#onboardingPanel")).toBeHidden();
+
+  await page.locator("[data-run-id]").first().click();
+  const detailDialog = page.locator("#detailBackdrop[open]");
+  await expect(detailDialog).toBeVisible();
+  await expect(detailDialog.getByRole("heading", { name: "Prompt", exact: true })).toBeVisible();
+  await expect(detailDialog.getByRole("heading", { name: "Run folder" })).toBeVisible();
+  await expect(page.locator("#detailRunFolderPath")).toHaveText(mobileRun.runDirectory);
+
+  const promptScrolls = await page.locator("#detailPrompt").evaluate((element) =>
+    element.scrollHeight > element.clientHeight
+  );
+  expect(promptScrolls).toBe(true);
+
+  await page.getByRole("button", { name: "Copy path" }).click();
+  await expect.poll(() => copiedText).toBe(mobileRun.runDirectory);
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+  );
+  expect(overflow).toBe(false);
+});
+
 test("hides operational chrome when writes are disabled", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: true, writesEnabled: false });
 
@@ -852,7 +906,6 @@ test("falls back to exported static data without prepare controls", async ({ pag
               "export/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z",
             assets: {
               metadata: "metadata.json",
-              prompt: "prompt.md",
               preview: "preview.png",
               video: "preview.webm"
             }
@@ -878,6 +931,11 @@ test("falls back to exported static data without prepare controls", async ({ pag
   });
 
   await page.goto("/");
+  await expect(page.locator("body.public-page")).toHaveCount(0);
+  await expect(page.locator(".public-header")).toHaveCount(0);
+  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table"]);
+  await expect(page.getByRole("heading", { name: "Prompt comparison" })).toBeVisible();
+  await expect(page.locator("#onboardingPanel")).toBeHidden();
   await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Setup" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);

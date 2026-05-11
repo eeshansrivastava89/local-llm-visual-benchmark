@@ -10,7 +10,7 @@ export function renderViewTabs() {
 export function updateOnboarding() {
   const panel = document.querySelector("#onboardingPanel");
   if (!panel) return;
-  if (state.workspace !== "visual") {
+  if (state.workspace !== "visual" || state.staticMode) {
     panel.hidden = true;
     return;
   }
@@ -21,18 +21,23 @@ export function updateOnboarding() {
     panel.hidden = true;
     return;
   }
+  const completedStep = onboardingCompletedStep();
+  if (completedStep >= 5) {
+    panel.hidden = true;
+    return;
+  }
   panel.hidden = false;
   const steps = panel.querySelectorAll("[data-onboarding-step]");
   steps.forEach((step) => {
     const num = Number(step.dataset.onboardingStep);
-    const done = num <= onboardingCompletedStep();
+    const done = num <= completedStep;
     step.dataset.onboardingStepCompleted = String(done);
   });
 }
 
 export function onboardingCompletedStep() {
   let step = 0;
-  if (state.lmConnected) step = 1;
+  if (state.omlxConnected || state.lmConnected) step = 1;
   if (state.discoveredModels.length > 0) step = 2;
   if (state.runs.some((r) => r.status === "prepared")) step = 3;
   if (state.runs.some((r) => r.assets?.html)) step = 4;

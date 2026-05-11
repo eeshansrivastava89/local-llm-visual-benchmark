@@ -553,6 +553,7 @@ async function enterStaticMode(reason) {
     renderModelSources();
     renderPrepOptions();
     renderRuns();
+    updateOnboarding();
     updateLmStepStates();
     updateWriteControls();
   } catch (staticError) {
@@ -699,6 +700,7 @@ async function loadModels() {
 
 function updateDiscoveredModels() {
   state.discoveredModels = [...state.omlxModels, ...state.lmStudioModels];
+  updateOnboarding();
 }
 
 async function loadModelSyncState() {
@@ -1567,6 +1569,11 @@ function renderDetailArtifact(run) {
       (mp4Href ? '<source src="' + escapeAttribute(mp4Href) + '" type="video/mp4" />' : '') +
       (videoHref ? '<source src="' + escapeAttribute(videoHref) + '" type="video/webm" />' : '') +
       '</video>';
+  }
+
+  const previewHref = assetHref(run, run.assets?.preview);
+  if (previewHref) {
+    return '<span class="artifact-image"><img src="' + escapeAttribute(previewHref) + '" alt="" /></span>';
   }
 
   if (run.assets?.html) {

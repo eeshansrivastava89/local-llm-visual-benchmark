@@ -9,3 +9,5 @@ Create a full-screen animated ocean sunset viewed from low above the water, look
 Add soft volumetric-looking sun rays breaking through thin clouds, but keep them subtle and elegant. Clouds should be stretched horizontally near the horizon, with glowing edges and darker undersides. The water should show changing reflections, foam accents on a few wave crests, and gentle color shifts from warm near the sun to cooler blue-violet in the foreground. Keep the composition clean: one horizon line, one sun, a readable wave rhythm, and no cluttered objects. The animation should loop naturally, run smoothly, and adapt to any viewport size.
 
 Keep the implementation performant while maximizing creativity. Use no external libraries. Use the most efficient complete approach, then use Playwright screenshots to see the output yourself, check for errors, review and adjust the output until it looks correct. If you don't have access to Playwright, still double check for errors and adjust the output.
+
+Build and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected.

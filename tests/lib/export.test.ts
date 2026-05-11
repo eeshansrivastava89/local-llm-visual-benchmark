@@ -79,6 +79,23 @@ async function writeRun(runsRoot: string) {
         path: "preview.png",
         capturedAt: "2026-05-06T19:13:00.000Z"
       }
+    },
+    runner: {
+      mode: "manual",
+      modelSource: "lmstudio",
+      intendedRunner: "manual",
+      backendLabel: "LM Studio",
+      baseUrl: "http://localhost:1234/v1",
+      model: "local/qwen2.5-vl",
+      launchCommand: "llama-server --model /Users/test/model.gguf",
+      commandAsset: "command.txt",
+      requestAsset: "request.json",
+      streamAsset: "stream.ndjson",
+      responseAsset: "response.txt",
+      retries: 0,
+      tokenMetrics: {
+        reported: false
+      }
     }
   };
 
@@ -125,7 +142,6 @@ describe("generateStaticExport", () => {
             "export/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z",
           assets: {
             metadata: "metadata.json",
-            prompt: "prompt.md",
             preview: "preview.png",
             video: "preview.webm"
           }
@@ -153,9 +169,23 @@ describe("generateStaticExport", () => {
       .rejects.toMatchObject({ code: "ENOENT" });
     await expect(stat(join(exportedRunDirectory, "response.raw.txt")))
       .rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(join(exportedRunDirectory, "prompt.md")))
+      .rejects.toMatchObject({ code: "ENOENT" });
+    expect(JSON.stringify(manifest)).not.toContain("localhost");
+    expect(JSON.stringify(manifest)).not.toContain("llama-server");
+    expect(JSON.stringify(manifest)).not.toContain("/Users/test");
+    expect(JSON.stringify(manifest)).not.toContain("promptText");
+    expect(manifest.runs[0].runner).toEqual({
+      mode: "manual",
+      modelSource: "lmstudio",
+      intendedRunner: "manual",
+      backendLabel: "LM Studio",
+      model: "local/qwen2.5-vl",
+      retries: 0
+    });
   });
 
-  it("sanitizes local run paths from exported prompt text and prompt files", async () => {
+  it("keeps source benchmark prompts but omits per-run prepared prompts from public export", async () => {
     const root = await createTempRoot("llm-visual-export-sanitize-");
     const benchmarkDirectory = join(root, "benchmarks");
     const runsRoot = join(root, "runs");
@@ -180,25 +210,23 @@ describe("generateStaticExport", () => {
       generatedAt: new Date("2026-05-06T20:00:00.000Z")
     });
     const [run] = manifest.runs;
-    const exportedRunDirectory =
-      "export/runs/sakura/local-qwen2-5-vl/2026-05-06T19-12-00-000Z";
-    const exportedPrompt = await readFile(
-      join(
-        publicExportDirectory,
-        "runs",
-        "sakura",
-        "local-qwen2-5-vl",
-        "2026-05-06T19-12-00-000Z",
-        "prompt.md"
-      ),
-      "utf8"
-    );
 
-    expect(run.promptText).toContain(`Run folder: ${exportedRunDirectory}`);
-    expect(run.promptText).toContain(`${exportedRunDirectory}/index.html`);
-    expect(run.promptText).not.toContain(runDirectory);
-    expect(exportedPrompt).toBe(run.promptText);
-    expect(exportedPrompt).not.toContain(runDirectory);
+    expect(manifest.benchmarks[0].prompt).toBe("Create a sakura animation with layered petals.");
+    expect(run.promptText).toBeUndefined();
+    expect(run.assets.prompt).toBeUndefined();
+    await expect(
+      stat(
+        join(
+          publicExportDirectory,
+          "runs",
+          "sakura",
+          "local-qwen2-5-vl",
+          "2026-05-06T19-12-00-000Z",
+          "prompt.md"
+        )
+      )
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(JSON.stringify(manifest)).not.toContain(runDirectory);
   });
 
   it("rejects traversal asset names while exporting run assets", async () => {
@@ -267,8 +295,21 @@ describe("static build script", () => {
     });
 
     await expect(stat(join(staticOutputDirectory, "index.html"))).resolves.toBeTruthy();
+    await expect(stat(join(staticOutputDirectory, "prompt", "sakura", "index.html")))
+      .rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(join(staticOutputDirectory, "model", "local-qwen2-5-vl", "index.html")))
+      .rejects.toMatchObject({ code: "ENOENT" });
     await expect(
       readFile(join(staticOutputDirectory, "export", "manifest.json"), "utf8")
     ).resolves.toContain("2026-05-06T19-12-00-000Z");
+    await expect(
+      readFile(join(staticOutputDirectory, "index.html"), "utf8")
+    ).resolves.toContain("Browse visual benchmark outputs by prompt, model, or table.");
+    await expect(
+      readFile(join(staticOutputDirectory, "index.html"), "utf8")
+    ).resolves.toContain('data-static-build="true"');
+    await expect(
+      readFile(join(staticOutputDirectory, "index.html"), "utf8")
+    ).resolves.not.toContain("Daily-driver stack evidence");
   });
 });

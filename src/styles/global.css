@@ -120,6 +120,10 @@ body {
   letter-spacing: 0;
 }
 
+body[data-static-build="true"] .operational-control {
+  display: none !important;
+}
+
 button,
 input,
 select,
@@ -1384,8 +1388,6 @@ html[data-theme="dark"] .sync-target-logo {
 #runsSurface,
 .prep-body,
 .available-model-list,
-.code-inline-path,
-.code-block,
 #preparedPrompt {
   scrollbar-width: none;
 }
@@ -1393,10 +1395,29 @@ html[data-theme="dark"] .sync-target-logo {
 #runsSurface::-webkit-scrollbar,
 .prep-body::-webkit-scrollbar,
 .available-model-list::-webkit-scrollbar,
-.code-inline-path::-webkit-scrollbar,
-.code-block::-webkit-scrollbar,
 #preparedPrompt::-webkit-scrollbar {
   display: none;
+}
+
+.code-inline-path,
+.code-block,
+.run-folder-path-wrap {
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground), transparent 55%) transparent;
+  scrollbar-width: thin;
+}
+
+.code-inline-path::-webkit-scrollbar,
+.code-block::-webkit-scrollbar,
+.run-folder-path-wrap::-webkit-scrollbar {
+  width: 0.45rem;
+  height: 0.45rem;
+}
+
+.code-inline-path::-webkit-scrollbar-thumb,
+.code-block::-webkit-scrollbar-thumb,
+.run-folder-path-wrap::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted-foreground), transparent 55%);
 }
 
 .grouped-runs {
@@ -1851,6 +1872,8 @@ html[data-theme="dark"] .sync-target-logo {
   display: flex;
   min-width: 0;
   align-items: center;
+  max-height: 8rem;
+  overflow: auto;
   background: var(--subtle-surface);
   padding: 0.8rem 0.75rem;
 }
@@ -1987,7 +2010,7 @@ html[data-theme="dark"] .sync-target-logo {
   }
 
   .detail-shell {
-    height: 100%;
+    height: calc(100dvh - 1rem);
   }
 
   .prep-shell,
@@ -2034,15 +2057,41 @@ html[data-theme="dark"] .sync-target-logo {
 
   .detail-body {
     gap: 1rem;
+    align-content: start;
+    grid-template-rows: auto auto;
+    overflow-y: auto;
     padding: 1rem;
   }
 
   .detail-inspector {
-    grid-template-rows: auto minmax(0, 1fr);
+    overflow: visible;
+    grid-template-rows: auto auto auto;
   }
 
   .compact-section {
-    display: none;
+    display: grid;
+    max-height: none;
+  }
+
+  #detailPreview {
+    max-height: 42dvh;
+    aspect-ratio: 16 / 10;
+  }
+
+  .artifact-image,
+  .artifact-video,
+  .artifact-empty {
+    height: auto;
+    aspect-ratio: 16 / 10;
+    max-height: 42dvh;
+  }
+
+  .prompt-block {
+    max-height: 17rem;
+  }
+
+  .run-folder-path-wrap {
+    max-height: 6.5rem;
   }
 
   .toolbar {

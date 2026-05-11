@@ -77,6 +77,9 @@ export function runCardState(run) {
   if (run.assets?.html) {
     return { status: "prepared", label: "capture" };
   }
+  if (run.assets?.preview) {
+    return { status: "completed", label: "preview" };
+  }
   return { status: "prepared", label: "slot" };
 }
 
@@ -97,6 +100,7 @@ export function runCardMediaMessage(run, isCapturing) {
     return displayRunError(run) ?? "Capture failed";
   }
   if (run.assets?.html) return "Needs media capture";
+  if (run.assets?.preview) return "Preview ready";
   return "Waiting for index.html source";
 }
 
