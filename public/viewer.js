@@ -1,7 +1,6 @@
 import { els } from "./js/dom.js";
 import { state } from "./js/state.js";
-import { DEFAULT_LLAMA_CPP_BASE_URL, DEFAULT_LLAMA_CPP_MODEL_PATH } from "./js/constants.js";
-import { clamp, escapeHtml, escapeAttribute, formatBytes, formatDate, formatDateShort, shellQuote, uniqueBy } from "./js/utils.js";
+import { clamp, escapeHtml, escapeAttribute, formatBytes, formatDate, formatDateShort, uniqueBy } from "./js/utils.js";
 import { fetchJson, fetchStaticManifest, postJson, deleteJson } from "./js/api.js";
 import { filteredRuns, groupRuns, modelsFromRuns, runSummaryText, runKind, hasCapturedVideo, needsMediaCapture, runCardState, displayRunError, runCardMediaMessage, runCardIdentity, runRecordText, canOpenVisualDetail, findRunByDirectoryOrId } from "./js/runs.js";
 import { openModal, closeModal, currentModal, handleModalKeydown } from "./js/modals.js";
@@ -9,12 +8,26 @@ import { applyStoredTheme, toggleTheme, setTheme } from "./js/theme.js";
 import { startHtmlPolling } from "./js/polling.js";
 import { renderViewTabs, updateOnboarding, showHtmlDetectToast } from "./js/ui.js";
 
+const SOURCE_STATUS_COPY = {
+  omlx: {
+    label: "oMLX",
+    offlineHint: "Start the oMLX server, then refresh.",
+    emptyHint: "oMLX is reachable but returned no models."
+  },
+  lmstudio: {
+    label: "LM Studio",
+    offlineHint: "Start LM Studio's local server, then refresh.",
+    emptyHint: "LM Studio is reachable but returned no models."
+  }
+};
+
 init();
 
 function init() {
   initWorkspaceState();
   applyStoredTheme();
   wireEvents();
+  initSourceStatuses();
   renderViewTabs();
   updateOnboarding();
   void loadLocalData();
@@ -24,8 +37,9 @@ function init() {
     }
   }, 5000);
   setInterval(() => {
-    if (!state.staticMode && state.lmConnected) {
-      void loadModels();
+    if (!state.staticMode) {
+      if (state.omlxConnected) void loadOmlxModels();
+      if (state.lmConnected) void loadModels();
     }
   }, 60000);
   setInterval(() => {
@@ -41,6 +55,7 @@ function initWorkspaceState() {
 }
 
 function wireEvents() {
+  els.refreshOmlx.addEventListener("click", () => loadOmlxModels({ manual: true }));
   els.refreshConnection.addEventListener("click", () => loadConnection({ manual: true }));
   els.refreshRuns.addEventListener("click", () => refreshRuns());
   els.syncPiBtn.addEventListener("click", () => syncModels(["pi"]));
@@ -99,19 +114,15 @@ function wireEvents() {
   });
   els.prepareRun.addEventListener("click", () => prepareRunSlot());
   els.copyPrompt.addEventListener("click", () => copyPreparedPrompt());
-  els.copyPrepCommand.addEventListener("click", () => copyPrepCommand());
   els.prepRunner.addEventListener("change", () => updatePrepareMode({ preserveCommand: false }));
-  els.prepBenchmark.addEventListener("change", () => updatePrepareMode());
-  els.prepBaseUrl.addEventListener("input", () => updatePrepareMode({ preserveCommand: false }));
-  els.prepCommand.addEventListener("input", () => {
-    els.copyPrepCommand.disabled = !els.prepCommand.value.trim();
+  els.prepModelSource.addEventListener("change", () => {
+    state.selectedModelSource = els.prepModelSource.value;
+    renderPrepOptions();
   });
+  els.prepBenchmark.addEventListener("change", () => updatePrepareMode());
   els.prepModelSelect.addEventListener("change", () => {
     updatePrepareMode({ preserveCommand: false });
   });
-  if (els.checkLlamaCppBtn) {
-    els.checkLlamaCppBtn.addEventListener("click", () => checkLlamaCppServer());
-  }
 
   els.viewTabs.forEach((button) => {
     button.addEventListener("click", () => {
@@ -136,7 +147,12 @@ function wireEvents() {
 }
 
 function wireHelpTooltips() {
-  document.querySelectorAll(".help-pill[data-tooltip]").forEach((button) => {
+  document.querySelectorAll("[data-tooltip]").forEach((button) => {
+    if (button.classList.contains("source-status-pill")) {
+      button.addEventListener("mousemove", () => showHelpTooltip(button));
+      button.addEventListener("mouseleave", hideHelpTooltip);
+      return;
+    }
     button.addEventListener("mouseenter", () => showHelpTooltip(button));
     button.addEventListener("focus", () => showHelpTooltip(button));
     button.addEventListener("mouseleave", hideHelpTooltip);
@@ -156,6 +172,18 @@ function showHelpTooltip(anchor) {
   const tooltipRect = els.helpTooltip.getBoundingClientRect();
   const gap = 8;
   const viewportGap = 12;
+  if (anchor.classList.contains("source-status-pill")) {
+    const canPlaceAbove = anchorRect.top - tooltipRect.height - gap >= viewportGap;
+    const rawLeft = anchorRect.left;
+    const rawTop = canPlaceAbove
+      ? anchorRect.top - tooltipRect.height - gap
+      : anchorRect.bottom + gap;
+    const left = clamp(rawLeft, viewportGap, window.innerWidth - tooltipRect.width - viewportGap);
+    const top = clamp(rawTop, viewportGap, window.innerHeight - tooltipRect.height - viewportGap);
+    els.helpTooltip.style.left = left + "px";
+    els.helpTooltip.style.top = top + "px";
+    return;
+  }
   const spaceRight = window.innerWidth - anchorRect.right;
   const side = spaceRight >= tooltipRect.width + gap + viewportGap ? "right" : "left";
   const rawLeft = side === "right"
@@ -219,7 +247,7 @@ function updateSyncButtons() {
   const canSync =
     canUseOperationalControls() &&
     state.modelSync.enabled &&
-    state.discoveredModels.length > 0 &&
+    state.lmStudioModels.length > 0 &&
     !state.syncBusy;
 
   els.syncPiBtn.disabled = !canSync;
@@ -230,7 +258,7 @@ function updateSyncButtons() {
 
 function renderModelInventory() {
   const runModels = modelsFromRuns(state.runs);
-  const currentIds = new Set(state.discoveredModels.map((m) => m.id));
+  const currentKeys = new Set(state.discoveredModels.map(modelKey));
   const runIds = new Set(runModels.map((m) => m.id));
   const opencodeModelIds = new Set(state.modelSync.files?.opencode?.modelIds ?? []);
   const piModelIds = new Set(state.modelSync.files?.pi?.modelIds ?? []);
@@ -239,7 +267,7 @@ function renderModelInventory() {
 
   const models = uniqueBy(
     [...state.discoveredModels, ...runModels],
-    (m) => m.id
+    (m) => modelKey(m)
   );
 
   els.availableModelCount.textContent = String(models.length);
@@ -247,34 +275,165 @@ function renderModelInventory() {
   if (models.length === 0) {
     els.availableModelChoices.innerHTML =
       '<p class="muted-copy text-sm leading-5">' +
-      (state.lmConnected
-        ? "LM Studio returned no models. Load a model in LM Studio first."
-        : "LM Studio did not return models and no run folders are indexed yet.") +
+      (state.omlxConnected || state.lmConnected
+        ? "No live models were returned. Load a model in oMLX or LM Studio first."
+        : "No local model source returned models and no run folders are indexed yet.") +
       "</p>";
     return;
   }
 
   els.availableModelChoices.innerHTML = models
     .map((model) => {
-      const isCurrent = currentIds.has(model.id);
+      const isCurrent = currentKeys.has(modelKey(model));
       const inPi = piModelIds.has(model.id);
       const inOc = opencodeModelIds.has(model.id);
-      const source = isCurrent ? "live" : runIds.has(model.id) ? "history" : "saved";
+      const source = isCurrent
+        ? modelSourceLabel(model.source)
+        : runIds.has(model.id)
+          ? "history"
+          : "saved";
 
       return (
         '<div class="lm-model-row">' +
           '<span class="lm-model-name" title="' + escapeAttribute(model.id) + '">' +
             escapeHtml(model.id) +
           "</span>" +
-          '<span class="lm-source-pill" data-source="' + source + '">' + source + "</span>" +
+          '<span class="lm-source-pill" data-source="' + escapeAttribute(source.toLowerCase().replace(/\\s+/gu, "-")) + '">' + source + "</span>" +
           '<span class="lm-model-sync">' +
-            renderStatusCheck("Pi", inPi, piExists) +
-            renderStatusCheck("OpenCode", inOc, ocExists) +
+            (model.source === "lmstudio"
+              ? renderStatusCheck("Pi", inPi, piExists) + renderStatusCheck("OpenCode", inOc, ocExists)
+              : '<span class="lm-status-chip" data-state="unavailable">Config sync not needed</span>') +
           "</span>" +
         "</div>"
       );
     })
     .join("");
+}
+
+function modelKey(model) {
+  return (model.source || "history") + ":" + model.id;
+}
+
+function modelSourceLabel(source) {
+  if (source === "omlx") return "oMLX";
+  if (source === "lmstudio") return "LM Studio";
+  return "history";
+}
+
+function initSourceStatuses() {
+  setSourceStatus("omlx", "checking", 0, "Checking oMLX model server.");
+  setSourceStatus("lmstudio", "checking", 0, "Checking LM Studio model server.");
+}
+
+function setSourceStatus(source, status, count, message) {
+  if (!state.sourceHealth[source]) {
+    state.sourceHealth[source] = {};
+  }
+  state.sourceHealth[source] = {
+    status,
+    count,
+    message
+  };
+  updateSourceStatusPill(source);
+  updatePrepareModelWarning();
+}
+
+function updateSourceStatusPill(source) {
+  const elements = sourceStatusElements(source);
+  if (!elements.pill || !elements.dot || !elements.text) return;
+
+  const health = state.sourceHealth[source] ?? { status: "checking", count: 0 };
+  const label = SOURCE_STATUS_COPY[source]?.label ?? modelSourceLabel(source);
+  const count = Number.isFinite(health.count) ? health.count : 0;
+  const status = health.status ?? "checking";
+  const text = status === "online"
+    ? label + " " + String(count)
+    : status === "offline"
+      ? label + " off"
+      : status === "static"
+        ? label + " static"
+        : label + " checking";
+  const tooltip = health.message || sourceStatusMessage(source, status, count);
+
+  elements.pill.dataset.status = status;
+  elements.pill.dataset.tooltip = tooltip;
+  elements.pill.setAttribute("aria-label", label + ": " + tooltip);
+  elements.dot.dataset.state = status === "online"
+    ? "online"
+    : status === "offline"
+      ? "offline"
+      : status === "static"
+        ? "static"
+        : "checking";
+  elements.text.textContent = text;
+}
+
+function sourceStatusElements(source) {
+  if (source === "omlx") {
+    return {
+      pill: els.omlxStatusPill,
+      dot: els.omlxStatusDot,
+      text: els.omlxStatusText
+    };
+  }
+  return {
+    pill: els.lmStudioStatusPill,
+    dot: els.lmStudioStatusDot,
+    text: els.lmStudioStatusText
+  };
+}
+
+function sourceStatusMessage(source, status, count) {
+  const copy = SOURCE_STATUS_COPY[source] ?? { label: modelSourceLabel(source), offlineHint: "Start the server, then refresh.", emptyHint: "The server returned no models." };
+  if (status === "online") {
+    return count > 0
+      ? copy.label + " is reachable with " + String(count) + " " + (count === 1 ? "model" : "models") + "."
+      : copy.emptyHint;
+  }
+  if (status === "offline") {
+    return copy.label + " is not reachable. " + copy.offlineHint;
+  }
+  if (status === "static") {
+    return copy.label + " status requires the local dev server.";
+  }
+  return "Checking " + copy.label + " model server.";
+}
+
+function selectedSourceHealth() {
+  return state.sourceHealth[state.selectedModelSource] ?? {
+    status: "checking",
+    count: 0,
+    message: sourceStatusMessage(state.selectedModelSource, "checking", 0)
+  };
+}
+
+function prepareModelPlaceholder(source) {
+  const health = state.sourceHealth[source] ?? { status: "checking", count: 0 };
+  const label = modelSourceLabel(source);
+  if (health.status === "offline") return label + " offline";
+  if (health.status === "checking") return "Checking " + label + "...";
+  if (health.status === "static") return label + " unavailable";
+  if ((modelsForSource(source)).length === 0) return "No " + label + " models";
+  return "Choose " + label + " model";
+}
+
+function updatePrepareModelWarning() {
+  if (!els.prepModelWarning || !els.prepModelSelect || !els.prepareRun) return;
+
+  const source = state.selectedModelSource;
+  const sourceModels = modelsForSource(source);
+  const health = selectedSourceHealth();
+  const copy = SOURCE_STATUS_COPY[source] ?? { label: modelSourceLabel(source), offlineHint: "Start the server, then refresh." };
+  const isOffline = health.status === "offline";
+  const message = isOffline
+    ? copy.label + " is not reachable. " + copy.offlineHint
+    : "";
+
+  els.prepModelWarning.hidden = !message;
+  els.prepModelWarning.textContent = message;
+  els.prepModelWarning.dataset.state = health.status ?? "checking";
+  els.prepModelSelect.title = health.message || sourceStatusMessage(source, health.status, sourceModels.length);
+  els.prepareRun.disabled = !canUseOperationalControls() || sourceModels.length === 0;
 }
 
 function renderStatusCheck(label, isPresent, configExists) {
@@ -307,12 +466,12 @@ async function syncModels(targets) {
     return;
   }
 
-  const discoveredIds = state.discoveredModels
+  const discoveredIds = state.lmStudioModels
     .map((m) => m.id)
     .filter((id) => typeof id === "string" && id.length > 0);
 
   if (discoveredIds.length === 0) {
-    els.syncMessage.textContent = "No discovered models to sync.";
+    els.syncMessage.textContent = "No discovered LM Studio models to sync.";
     return;
   }
 
@@ -365,7 +524,7 @@ async function loadLocalData() {
       onRefresh: refreshRunsForPolling,
       onDetect: showHtmlDetectToast
     });
-    await Promise.allSettled([loadConnection(), loadStats(), loadModelSyncState()]);
+    await Promise.allSettled([loadOmlxModels(), loadConnection(), loadStats(), loadModelSyncState()]);
   } catch (error) {
     await enterStaticMode(error);
   }
@@ -378,8 +537,13 @@ async function enterStaticMode(reason) {
     state.benchmarks = manifest.benchmarks ?? [];
     state.runs = manifest.runs ?? [];
     state.discoveredModels = [];
+    state.omlxModels = [];
+    state.lmStudioModels = [];
+    state.omlxConnected = false;
     state.lmConnected = false;
     state.writesEnabled = false;
+    setSourceStatus("omlx", "static", 0, "oMLX status requires the local dev server.");
+    setSourceStatus("lmstudio", "static", 0, "LM Studio status requires the local dev server.");
     setConnection("static", "Static", "Browsing exported runs. Sync requires the local dev server.");
     els.statsDot.dataset.state = "static";
     els.statsCompact.textContent = "Static";
@@ -400,10 +564,11 @@ async function enterStaticMode(reason) {
 }
 
 async function loadConnection(options = {}) {
+  setSourceStatus("lmstudio", "checking", state.lmStudioModels.length, "Checking LM Studio model server.");
   if (options.manual) {
     els.refreshConnection.disabled = true;
-    els.refreshConnection.textContent = "Testing…";
-    setConnection("checking", "Checking", "Checking LM Studio and refreshing models…");
+    els.refreshConnection.textContent = "Refreshing…";
+    els.connectionMessage.textContent = "Checking LM Studio and refreshing models…";
   }
 
   try {
@@ -420,23 +585,24 @@ async function loadConnection(options = {}) {
       state.lmConnected = true;
       const modelCount = await loadModels();
       await loadModelSyncState();
-      setConnection(
-        "online",
-        "Online",
-        "LM Studio is reachable. " + modelCount + " " + (modelCount === 1 ? "model" : "models") + " discovered."
-      );
+      els.connectionMessage.textContent = "LM Studio is reachable. " + modelCount + " " + (modelCount === 1 ? "model" : "models") + " discovered.";
     } else {
       state.lmConnected = false;
-      setConnection("offline", "Offline", connection?.error ?? "LM Studio is not reachable.");
-      state.discoveredModels = [];
+      const message = connection?.error ?? "LM Studio is not reachable.";
+      els.connectionMessage.textContent = message;
+      state.lmStudioModels = [];
+      setSourceStatus("lmstudio", "offline", 0, "LM Studio is not reachable. Start LM Studio's local server, then refresh. " + message);
+      updateDiscoveredModels();
       renderModelSources();
       renderPrepOptions();
       await loadModelSyncState();
     }
   } catch (error) {
     state.lmConnected = false;
-    setConnection("offline", "Offline", error.message);
-    state.discoveredModels = [];
+    els.connectionMessage.textContent = error.message;
+    state.lmStudioModels = [];
+    setSourceStatus("lmstudio", "offline", 0, "LM Studio is not reachable. Start LM Studio's local server, then refresh. " + error.message);
+    updateDiscoveredModels();
     renderModelSources();
     renderPrepOptions();
   } finally {
@@ -445,7 +611,55 @@ async function loadConnection(options = {}) {
     updateSyncButtons();
     if (options.manual) {
       els.refreshConnection.disabled = false;
-      els.refreshConnection.textContent = "Test";
+      els.refreshConnection.textContent = "Refresh";
+    }
+  }
+}
+
+async function loadOmlxModels(options = {}) {
+  setSourceStatus("omlx", "checking", state.omlxModels.length, "Checking oMLX model server.");
+  if (options.manual) {
+    els.refreshOmlx.disabled = true;
+    els.refreshOmlx.textContent = "Refreshing…";
+    els.omlxConnectionMessage.textContent = "Checking oMLX and refreshing models…";
+  }
+
+  try {
+    const data = await fetchJson("/api/omlx/models?baseUrl=" + encodeURIComponent(els.omlxBaseUrl.value));
+    if (data.baseUrl) {
+      els.omlxBaseUrl.value = data.baseUrl;
+    }
+    const discovered = (data.models ?? []).map((model) => ({
+      ...model,
+      source: "omlx"
+    }));
+    state.omlxConnected = true;
+    state.omlxModels = discovered;
+    setSourceStatus(
+      "omlx",
+      "online",
+      discovered.length,
+      sourceStatusMessage("omlx", "online", discovered.length)
+    );
+    updateDiscoveredModels();
+    renderModelSources();
+    renderPrepOptions();
+    els.omlxConnectionMessage.textContent =
+      "oMLX is reachable. " + discovered.length + " " + (discovered.length === 1 ? "model" : "models") + " discovered.";
+    return discovered.length;
+  } catch (error) {
+    state.omlxConnected = false;
+    state.omlxModels = [];
+    setSourceStatus("omlx", "offline", 0, "oMLX is not reachable. Start the oMLX server, then refresh. " + error.message);
+    updateDiscoveredModels();
+    renderModelSources();
+    renderPrepOptions();
+    els.omlxConnectionMessage.textContent = "oMLX unavailable: " + error.message;
+    return 0;
+  } finally {
+    if (options.manual) {
+      els.refreshOmlx.disabled = false;
+      els.refreshOmlx.textContent = "Refresh";
     }
   }
 }
@@ -453,21 +667,38 @@ async function loadConnection(options = {}) {
 async function loadModels() {
   try {
     const data = await fetchJson("/api/lmstudio/models?baseUrl=" + encodeURIComponent(els.baseUrl.value));
-    const discovered = data.models ?? [];
-    state.discoveredModels = discovered;
+    const discovered = (data.models ?? []).map((model) => ({
+      ...model,
+      source: "lmstudio"
+    }));
+    state.lmStudioModels = discovered;
+    setSourceStatus(
+      "lmstudio",
+      "online",
+      discovered.length,
+      sourceStatusMessage("lmstudio", "online", discovered.length)
+    );
+    updateDiscoveredModels();
     renderModelSources();
     renderPrepOptions();
     updateLmStepStates();
     updateSyncButtons();
     return discovered.length;
-  } catch {
-    state.discoveredModels = [];
+  } catch (error) {
+    state.lmConnected = false;
+    state.lmStudioModels = [];
+    setSourceStatus("lmstudio", "offline", 0, "LM Studio is not reachable. Start LM Studio's local server, then refresh. " + error.message);
+    updateDiscoveredModels();
     renderModelSources();
     renderPrepOptions();
     updateLmStepStates();
     updateSyncButtons();
     return 0;
   }
+}
+
+function updateDiscoveredModels() {
+  state.discoveredModels = [...state.omlxModels, ...state.lmStudioModels];
 }
 
 async function loadModelSyncState() {
@@ -699,103 +930,45 @@ function resetPrepareRunModal() {
   if (state.benchmarks[0]) {
     els.prepBenchmark.value = state.benchmarks[0].id;
   }
-  const firstModel = state.discoveredModels[0]?.id ?? "";
+  if (state.omlxModels.length === 0 && state.lmStudioModels.length > 0) {
+    state.selectedModelSource = "lmstudio";
+  }
+  els.prepModelSource.value = state.selectedModelSource;
+  const firstModel = modelsForSelectedSource()[0]?.id ?? "";
   els.prepModelSelect.value = firstModel;
-  els.prepBaseUrl.value = DEFAULT_LLAMA_CPP_BASE_URL;
   updatePrepareMode({ preserveCommand: false });
 
   if (!canUseOperationalControls()) {
     els.prepareRun.disabled = true;
     els.preparedPaths.textContent = "Preparing runs requires the local dev server.";
   } else {
-    els.prepareRun.disabled = false;
+    updatePrepareModelWarning();
   }
 }
 
 function updatePrepareMode(options = {}) {
-  const runner = els.prepRunner.value;
-  const commandVisible = runner === "llama-cpp";
-  const workflow = commandVisible ? "visual-llama-cpp" : "visual";
+  const workflow = "visual";
   els.prepBackendHelperGroup.hidden = false;
+  els.prepModelSourceGroup.hidden = false;
   els.prepVisualPromptGroup.hidden = false;
   els.prepModelSelectGroup.hidden = false;
-  els.prepBaseUrlGroup.hidden = runner !== "llama-cpp";
-  els.prepCommandGroup.hidden = !commandVisible;
-  if (els.llamaCppStatusBar) {
-    els.llamaCppStatusBar.hidden = !commandVisible;
-  }
   els.prepLayout.dataset.kind = workflow;
   els.prepResult.dataset.panelMode = workflow;
   els.preparedPrompt.readOnly = true;
-  els.prepModelSelectLabel.textContent = "Discovered model";
-  els.prepBaseUrlLabel.textContent = "Base URL";
-
-  if (!options.preserveCommand || !els.prepCommand.value.trim()) {
-    els.prepCommand.value = runner === "llama-cpp"
-      ? defaultLlamaCppCommand(els.prepModelSelect.value)
-      : "";
-  }
-  els.copyPrepCommand.disabled = !commandVisible || !els.prepCommand.value.trim();
+  els.prepModelSelectLabel.textContent = modelSourceLabel(state.selectedModelSource) + " model";
   if (!state.preparedPrompt) {
     els.preparedPrompt.value = "";
     updatePreparedCopyState();
   }
 
-  els.prepResultTitle.textContent = commandVisible ? "Generated artifacts" : "Generated prompt";
-  els.prepSubtitle.textContent = "Choose a prompt and model to generate a run folder.";
-  els.prepResultHint.textContent = commandVisible
-    ? "Edit the server command, prepare the slot, then copy the prompt into your visual runner."
-    : "Copy this into your external tool after preparing the slot.";
+  els.prepResultTitle.textContent = "Generated prompt";
+  els.prepSubtitle.textContent = "Choose a prompt, model source, model, and harness to generate a run folder.";
+  els.prepResultHint.textContent = "Copy this into your selected harness after preparing the slot.";
   els.preparedPrompt.placeholder = "Prepare a run slot to generate the exact prompt and output path.";
   els.prepOutputLabel.textContent = "Visual prompt";
   els.copyPrompt.textContent = "Copy prompt";
   els.prepareRun.textContent = "Prepare slot";
-}
-
-function defaultLlamaCppCommand(modelId) {
-  const modelPath = localPathForModel(modelId) || DEFAULT_LLAMA_CPP_MODEL_PATH;
-  return [
-    "llama-server \\",
-    "  -m \\",
-    "  " + shellQuote(modelPath) + " \\",
-    "  --host 127.0.0.1 \\",
-    "  --port 8080 \\",
-    "  --ctx-size 8192 \\",
-    "  --threads -1 \\",
-    "  --n-gpu-layers 999 \\",
-    "  --parallel 1"
-  ].join("\n");
-}
-
-function localPathForModel(modelId) {
-  return state.discoveredModels.find((model) => model.id === modelId)?.localPath ?? "";
-}
-
-async function checkLlamaCppServer() {
-  if (!els.llamaCppStatusBar || !els.llamaCppStatusDot || !els.llamaCppStatusText) return;
-
-  els.llamaCppStatusBar.hidden = false;
-  els.llamaCppStatusDot.dataset.state = "checking";
-  els.llamaCppStatusText.textContent = "Checking server…";
-  if (els.checkLlamaCppBtn) els.checkLlamaCppBtn.disabled = true;
-
-  const baseUrl = els.prepBaseUrl.value || DEFAULT_LLAMA_CPP_BASE_URL;
-
-  try {
-    const data = await fetchJson("/api/llama-cpp/status?baseUrl=" + encodeURIComponent(baseUrl));
-    if (data.ok) {
-      els.llamaCppStatusDot.dataset.state = "online";
-      els.llamaCppStatusText.textContent = "Server online · " + (data.modelCount ?? 0) + " model(s)";
-    } else {
-      els.llamaCppStatusDot.dataset.state = "offline";
-      els.llamaCppStatusText.textContent = "Server offline · " + (data.error ?? "Not reachable");
-    }
-  } catch (error) {
-    els.llamaCppStatusDot.dataset.state = "offline";
-    els.llamaCppStatusText.textContent = "Server offline · " + error.message;
-  } finally {
-    if (els.checkLlamaCppBtn) els.checkLlamaCppBtn.disabled = false;
-  }
+  updatePrepareModelWarning();
 }
 
 async function prepareRunSlot() {
@@ -806,31 +979,32 @@ async function prepareRunSlot() {
   const benchmarkId = els.prepBenchmark.value;
   const modelId = els.prepModelSelect.value.trim();
   if (!benchmarkId || !modelId) {
-    els.preparedPaths.textContent = "Choose a prompt and model label.";
+    updatePrepareModelWarning();
+    const source = state.selectedModelSource;
+    const health = selectedSourceHealth();
+    els.preparedPaths.textContent = health.status === "offline"
+      ? modelSourceLabel(source) + " is offline. Start the server, then refresh models."
+      : "Choose a prompt and " + modelSourceLabel(source) + " model.";
     return;
   }
   const runner = els.prepRunner.value;
-  const launchCommand = els.prepCommand.value;
-  const modelPath = runner === "llama-cpp" ? localPathForModel(modelId) : undefined;
+  const modelSource = els.prepModelSource.value;
+  const baseUrl = modelSource === "lmstudio" ? els.baseUrl.value : els.omlxBaseUrl.value;
   try {
     const data = await postJson("/api/prepare-run", {
       benchmarkId,
       modelId,
+      modelSource,
       kind: "visual",
       runner,
-      baseUrl: els.prepBaseUrl.value,
-      launchCommand,
-      modelPath
+      baseUrl
     });
     const prepared = data.preparedRun;
     const output = prepared.prompt;
-    const statusText = runner === "llama-cpp"
-        ? "Run slot prepared. Command saved in metadata and command.txt."
-        : "Run slot prepared. Copy the prompt into your external tool.";
+    const statusText = "Run slot prepared for " + modelSourceLabel(modelSource) + " via " + harnessLabel(runner) + ". Copy the prompt into your harness.";
     state.preparedPrompt = output;
     els.preparedPrompt.value = output;
-    els.preparedPaths.textContent = statusText + " Run folder: " + prepared.paths.runDirectory +
-      (prepared.command ? " · Command: " + prepared.paths.commandPath : "");
+    els.preparedPaths.textContent = statusText + " Run folder: " + prepared.paths.runDirectory;
     els.copyPrompt.disabled = !output;
     updatePreparedCopyState();
     state.runs = [availablePreparedRun(prepared.run), ...state.runs.filter((run) => run.runId !== prepared.run.runId)];
@@ -841,10 +1015,17 @@ async function prepareRunSlot() {
     renderRuns();
   } catch (error) {
     els.preparedPrompt.value = "";
-    els.preparedPaths.textContent = "No run slot prepared yet.";
+    els.preparedPaths.textContent = "Prepare failed: " + error.message;
     els.copyPrompt.disabled = true;
     updatePreparedCopyState();
   }
+}
+
+function harnessLabel(runner) {
+  if (runner === "opencode") return "OpenCode";
+  if (runner === "pi") return "Pi";
+  if (runner === "hermes") return "Hermes";
+  return "manual chat";
 }
 
 async function copyPreparedPrompt() {
@@ -858,14 +1039,6 @@ async function copyPreparedPrompt() {
 function updatePreparedCopyState() {
   const value = els.preparedPrompt.value.trim();
   els.copyPrompt.disabled = !value;
-}
-
-async function copyPrepCommand() {
-  if (!els.prepCommand.value.trim()) {
-    return;
-  }
-  await copyTextToClipboard(els.prepCommand.value, els.copyPrepCommand, "Copy command");
-  els.preparedPaths.textContent = "Command copied.";
 }
 
 async function copyDetailPrompt() {
@@ -1023,17 +1196,39 @@ function renderModelSources() {
 }
 
 function renderPrepOptions() {
+  const selectedBenchmark = els.prepBenchmark.value;
   els.prepBenchmark.innerHTML = state.benchmarks
     .map((b) => '<option value="' + escapeAttribute(b.id) + '">' + escapeHtml(b.title) + "</option>")
     .join("");
+  if (state.benchmarks.some((benchmark) => benchmark.id === selectedBenchmark)) {
+    els.prepBenchmark.value = selectedBenchmark;
+  }
+  if (!["omlx", "lmstudio"].includes(state.selectedModelSource)) {
+    state.selectedModelSource = "omlx";
+  }
+  if (state.selectedModelSource === "omlx" && state.omlxModels.length === 0 && state.lmStudioModels.length > 0) {
+    state.selectedModelSource = "lmstudio";
+  }
+  els.prepModelSource.value = state.selectedModelSource;
+  const sourceModels = modelsForSelectedSource();
   els.prepModelSelect.innerHTML = [
-    '<option value="">Choose discovered model</option>',
-    ...state.discoveredModels.map((m) => '<option value="' + escapeAttribute(m.id) + '">' + escapeHtml(m.id) + "</option>")
+    '<option value="">' + escapeHtml(prepareModelPlaceholder(state.selectedModelSource)) + "</option>",
+    ...sourceModels.map((m) => '<option value="' + escapeAttribute(m.id) + '">' + escapeHtml(m.id) + "</option>")
   ].join("");
-  if (!els.prepModelSelect.value && state.discoveredModels[0]) {
-    els.prepModelSelect.value = state.discoveredModels[0].id;
+  if (!sourceModels.some((model) => model.id === els.prepModelSelect.value) && sourceModels[0]) {
+    els.prepModelSelect.value = sourceModels[0].id;
   }
   updatePrepareMode({ preserveCommand: true });
+}
+
+function modelsForSelectedSource() {
+  return modelsForSource(state.selectedModelSource);
+}
+
+function modelsForSource(source) {
+  return source === "lmstudio"
+    ? state.lmStudioModels
+    : state.omlxModels;
 }
 
 function resetRunPage() {

@@ -2,10 +2,7 @@ import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_LLAMA_CPP_BASE_URL,
-  prepareRun
-} from "../../src/lib/prompt-prep";
+import { prepareRun } from "../../src/lib/prompt-prep";
 import type { BenchmarkRecord } from "../../src/lib/types";
 
 const benchmark: BenchmarkRecord = {
@@ -61,63 +58,33 @@ describe("prepareRun", () => {
     );
   });
 
-  it("snapshots an editable llama.cpp command into metadata and command.txt", async () => {
-    const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-llama-runs-"));
-    const command = "llama-server -m /models/test.gguf --port 8080 --n-gpu-layers 999";
+  it("records model source and harness metadata without command artifacts", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-omlx-runs-"));
     const prepared = await prepareRun({
       benchmark,
-      modelId: "local/test.gguf",
-      runner: "llama-cpp",
-      baseUrl: DEFAULT_LLAMA_CPP_BASE_URL,
-      launchCommand: command,
+      modelId: "Qwen3.6-35B-A3B-4bit",
+      modelSource: "omlx",
+      runner: "opencode",
+      baseUrl: "http://127.0.0.1:8000/v1",
       runsRoot,
       now: new Date("2026-05-07T04:00:32.122Z")
     });
 
-    expect(prepared.command).toBe(command);
+    expect(prepared.command).toBeUndefined();
     expect(prepared.run).toMatchObject({
       kind: "visual",
+      tool: "opencode",
       runner: {
-        mode: "openai-compatible",
-        intendedRunner: "llama.cpp",
-        backendLabel: "llama.cpp",
-        baseUrl: DEFAULT_LLAMA_CPP_BASE_URL,
-        launchCommand: command,
-        commandAsset: "command.txt"
-      },
-      assets: {
-        command: "command.txt"
+        mode: "external",
+        modelSource: "omlx",
+        intendedRunner: "OpenCode",
+        backendLabel: "oMLX",
+        baseUrl: "http://127.0.0.1:8000/v1"
       }
     });
-    await expect(readFile(prepared.paths.commandPath, "utf8")).resolves.toBe(command + "\n");
-  });
-
-  it("replaces prepared run placeholders in supplied commands", async () => {
-    const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-command-placeholder-runs-"));
-    const prepared = await prepareRun({
-      benchmark,
-      modelId: "local-model",
-      runner: "llama-cpp",
-      launchCommand: "llama-server -m /models/test.gguf --run-folder <prepared-run-folder>",
-      runsRoot,
-      now: new Date("2026-05-07T04:00:32.122Z")
-    });
-
-    expect(prepared.command).toContain("--run-folder " + prepared.paths.runDirectory);
-    expect(prepared.command).not.toContain("<prepared-run-folder>");
-    await expect(readFile(prepared.paths.commandPath, "utf8")).resolves.toBe(prepared.command + "\n");
-  });
-
-  it("uses the Apple Silicon llama.cpp default when no command is supplied", async () => {
-    const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-llama-default-runs-"));
-    const prepared = await prepareRun({
-      benchmark,
-      modelId: "local/test.gguf",
-      runner: "llama-cpp",
-      runsRoot
-    });
-
-    expect(prepared.command).toContain("llama-server");
-    expect(prepared.command).toContain("-m");
+    expect(prepared.run.assets.command).toBeUndefined();
+    await expect(readFile(prepared.paths.metadataPath, "utf8")).resolves.toContain(
+      "\"modelSource\": \"omlx\""
+    );
   });
 });

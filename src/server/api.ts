@@ -16,6 +16,10 @@ import {
   normalizeLmStudioBaseUrl
 } from "../lib/lmstudio";
 import {
+  listOmlxModels as defaultListOmlxModels,
+  normalizeOmlxBaseUrl
+} from "../lib/omlx";
+import {
   getModelSyncState as defaultGetModelSyncState,
   mirrorModelsToConfigs as defaultMirrorModelsToConfigs,
   type ModelSyncState,
@@ -27,7 +31,7 @@ import {
   listRunMetadata as defaultListRunMetadata
 } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
-import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunKind, RunMetadata } from "../lib/types";
+import type { BenchmarkRecord, LMStudioModel, ModelSourceId, OmlxModel, PreparedRun, RunKind, RunMetadata } from "../lib/types";
 import type { PrepareRunRunner } from "../lib/prompt-prep";
 
 const STATUS_TIMEOUT_MS = 2000;
@@ -45,11 +49,10 @@ export interface ModelsRequest {
 export interface PrepareRunRequest {
   benchmarkId?: string;
   modelId?: string;
+  modelSource?: string;
   kind?: string;
   runner?: string;
   baseUrl?: string;
-  launchCommand?: string;
-  modelPath?: string;
 }
 
 export interface MirrorModelsRequest {
@@ -86,6 +89,7 @@ export interface LocalApiDependencies {
   loadBenchmarks?: (benchmarkDirectory: string) => Promise<BenchmarkRecord[]>;
   checkLmStudioConnection?: typeof defaultCheckLmStudioConnection;
   listLmStudioModels?: typeof defaultListLmStudioModels;
+  listOmlxModels?: typeof defaultListOmlxModels;
   listRunMetadata?: (runsRoot?: string) => Promise<RunMetadata[]>;
   deleteRunDirectory?: typeof defaultDeleteRunDirectory;
   getSystemStats?: typeof defaultGetSystemStats;
@@ -101,6 +105,7 @@ export interface LocalApi {
   getStatus(request?: StatusRequest): Promise<StatusResponse>;
   getBenchmarks(): Promise<BenchmarksResponse>;
   getLmStudioModels(request?: ModelsRequest): Promise<ModelsResponse>;
+  getOmlxModels(request?: ModelsRequest): Promise<OmlxModelsResponse>;
   getSystemStats(): Promise<SystemStatsResponse>;
   getSavedRuns(): Promise<SavedRunsResponse>;
   deleteSavedRun(request: DeleteRunRequest): Promise<DeleteRunResponse>;
@@ -130,6 +135,11 @@ export interface BenchmarksResponse {
 export interface ModelsResponse {
   baseUrl: string;
   models: LMStudioModel[];
+}
+
+export interface OmlxModelsResponse {
+  baseUrl: string;
+  models: OmlxModel[];
 }
 
 export interface SystemStatsResponse {
@@ -195,6 +205,8 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
     dependencies.checkLmStudioConnection ?? defaultCheckLmStudioConnection;
   const listLmStudioModels =
     dependencies.listLmStudioModels ?? defaultListLmStudioModels;
+  const listOmlxModels =
+    dependencies.listOmlxModels ?? defaultListOmlxModels;
   const listRunMetadata = dependencies.listRunMetadata ?? defaultListRunMetadata;
   const deleteRunDirectory = dependencies.deleteRunDirectory ?? defaultDeleteRunDirectory;
   const getSystemStats = dependencies.getSystemStats ?? defaultGetSystemStats;
@@ -241,6 +253,15 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       };
     },
 
+    async getOmlxModels(request = {}) {
+      return {
+        baseUrl: normalizeOmlxBaseUrl(request.baseUrl),
+        models: await listOmlxModels(request.baseUrl, {
+          timeoutMs: MODEL_LIST_TIMEOUT_MS
+        })
+      };
+    },
+
     async getSystemStats() {
       return {
         stats: getSystemStats()
@@ -269,6 +290,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       readRunKind(request.kind);
       const modelId = readRequiredString(request.modelId, "modelId");
       const runner = readPrepareRunner(request.runner);
+      const modelSource = readModelSource(request.modelSource);
       const benchmark = selectBenchmark(
         await loadBenchmarks(benchmarkDirectory),
         readRequiredString(request.benchmarkId, "benchmarkId")
@@ -278,10 +300,9 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
         preparedRun: await prepareRun({
           benchmark,
           modelId,
+          modelSource,
           runner,
           baseUrl: readOptionalString(request.baseUrl, "baseUrl"),
-          launchCommand: readOptionalString(request.launchCommand, "launchCommand"),
-          modelPath: readOptionalString(request.modelPath, "modelPath"),
           runsRoot
         })
       };
@@ -387,11 +408,21 @@ function readPrepareRunner(value: unknown): PrepareRunRunner {
     value === "manual" ||
     value === "pi" ||
     value === "opencode" ||
-    value === "llama-cpp"
+    value === "hermes"
   ) {
     return value;
   }
-  throw new ApiRequestError(400, "runner must be manual, pi, opencode, or llama-cpp.");
+  throw new ApiRequestError(400, "runner must be manual, pi, opencode, or hermes.");
+}
+
+function readModelSource(value: unknown): ModelSourceId | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  if (value === "omlx" || value === "lmstudio") {
+    return value;
+  }
+  throw new ApiRequestError(400, "modelSource must be omlx or lmstudio.");
 }
 
 async function defaultOpenFile(path: string): Promise<void> {

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { assertTrustedWriteRequest, createLocalApi } from "../../src/server/api";
-import type { BenchmarkRecord, LMStudioModel, PreparedRun, RunMetadata } from "../../src/lib/types";
+import type { BenchmarkRecord, LMStudioModel, OmlxModel, PreparedRun, RunMetadata } from "../../src/lib/types";
 import type { MirrorModelsResult } from "../../src/lib/model-sync";
 
 const benchmarks: BenchmarkRecord[] = [
@@ -22,6 +22,7 @@ const benchmarks: BenchmarkRecord[] = [
 ];
 
 const models: LMStudioModel[] = [{ id: "model-a" }, { id: "model-b" }];
+const omlxModels: OmlxModel[] = [{ id: "Qwen3.6-35B-A3B-4bit" }];
 
 describe("createLocalApi", () => {
   it("returns status with passive LM Studio connection shape", async () => {
@@ -75,6 +76,21 @@ describe("createLocalApi", () => {
       models
     });
     expect(listLmStudioModels).toHaveBeenCalledWith("http://localhost:1234", {
+      timeoutMs: 10000
+    });
+  });
+
+  it("lists oMLX models through the passive client", async () => {
+    const listOmlxModels = vi.fn(async () => omlxModels);
+    const api = createLocalApi({
+      listOmlxModels
+    });
+
+    await expect(api.getOmlxModels({ baseUrl: "http://127.0.0.1:8000" })).resolves.toEqual({
+      baseUrl: "http://127.0.0.1:8000/v1",
+      models: omlxModels
+    });
+    expect(listOmlxModels).toHaveBeenCalledWith("http://127.0.0.1:8000", {
       timeoutMs: 10000
     });
   });
@@ -161,7 +177,10 @@ describe("createLocalApi", () => {
     await expect(
       api.prepareRun({
         benchmarkId: "sakura",
-        modelId: "model-a"
+        modelId: "model-a",
+        modelSource: "omlx",
+        runner: "opencode",
+        baseUrl: "http://127.0.0.1:8000/v1"
       })
     ).resolves.toEqual({
       preparedRun
@@ -169,9 +188,9 @@ describe("createLocalApi", () => {
     expect(prepareRun).toHaveBeenCalledWith({
       benchmark: benchmarks[0],
       modelId: "model-a",
-      runner: "manual",
-      baseUrl: undefined,
-      launchCommand: undefined,
+      modelSource: "omlx",
+      runner: "opencode",
+      baseUrl: "http://127.0.0.1:8000/v1",
       runsRoot: "/runs"
     });
   });

@@ -2,6 +2,8 @@ export const state = {
   staticMode: false,
   benchmarks: [],
   discoveredModels: [],
+  omlxModels: [],
+  lmStudioModels: [],
   modelSync: {
     enabled: false,
     paths: {
@@ -19,7 +21,20 @@ export const state = {
       }
     }
   },
+  omlxConnected: false,
   lmConnected: false,
+  sourceHealth: {
+    omlx: {
+      status: "checking",
+      count: 0,
+      message: "Checking oMLX model server."
+    },
+    lmstudio: {
+      status: "checking",
+      count: 0,
+      message: "Checking LM Studio model server."
+    }
+  },
   writesEnabled: true,
   syncBusy: false,
   captureBusy: false,
@@ -32,6 +47,7 @@ export const state = {
   runsPerPage: 25,
   workspace: "visual",
   mode: "benchmark",
+  selectedModelSource: "omlx",
   preparedPrompt: "",
   selectedRun: null,
   captureRunDirectory: "",

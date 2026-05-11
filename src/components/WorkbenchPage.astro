@@ -65,7 +65,7 @@ const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
               <button type="button" class="btn-sm-ghost" id="dismissOnboarding">Dismiss</button>
             </div>
             <ol class="onboarding-steps">
-              <li data-onboarding-step="1"><span class="step-num">1</span>Start LM Studio</li>
+              <li data-onboarding-step="1"><span class="step-num">1</span>Start oMLX or LM Studio</li>
               <li data-onboarding-step="2"><span class="step-num">2</span>Load a model</li>
               <li data-onboarding-step="3"><span class="step-num">3</span>Pick a prompt</li>
               <li data-onboarding-step="4"><span class="step-num">4</span>Generate with your tool</li>
@@ -210,11 +210,35 @@ const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
     <div class="detail-backdrop" id="prepBackdrop">
       <article class="prep-shell" role="dialog" aria-modal="true" aria-label="Prepare run">
         <header class="detail-header">
-          <div class="min-w-0">
+          <div class="prep-header-copy min-w-0">
             <h2 class="truncate-line text-lg font-semibold">Prepare run slot</h2>
             <p class="muted-copy truncate-line mt-1 text-sm" id="prepSubtitle">Choose a prompt and model to generate a run folder.</p>
           </div>
           <div class="prep-header-actions">
+            <div class="source-status-rack operational-control" aria-label="Local model source status">
+              <span
+                class="source-status-pill"
+                id="omlxStatusPill"
+                role="status"
+                data-source="omlx"
+                data-status="checking"
+                data-tooltip="Checking oMLX model server."
+              >
+                <span id="omlxStatusDot" class="status-dot" data-state="checking"></span>
+                <span id="omlxStatusText">oMLX checking</span>
+              </span>
+              <span
+                class="source-status-pill"
+                id="lmStudioStatusPill"
+                role="status"
+                data-source="lmstudio"
+                data-status="checking"
+                data-tooltip="Checking LM Studio model server."
+              >
+                <span id="lmStudioStatusDot" class="status-dot" data-state="checking"></span>
+                <span id="lmStudioStatusText">LM Studio checking</span>
+              </span>
+            </div>
             <button class="btn" type="button" id="prepareRun">Prepare slot</button>
             <button type="button" class="btn-sm-outline" id="closePrep">Close</button>
           </div>
@@ -224,20 +248,25 @@ const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
             <section class="prep-form-panel" aria-label="Run slot inputs">
               <div class="grid gap-2" id="prepBackendHelperGroup">
                 <div class="field-label-row">
-                  <label for="prepRunner">Backend helper</label>
-                  <button type="button" class="help-pill" data-tooltip="Optional starter command for the model server. The app records the command but does not start or stop the server.">?</button>
+                  <label for="prepRunner">Coding harness</label>
+                  <button type="button" class="help-pill" data-tooltip="The tool you plan to paste the generated prompt into. The harness is recorded because tool calling and file writes affect run quality.">?</button>
                 </div>
                 <select id="prepRunner" class="input">
-                  <option value="manual">None</option>
-                  <option value="llama-cpp">llama.cpp server command</option>
+                  <option value="manual">Manual chat</option>
+                  <option value="opencode">OpenCode</option>
+                  <option value="pi">Pi</option>
+                  <option value="hermes">Hermes</option>
                 </select>
               </div>
-              <div class="grid gap-2" id="prepBaseUrlGroup">
+              <div class="grid gap-2" id="prepModelSourceGroup">
                 <div class="field-label-row">
-                  <label for="prepBaseUrl" id="prepBaseUrlLabel">Base URL</label>
-                  <button type="button" class="help-pill" data-tooltip="OpenAI-compatible endpoint URL. For LM Studio this is usually http://localhost:1234/v1. For llama.cpp this is usually http://127.0.0.1:8080/v1.">?</button>
+                  <label for="prepModelSource">Model source</label>
+                  <button type="button" class="help-pill" data-tooltip="Choose whether the model label comes from oMLX or LM Studio. oMLX is the primary Apple Silicon daily-driver lane.">?</button>
                 </div>
-                <input id="prepBaseUrl" class="input" value="http://127.0.0.1:8080/v1" />
+                <select id="prepModelSource" class="input">
+                  <option value="omlx">oMLX</option>
+                  <option value="lmstudio">LM Studio</option>
+                </select>
               </div>
               <div class="grid gap-2" id="prepVisualPromptGroup">
                 <div class="field-label-row">
@@ -249,9 +278,10 @@ const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
               <div class="grid gap-2" id="prepModelSelectGroup">
                 <div class="field-label-row">
                   <label for="prepModelSelect" id="prepModelSelectLabel">Discovered model</label>
-                  <button type="button" class="help-pill" data-tooltip="Model discovered from LM Studio. The app records this label in the prepared run metadata.">?</button>
+                  <button type="button" class="help-pill" data-tooltip="Model discovered from the selected local source. The app records this label and source in prepared run metadata.">?</button>
                 </div>
                 <select id="prepModelSelect" class="input"></select>
+                <p id="prepModelWarning" class="prep-source-warning" hidden></p>
               </div>
             </section>
 
@@ -260,24 +290,6 @@ const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
                 <div>
                   <h3 class="text-sm font-medium" id="prepResultTitle">Generated prompt</h3>
                   <p class="muted-copy mt-0.5 text-xs" id="prepResultHint">Copy this into your external tool after preparing the slot.</p>
-                </div>
-              </div>
-              <div class="prep-artifact" id="prepCommandGroup" hidden>
-                <div class="prep-artifact-head">
-                  <div>
-                    <div class="field-label-row">
-                      <label for="prepCommand">llama.cpp server command</label>
-                      <button type="button" class="help-pill" data-tooltip="Editable command to start llama.cpp outside the app. The app saves this exact command in metadata and command.txt when you prepare the run.">?</button>
-                    </div>
-                    <p class="muted-copy mt-0.5 text-xs">Run this in your terminal before using the generated visual prompt.</p>
-                  </div>
-                  <button type="button" class="btn-sm-outline" id="copyPrepCommand">Copy command</button>
-                </div>
-                <textarea id="prepCommand" class="input prep-command-input" rows="9" wrap="off"></textarea>
-                <div id="llamaCppStatusBar" class="llama-cpp-status-bar" hidden>
-                  <span id="llamaCppStatusDot" class="status-dot"></span>
-                  <span id="llamaCppStatusText" class="muted-copy text-xs">Checking server…</span>
-                  <button type="button" class="btn-sm-ghost text-xs" id="checkLlamaCppBtn">Check</button>
                 </div>
               </div>
               <div class="prep-artifact prep-output-artifact" id="prepOutputGroup">
@@ -305,7 +317,7 @@ const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
         <header class="detail-header">
           <div class="min-w-0">
             <h2 class="truncate-line text-lg font-semibold">Setup</h2>
-            <p class="muted-copy truncate-line mt-1 text-sm">Configure LM Studio, then prepare runs and save generated artifacts.</p>
+            <p class="muted-copy truncate-line mt-1 text-sm">Refresh oMLX or LM Studio models, then prepare runs and save generated artifacts.</p>
           </div>
           <button type="button" class="btn-sm-outline" id="closeSetup">Close</button>
         </header>
@@ -315,21 +327,33 @@ const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
               <div class="lm-source-heading">
                 <div class="min-w-0">
                   <span class="section-label">Local model source</span>
-                  <h3 id="lmStudioHeading">LM Studio</h3>
-                  <p>Discover live models, then mirror that list into Pi and OpenCode when needed.</p>
+                  <h3 id="lmStudioHeading">Model sources</h3>
+                  <p>Discover oMLX and LM Studio models. LM Studio models can still be mirrored into Pi and OpenCode when needed.</p>
                 </div>
                 <span class="badge-outline lm-count-badge"><span id="availableModelCount">0</span> models</span>
               </div>
 
               <div class="lm-operations-grid">
+                <div id="lmStepOmlx" class="lm-op-cell lm-connect-cell">
+                  <div class="lm-op-head">
+                    <span class="lm-op-title">oMLX</span>
+                    <span class="section-label">oMLX URL</span>
+                  </div>
+                  <div class="lm-op-control lm-connect-control">
+                    <input id="omlxBaseUrl" class="input flex-1" aria-label="oMLX base URL" value="http://127.0.0.1:8000/v1" />
+                    <button type="button" class="btn" id="refreshOmlx">Refresh</button>
+                  </div>
+                  <p class="lm-op-message" id="omlxConnectionMessage" aria-live="polite">Waiting for local API.</p>
+                </div>
+
                 <div id="lmStep1" class="lm-op-cell lm-connect-cell">
                   <div class="lm-op-head">
-                    <span class="lm-op-title">Connection</span>
+                    <span class="lm-op-title">LM Studio</span>
                     <span class="section-label">LM Studio URL</span>
                   </div>
                   <div class="lm-op-control lm-connect-control">
                     <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
-                    <button type="button" class="btn" id="refreshConnection">Test</button>
+                    <button type="button" class="btn" id="refreshConnection">Refresh</button>
                   </div>
                   <p class="lm-op-message" id="connectionMessage" aria-live="polite">Waiting for local API.</p>
                 </div>
@@ -356,13 +380,13 @@ const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
                   </div>
                 </section>
               </div>
-              <p class="lm-sync-message" id="syncMessage" aria-live="polite">Start LM Studio, test the URL, then sync discovered models to your tool configs.</p>
+              <p class="lm-sync-message" id="syncMessage" aria-live="polite">Start LM Studio, refresh its model list, then sync discovered LM Studio models to your tool configs.</p>
 
               <section id="lmStep2" class="lm-model-section" aria-labelledby="modelInventoryHeading">
                 <div class="lm-model-section-head">
                   <div>
                     <h3 id="modelInventoryHeading">Model inventory</h3>
-                    <p>Live LM Studio models plus saved run history.</p>
+                    <p>Live oMLX and LM Studio models plus saved run history.</p>
                   </div>
                 </div>
                 <div class="lm-model-table-head" id="lmModelHeader">

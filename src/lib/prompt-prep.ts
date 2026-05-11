@@ -1,34 +1,20 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { buildRunPaths, createRunId } from "./paths";
 import { writePromptMarkdown, writeRunMetadata } from "./runs";
-import type { BenchmarkRecord, PreparedRun, RunnerMode, RunMetadata } from "./types";
+import type { BenchmarkRecord, ModelSourceId, PreparedRun, RunnerMode, RunMetadata } from "./types";
 
 export type PrepareRunRunner =
   | "manual"
   | "pi"
   | "opencode"
-  | "llama-cpp";
-
-export const DEFAULT_LLAMA_CPP_BASE_URL = "http://127.0.0.1:8080/v1";
-export const DEFAULT_LLAMA_CPP_COMMAND_TEMPLATE = [
-  "llama-server \\",
-  "  -m \\",
-  "  <model-path> \\",
-  "  --host 127.0.0.1 \\",
-  "  --port 8080 \\",
-  "  --ctx-size 8192 \\",
-  "  --threads -1 \\",
-  "  --n-gpu-layers 999 \\",
-  "  --parallel 1"
-].join("\n");
+  | "hermes";
 
 export interface PrepareRunInput {
   benchmark: BenchmarkRecord;
   modelId: string;
+  modelSource?: ModelSourceId;
   runner?: PrepareRunRunner;
   baseUrl?: string;
-  launchCommand?: string;
-  modelPath?: string;
   runsRoot?: string;
   now?: Date;
 }
@@ -48,16 +34,8 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     runDirectory: paths.runDirectory,
     htmlPath: paths.htmlPath
   });
-  const command = buildPreparedCommand({
-    benchmark: input.benchmark,
-    modelId: input.modelId,
-    runner,
-    runDirectory: paths.runDirectory,
-    baseUrl: input.baseUrl,
-    launchCommand: input.launchCommand,
-    modelPath: input.modelPath
-  });
   const timestamp = now.toISOString();
+  const modelSource = input.modelSource;
   const run: RunMetadata = {
     schemaVersion: 1,
     kind: "visual",
@@ -78,24 +56,21 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
       html: "index.html",
       preview: "preview.png",
       video: "preview.webm",
-      rawResponse: "response.raw.txt",
-      ...(command ? { command: "command.txt" } : {})
+      rawResponse: "response.raw.txt"
     },
     runner: {
       mode: runnerModeFor(runner),
+      ...(modelSource ? { modelSource } : {}),
       intendedRunner: runnerLabel(runner),
-      backendLabel: runner === "llama-cpp" ? "llama.cpp" : runnerLabel(runner),
-      baseUrl: runner === "llama-cpp"
-        ? normalizeOptionalString(input.baseUrl) ?? DEFAULT_LLAMA_CPP_BASE_URL
-        : undefined,
+      backendLabel: modelSource ? modelSourceLabel(modelSource) : undefined,
+      baseUrl: normalizeOptionalString(input.baseUrl),
       model: input.modelId,
-      launchCommand: command,
-      commandAsset: command ? "command.txt" : undefined,
       retries: 0,
       tokenMetrics: {
         reported: false
       }
-    }
+    },
+    ...(runner === "manual" ? {} : { tool: runner })
   };
 
   await mkdir(paths.runDirectory, { recursive: true });
@@ -103,15 +78,11 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
   if (prompt) {
     writes.push(writePromptMarkdown(paths, prompt));
   }
-  if (command) {
-    writes.push(writeFile(paths.commandPath, command + "\n", "utf8"));
-  }
   await Promise.all(writes);
 
   return {
     run,
     prompt,
-    ...(command ? { command } : {}),
     paths: {
       runDirectory: paths.runDirectory,
       promptPath: paths.promptPath,
@@ -121,28 +92,6 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
       previewPath: paths.previewPath
     }
   };
-}
-
-export function buildPreparedCommand(input: {
-  benchmark: BenchmarkRecord;
-  modelId: string;
-  runner: PrepareRunRunner;
-  runDirectory: string;
-  baseUrl?: string;
-  launchCommand?: string;
-  modelPath?: string;
-}): string {
-  const supplied = normalizeOptionalString(input.launchCommand);
-  if (supplied) {
-    return supplied.replaceAll("<prepared-run-folder>", input.runDirectory);
-  }
-
-  if (input.runner === "llama-cpp") {
-    const modelPath = normalizeOptionalString(input.modelPath) ?? "/path/to/model.gguf";
-    return DEFAULT_LLAMA_CPP_COMMAND_TEMPLATE.replaceAll("<model-path>", shellQuote(modelPath));
-  }
-
-  return "";
 }
 
 export function buildToolPrompt(input: {
@@ -165,23 +114,23 @@ export function buildToolPrompt(input: {
 }
 
 function runnerModeFor(runner: PrepareRunRunner): RunnerMode {
-  if (runner === "llama-cpp") return "openai-compatible";
   if (runner === "manual") return "manual";
   return "external";
 }
 
 function runnerLabel(runner: PrepareRunRunner): string {
-  if (runner === "llama-cpp") return "llama.cpp";
+  if (runner === "hermes") return "Hermes";
   if (runner === "opencode") return "OpenCode";
   if (runner === "pi") return "Pi";
   return "manual";
 }
 
+function modelSourceLabel(source: ModelSourceId): string {
+  if (source === "omlx") return "oMLX";
+  return "LM Studio";
+}
+
 function normalizeOptionalString(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
-}
-
-function shellQuote(value: string): string {
-  return "'" + value.replace(/'/g, "'\\''") + "'";
 }

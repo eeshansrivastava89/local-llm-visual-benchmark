@@ -37,10 +37,6 @@ export function formatDateShort(value) {
     : "-";
 }
 
-export function shellQuote(value) {
-  return "'" + String(value).replace(/'/g, "'\\''") + "'";
-}
-
 export function normalizeBaseUrlInput(value) {
   const trimmed = String(value || "").trim().replace(/\/+$/u, "");
   if (!trimmed) return "http://localhost:1234/v1";

@@ -36,6 +36,15 @@ export interface LMStudioModel {
   localPath?: string;
 }
 
+export interface OmlxModel {
+  id: string;
+  object?: string;
+  created?: number;
+  owned_by?: string;
+}
+
+export type ModelSourceId = "omlx" | "lmstudio";
+
 export interface RunModelRecord {
   id: string;
   slug: string;
@@ -109,6 +118,7 @@ export interface RunTokenMetrics {
 
 export interface RunRunnerMetadata {
   mode: RunnerMode;
+  modelSource?: ModelSourceId;
   intendedRunner?: string;
   actualRunner?: string;
   backendLabel?: string;
@@ -139,7 +149,7 @@ export interface RunMetadata {
   assets: RunAssets;
   promptText?: string;
   preparedAt?: string;
-  tool?: "opencode" | "pi" | "generic";
+  tool?: "opencode" | "pi" | "hermes" | "generic";
   completedAt?: string;
   failedAt?: string;
   cancelledAt?: string;
