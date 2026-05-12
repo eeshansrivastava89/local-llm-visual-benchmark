@@ -99,6 +99,10 @@ dist-static/
 
 The default static build uses the GitHub Pages base path `/local-llm-visual-benchmark/`. To smoke-test that exact output locally, serve `dist-static/` from that path rather than the domain root.
 
+For this repository, GitHub Pages is deployed by `.github/workflows/deploy-pages.yml` on every push to `main`. The live site should be configured to use **GitHub Actions** as its Pages source; do not manually update a serving branch after normal code changes.
+
+The workflow rebuilds the app shell from `main` and reuses the current published `export/` snapshot so existing gallery media is not lost when local `runs/` are absent in CI. New captured results still start locally in `runs/`; publish them with a local static build when you intentionally want to refresh the public gallery data.
+
 The static export includes benchmark metadata, summary run metadata, preview images, videos, and a build-time machine profile for the header pill. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, or operational controls.
 
 ## Architecture notes

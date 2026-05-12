@@ -1,4 +1,4 @@
-import { cp, rm, writeFile } from "node:fs/promises";
+import { cp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -16,15 +16,18 @@ const staticOutputDirectory =
 const clientBuildDirectory =
   process.env.STATIC_CLIENT_BUILD_DIR ?? join(repoRoot, "dist", "client");
 const astroBase = process.env.ASTRO_BASE ?? "/local-llm-visual-benchmark/";
+const prebuiltExportDirectory = process.env.STATIC_PREBUILT_EXPORT_DIR;
 
-const manifest = await generateStaticExport({
-  benchmarkDirectory,
-  runsRoot,
-  publicExportDirectory
-});
+const manifest = prebuiltExportDirectory
+  ? await copyPrebuiltExport(prebuiltExportDirectory, publicExportDirectory)
+  : await generateStaticExport({
+      benchmarkDirectory,
+      runsRoot,
+      publicExportDirectory
+    });
 
 process.stdout.write(
-  `Generated static export with ${manifest.benchmarks.length} benchmarks and ${manifest.runs.length} runs.\n`
+  `${prebuiltExportDirectory ? "Using prebuilt" : "Generated"} static export with ${manifest.benchmarks.length} benchmarks and ${manifest.runs.length} runs.\n`
 );
 
 await run("npm", ["run", "build"], repoRoot);
@@ -37,6 +40,16 @@ await cp(publicExportDirectory, join(staticOutputDirectory, "export"), {
 await writeFile(join(staticOutputDirectory, ".nojekyll"), "", "utf8");
 
 process.stdout.write(`Wrote static publish build to ${staticOutputDirectory}.\n`);
+
+async function copyPrebuiltExport(sourceDirectory, targetDirectory) {
+  await rm(targetDirectory, { recursive: true, force: true });
+  await cp(sourceDirectory, targetDirectory, { recursive: true });
+
+  const manifest = JSON.parse(
+    await readFile(join(targetDirectory, "manifest.json"), "utf8")
+  );
+  return manifest;
+}
 
 async function run(command, args, cwd) {
   await new Promise((resolve, reject) => {
