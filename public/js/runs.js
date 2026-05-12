@@ -59,6 +59,22 @@ export function runnerLabel(run) {
   return run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.runner?.mode ?? run.tool ?? "manual";
 }
 
+export function stackAttemptIdentity(run) {
+  const modelArtifact = run.model?.slug ?? run.model?.id ?? "unknown-model";
+  const modelSource = run.runner?.modelSource ?? run.runner?.backendLabel ?? "unknown-source";
+  const harness = runnerLabel(run);
+  const sourceLabel = run.runner?.backendLabel ?? modelSource;
+  const modelLabel = run.model?.id ?? modelArtifact;
+
+  return {
+    key: [modelSource, modelArtifact, harness].map(normalizeIdentityPart).join("|"),
+    label: [modelLabel, sourceLabel, harness].filter(Boolean).join(" · "),
+    modelSource,
+    modelArtifact,
+    harness
+  };
+}
+
 export function hasCapturedVideo(run) {
   return Boolean(run.assets?.video || run.assets?.videoMp4);
 }
@@ -107,16 +123,17 @@ export function runCardMediaMessage(run, isCapturing) {
 export function runCardIdentity(run, mode) {
   const promptTitle = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
   const modelId = run.model?.id ?? "Unknown model";
+  const stack = stackAttemptIdentity(run);
 
   if (mode === "benchmark") {
-    return { primary: modelId, secondary: "" };
+    return { primary: modelId, secondary: stack.label.replace(modelId, "").replace(/^\s*·\s*/u, "") };
   }
 
   if (mode === "model") {
-    return { primary: promptTitle, secondary: "" };
+    return { primary: promptTitle, secondary: stack.harness };
   }
 
-  return { primary: promptTitle, secondary: modelId };
+  return { primary: promptTitle, secondary: stack.label };
 }
 
 export function runRecordText(run) {
@@ -151,6 +168,8 @@ function searchableRunText(run) {
     run.benchmark?.prompt,
     run.model?.id,
     run.model?.slug,
+    stackAttemptIdentity(run).key,
+    stackAttemptIdentity(run).label,
     run.runner?.backendLabel,
     run.runner?.baseUrl,
     run.runner?.launchCommand,
@@ -162,6 +181,13 @@ function searchableRunText(run) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+function normalizeIdentityPart(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/gu, "-");
 }
 
 function uniqueBy(items, keyForItem) {

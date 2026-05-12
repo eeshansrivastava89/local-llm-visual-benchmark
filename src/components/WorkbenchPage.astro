@@ -22,7 +22,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
       } catch {}
     </script>
   </head>
-  <body data-workspace="visual" data-static-build={isStaticBuild ? "true" : undefined}>
+  <body data-workspace="visual" data-base-path={basePath} data-static-build={isStaticBuild ? "true" : undefined}>
     <div class="app-shell">
       <header class="app-header">
         <div class="mx-auto flex min-h-14 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
@@ -80,6 +80,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
               <button type="button" class="view-tab" data-mode="benchmark" aria-pressed="true">By prompt</button>
               <button type="button" class="view-tab" data-mode="model" aria-pressed="false">By model</button>
               <button type="button" class="view-tab" data-mode="table" aria-pressed="false">Table</button>
+              <button type="button" class="view-tab" data-mode="compare" aria-pressed="false">Compare</button>
             </div>
             <div class="toolbar-filters">
               <div class="dropdown-wrap">

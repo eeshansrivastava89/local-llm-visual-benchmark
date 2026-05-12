@@ -173,6 +173,35 @@ describe("run metadata helpers", () => {
     expect(run.promptText).toBe("filesystem prompt text");
   });
 
+  it("ignores traversal asset paths when hydrating saved run metadata", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "sakura",
+      modelId: "lmstudio-community/Qwen2.5 Coder:7B Instruct",
+      runId: "2026-05-06T01-02-03-004Z"
+    });
+    const metadata: RunMetadata = {
+      ...createMetadata(paths.runDirectory),
+      assets: {
+        metadata: "metadata.json",
+        prompt: "../private-prompt.md",
+        preview: "../private-preview.png"
+      }
+    };
+
+    await mkdir(paths.runDirectory, { recursive: true });
+    await writeFile(join(paths.runDirectory, "metadata.json"), JSON.stringify(metadata), "utf8");
+    await writeFile(join(paths.runDirectory, "..", "private-prompt.md"), "do not hydrate this", "utf8");
+    await writeFile(join(paths.runDirectory, "..", "private-preview.png"), "png", "utf8");
+
+    const [run] = await listRunMetadata(runsRoot);
+
+    expect(run.promptText).toBeUndefined();
+    expect(run.assets.prompt).toBeUndefined();
+    expect(run.assets.preview).toBeUndefined();
+  });
+
   it("discovers future kind-based run folders and hydrates runner artifacts", async () => {
     const runsRoot = await createRunsRoot();
     const runDirectory = join(

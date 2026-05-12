@@ -229,7 +229,7 @@ describe("generateStaticExport", () => {
     expect(JSON.stringify(manifest)).not.toContain(runDirectory);
   });
 
-  it("rejects traversal asset names while exporting run assets", async () => {
+  it("omits traversal asset names while exporting run assets", async () => {
     const root = await createTempRoot("llm-visual-export-traversal-");
     const benchmarkDirectory = join(root, "benchmarks");
     const runsRoot = join(root, "runs");
@@ -246,13 +246,82 @@ describe("generateStaticExport", () => {
     await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(maliciousMetadata), "utf8");
     await writeFile(join(runDirectory, "..", "leaked.png"), "leaked", "utf8");
 
+    const manifest = await generateStaticExport({
+      benchmarkDirectory,
+      runsRoot,
+      publicExportDirectory
+    });
+
+    expect(manifest.runs[0].assets.preview).toBeUndefined();
+    await expect(stat(join(publicExportDirectory, "runs", "sakura", "local-qwen2-5-vl", "leaked.png")))
+      .rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("rejects traversal path segments in exported run identifiers", async () => {
+    const root = await createTempRoot("llm-visual-export-id-traversal-");
+    const benchmarkDirectory = join(root, "benchmarks");
+    const runsRoot = join(root, "runs");
+    const publicExportDirectory = join(root, "public", "export");
+    await writeBenchmark(benchmarkDirectory);
+    const { runDirectory, metadata } = await writeRun(runsRoot);
+    const maliciousMetadata: RunMetadata = {
+      ...metadata,
+      model: {
+        ...metadata.model,
+        slug: "../../outside"
+      }
+    };
+    await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(maliciousMetadata), "utf8");
+
     await expect(
       generateStaticExport({
         benchmarkDirectory,
         runsRoot,
         publicExportDirectory
       })
-    ).rejects.toThrow(/Asset path must stay inside a run folder/);
+    ).rejects.toThrow(/Export path segment must be a safe filename segment/);
+    await expect(stat(join(publicExportDirectory, "..", "outside")))
+      .rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("redacts local paths from public runner and capture metadata", async () => {
+    const root = await createTempRoot("llm-visual-export-redact-");
+    const benchmarkDirectory = join(root, "benchmarks");
+    const runsRoot = join(root, "runs");
+    const publicExportDirectory = join(root, "public", "export");
+    await writeBenchmark(benchmarkDirectory);
+    const { runDirectory, metadata } = await writeRun(runsRoot);
+    const localPath = join(root, "models", "private-model.gguf");
+    const localErrorPath = join(runDirectory, "index.html");
+    const metadataWithLocalStrings: RunMetadata = {
+      ...metadata,
+      runner: {
+        ...metadata.runner!,
+        model: localPath
+      },
+      capture: {
+        video: {
+          status: "failed",
+          error: {
+            message: `Failed to open file://${localErrorPath}`
+          }
+        }
+      }
+    };
+    await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(metadataWithLocalStrings), "utf8");
+
+    const manifest = await generateStaticExport({
+      benchmarkDirectory,
+      runsRoot,
+      publicExportDirectory
+    });
+    const serialized = JSON.stringify(manifest);
+
+    expect(serialized).not.toContain(root);
+    expect(serialized).not.toContain(runDirectory);
+    expect(serialized).not.toContain("file://");
+    expect(manifest.runs[0].runner?.model).toBeUndefined();
+    expect(manifest.runs[0].capture?.video?.error?.message).toBe("Capture failed. See local run evidence for details.");
   });
 
   it("handles an empty saved runs directory", async () => {

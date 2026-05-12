@@ -4,11 +4,19 @@ export async function fetchJson(url) {
 }
 
 export async function fetchStaticManifest() {
-  try {
-    return await fetchJson("export/manifest.json");
-  } catch {
-    return fetchJson("/export/manifest.json");
-  }
+  return fetchJson(staticExportUrl("export/manifest.json"));
+}
+
+export function staticExportUrl(path, basePath = configuredBasePath()) {
+  const cleanPath = String(path).replace(/^\/+/, "");
+  const cleanBase = String(basePath || "/")
+    .replace(/^\/*/, "/")
+    .replace(/\/*$/, "/");
+  return cleanBase + cleanPath;
+}
+
+function configuredBasePath() {
+  return document.body?.dataset.basePath ?? "/";
 }
 
 export async function postJson(url, body) {

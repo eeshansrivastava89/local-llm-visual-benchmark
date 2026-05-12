@@ -29,6 +29,14 @@ export function resolveRunAssetPath(runDirectory: string, asset: string): string
   return assetPath;
 }
 
+export function assertSafePathSegment(segment: string, label = "Path segment"): string {
+  if (!/^[A-Za-z0-9._-]+$/u.test(segment) || segment === "." || segment === "..") {
+    throw new Error(`${label} must be a safe filename segment.`);
+  }
+
+  return segment;
+}
+
 export function isPathInside(path: string, root: string): boolean {
   return path === root || path.startsWith(`${root}${sep}`);
 }

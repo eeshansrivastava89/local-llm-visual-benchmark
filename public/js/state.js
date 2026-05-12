@@ -50,6 +50,7 @@ export const state = {
   selectedModelSource: "omlx",
   preparedPrompt: "",
   selectedRun: null,
+  compareSelection: [],
   captureRunDirectory: "",
   modalFocusReturn: {},
   onboardingDismissed: false,

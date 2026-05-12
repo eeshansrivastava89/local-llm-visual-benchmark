@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, rm, rmdir, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve, sep } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { isPathInside, resolveRunAssetPath } from "./asset-paths.ts";
 import type { RunPaths } from "./paths";
 import type { RunError, RunMetadata } from "./types";
 
@@ -236,9 +237,9 @@ async function readAssetTextIfPresent(
   asset: string
 ): Promise<string | undefined> {
   try {
-    return await readFile(join(metadata.runDirectory, asset), "utf8");
+    return await readFile(resolveRunAssetPath(metadata.runDirectory, asset), "utf8");
   } catch (error) {
-    if (isMissingPathError(error)) {
+    if (isMissingPathError(error) || isUnsafeAssetPathError(error)) {
       return undefined;
     }
 
@@ -252,10 +253,10 @@ async function assetExists(metadata: RunMetadata, asset?: string): Promise<boole
   }
 
   try {
-    const result = await stat(join(metadata.runDirectory, asset));
+    const result = await stat(resolveRunAssetPath(metadata.runDirectory, asset));
     return result.isFile() || result.isDirectory();
   } catch (error) {
-    if (isMissingPathError(error)) {
+    if (isMissingPathError(error) || isUnsafeAssetPathError(error)) {
       return false;
     }
 
@@ -267,10 +268,6 @@ function sortTimestamp(metadata: RunMetadata): string {
   return metadata.updatedAt || metadata.createdAt || metadata.runId;
 }
 
-function isPathInside(path: string, root: string): boolean {
-  return path === root || path.startsWith(`${root}${sep}`);
-}
-
 function isMissingPathError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -278,6 +275,10 @@ function isMissingPathError(error: unknown): boolean {
     "code" in error &&
     error.code === "ENOENT"
   );
+}
+
+function isUnsafeAssetPathError(error: unknown): boolean {
+  return error instanceof Error && /Asset path must stay inside a run folder/u.test(error.message);
 }
 
 async function pruneEmptyParents(directory: string, stopAt: string): Promise<void> {

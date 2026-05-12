@@ -1,8 +1,9 @@
 import { els } from "./js/dom.js";
 import { state } from "./js/state.js";
 import { clamp, escapeHtml, escapeAttribute, formatBytes, formatDate, formatDateShort, uniqueBy } from "./js/utils.js";
-import { fetchJson, fetchStaticManifest, postJson, deleteJson } from "./js/api.js";
-import { filteredRuns, groupRuns, modelsFromRuns, runSummaryText, runKind, hasCapturedVideo, needsMediaCapture, runCardState, displayRunError, runCardMediaMessage, runCardIdentity, runRecordText, canOpenVisualDetail, findRunByDirectoryOrId } from "./js/runs.js";
+import { fetchJson, fetchStaticManifest, postJson, deleteJson, staticExportUrl } from "./js/api.js";
+import { compareRunKey, selectedCompareRuns, toggleCompareSelection } from "./js/compare.js";
+import { filteredRuns, groupRuns, modelsFromRuns, runSummaryText, runKind, hasCapturedVideo, needsMediaCapture, runCardState, displayRunError, runCardMediaMessage, runCardIdentity, runRecordText, canOpenVisualDetail, findRunByDirectoryOrId, stackAttemptIdentity } from "./js/runs.js";
 import { openModal, closeModal, currentModal, handleModalKeydown } from "./js/modals.js";
 import { applyStoredTheme, toggleTheme, setTheme } from "./js/theme.js";
 import { startHtmlPolling } from "./js/polling.js";
@@ -1245,16 +1246,20 @@ function renderRuns() {
     ? "Model attempts"
     : state.mode === "table"
     ? "Table"
-    : state.mode === "benchmark"
-      ? "Prompt comparison"
-      : "Prompt comparison";
+    : state.mode === "compare"
+      ? "Compare runs"
+      : state.mode === "benchmark"
+        ? "Prompt comparison"
+        : "Prompt comparison";
   els.viewSubtitle.textContent = state.mode === "model"
     ? "Group attempts by model and prompt."
     : state.mode === "table"
     ? "Scan visual runs in a compact table."
-    : state.mode === "benchmark"
-      ? "Compare one prompt across models."
-      : "Compare one prompt across models.";
+    : state.mode === "compare"
+      ? "Select 2-4 visual runs for side-by-side inspection."
+      : state.mode === "benchmark"
+        ? "Compare one prompt across models."
+        : "Compare one prompt across models.";
 
   if (runs.length === 0) {
     const emptyBase = '<div class="empty">No runs match the current filters.</div>';
@@ -1271,6 +1276,11 @@ function renderRuns() {
 
   if (state.mode === "table") {
     renderRunsTable(runs);
+    return;
+  }
+
+  if (state.mode === "compare") {
+    renderCompareRuns(runs);
     return;
   }
 
@@ -1293,6 +1303,83 @@ function renderRuns() {
     groupRuns(runs, (r) => r.benchmark?.title ?? r.benchmark?.id ?? "Unknown prompt", (r) => r.model?.id ?? "Unknown model"),
     "benchmark"
   );
+}
+
+function renderCompareRuns(runs) {
+  const selectedRuns = selectedCompareRuns(runs, state.compareSelection);
+  els.runsSurface.innerHTML =
+    '<div class="grid gap-4">' +
+      '<section class="grid gap-3 rounded-lg border bg-card p-3 shadow-sm" aria-label="Compare run selection">' +
+        '<div class="flex flex-wrap items-baseline justify-between gap-2">' +
+          '<strong>' + String(selectedRuns.length) + " selected</strong>" +
+          '<span class="muted-copy text-sm">Choose up to 4 visual runs.</span>' +
+        "</div>" +
+        '<div class="grid gap-2 md:grid-cols-2">' + runs.map(renderCompareCandidate).join("") + "</div>" +
+      "</section>" +
+      renderComparePreviewGrid(selectedRuns) +
+    "</div>";
+  wireCompareSelection(runs);
+}
+
+function renderCompareCandidate(run) {
+  const stack = stackAttemptIdentity(run);
+  const key = compareRunKey(run);
+  const selected = state.compareSelection.includes(key);
+  const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
+  const label = "Select " + title + " " + stack.label;
+  return (
+    '<label class="flex min-w-0 cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors data-[selected=true]:border-accent data-[selected=true]:bg-accent-soft" data-selected="' + String(selected) + '">' +
+      '<input type="checkbox" data-compare-select="' + escapeAttribute(key) + '" aria-label="' + escapeAttribute(label) + '" ' + (selected ? "checked" : "") + " />" +
+      '<span class="grid min-w-0 gap-0.5">' +
+        '<strong class="truncate-line">' + escapeHtml(title) + "</strong>" +
+        '<span class="muted-copy truncate-line">' + escapeHtml(stack.label) + "</span>" +
+      "</span>" +
+    "</label>"
+  );
+}
+
+function renderComparePreviewGrid(selectedRuns) {
+  if (selectedRuns.length === 0) {
+    return '<section class="rounded-lg border bg-card p-3 text-sm text-muted-foreground shadow-sm" aria-label="Selected compare runs">Select runs to start comparing visual outputs.</section>';
+  }
+
+  return (
+    '<section class="grid gap-3 rounded-lg border bg-card p-3 shadow-sm md:grid-cols-2" aria-label="Selected compare runs">' +
+      selectedRuns.map(renderComparePreviewCard).join("") +
+    "</section>"
+  );
+}
+
+function renderComparePreviewCard(run) {
+  const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
+  const stack = stackAttemptIdentity(run);
+  const videoHref = assetHref(run, run.assets?.videoMp4 ?? run.assets?.video);
+  const previewHref = assetHref(run, run.assets?.preview);
+  const media = videoHref
+    ? '<video class="h-full w-full object-cover" controls muted playsinline src="' + escapeAttribute(videoHref) + '"></video>'
+    : previewHref
+      ? '<img class="h-full w-full object-cover" src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />'
+      : '<div class="preview-placeholder"><strong>No captured media</strong></div>';
+
+  return (
+    '<article class="grid min-w-0 gap-2" data-compare-run>' +
+      '<div class="grid aspect-video overflow-hidden rounded-lg bg-muted">' + media + "</div>" +
+      '<div class="grid min-w-0 gap-0.5">' +
+        '<strong class="truncate-line">' + escapeHtml(title) + "</strong>" +
+        '<span class="muted-copy truncate-line">' + escapeHtml(stack.label) + "</span>" +
+      "</div>" +
+    "</article>"
+  );
+}
+
+function wireCompareSelection(runs) {
+  document.querySelectorAll("[data-compare-select]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const run = runs.find((candidate) => compareRunKey(candidate) === input.dataset.compareSelect);
+      state.compareSelection = toggleCompareSelection(state.compareSelection, run);
+      renderRuns();
+    });
+  });
 }
 
 function renderRunsTable(runs) {
@@ -1610,7 +1697,7 @@ function assetHref(run, asset) {
   const version = assetVersion(run, asset);
   if (/^[a-z][a-z0-9+.-]*:/iu.test(path)) return path;
   if (state.staticMode || path.startsWith("export/")) {
-    return appendAssetVersion(path.replace(/^\/+/u, ""), version);
+    return appendAssetVersion(staticExportUrl(path), version);
   }
   return "/api/run-asset?runDirectory=" + encodeURIComponent(run.runDirectory) +
     "&asset=" + encodeURIComponent(asset) +

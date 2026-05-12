@@ -51,7 +51,7 @@ The point of view is intentionally narrow: this is an Apple Silicon daily-driver
 5. Paste the prompt into OpenCode, Pi, Hermes, LM Studio chat, or another local tool.
 6. The tool writes `index.html` into the prepared run folder.
 7. Click **Capture media** to generate the preview image and video.
-8. Compare the results in the gallery.
+8. Browse results in the workbench using **By prompt**, **By model**, or **Table**, or use **Compare** to select visual runs for side-by-side inspection.
 
 The live site is a static export of captured results. The local app is where run preparation, capture, and config sync happen.
 
@@ -97,7 +97,7 @@ That creates a static site in:
 dist-static/
 ```
 
-The static export includes benchmark metadata, preview images, and videos. It does not publish raw generated `index.html` files or operational controls.
+The static export includes benchmark metadata, summary run metadata, preview images, and videos. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, or operational controls.
 
 ## Local folders
 
@@ -125,8 +125,8 @@ npm run check         # Astro + TypeScript checks
 
 - Runs are local by default.
 - oMLX and LM Studio stay on your machine.
-- The app only publishes captured media and metadata when you build the static export.
-- Raw generated HTML is kept local and is not included in the published gallery.
+- The app only publishes captured media and publish-safe summary metadata when you build the static export.
+- Raw generated HTML, prepared run prompts, raw responses, stream logs, launch commands, local service URLs, and local filesystem paths are kept local and are not included in the published workbench.
 
 ## License
 

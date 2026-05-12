@@ -135,7 +135,7 @@ test("renders the visual workbench with prompt/model/table modes", async ({ page
   await expect(page.getByRole("link", { name: /Runs Metadata & files/ })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /LightEval/i })).toHaveCount(0);
   await expect(page.locator("[data-section]")).toHaveCount(0);
-  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table"]);
+  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table", "Compare"]);
   await expect(page.getByRole("button", { name: "By prompt" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "By model" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "Table" })).toHaveAttribute("aria-pressed", "false");
@@ -214,6 +214,52 @@ test("renders the visual workbench with prompt/model/table modes", async ({ page
 
   await page.locator("#refreshConnection").click();
   await expect(page.locator("#connectionMessage")).toContainText("2 models discovered");
+});
+
+test("compares selected visual runs side by side", async ({ page }) => {
+  const compareRuns = [
+    {
+      ...sampleRunWithVideo,
+      runner: {
+        mode: "external",
+        modelSource: "omlx",
+        intendedRunner: "opencode",
+        backendLabel: "oMLX"
+      }
+    },
+    {
+      ...sampleRunWithVideo,
+      runId: "2026-05-06T20-12-00-000Z",
+      updatedAt: "2026-05-06T20:13:00.000Z",
+      runDirectory: "/tmp/runs/sakura/local-qwen2-5-vl/2026-05-06T20-12-00-000Z",
+      model: {
+        id: "local/qwen2.5-vl",
+        slug: "local-qwen2-5-vl"
+      },
+      runner: {
+        mode: "manual",
+        modelSource: "lmstudio",
+        intendedRunner: "manual",
+        backendLabel: "LM Studio"
+      }
+    }
+  ];
+  await mockApi(page, { lmStudioOnline: true, runs: compareRuns });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Compare" }).click();
+
+  await expect(page.getByRole("heading", { name: "Compare runs" })).toBeVisible();
+  await expect(page.locator("#viewSubtitle")).toHaveText("Select 2-4 visual runs for side-by-side inspection.");
+  await page.getByRole("checkbox", { name: /Select Sakura Particle Field.*oMLX.*opencode/ }).check();
+  await page.getByRole("checkbox", { name: /Select Sakura Particle Field.*LM Studio.*manual/ }).check();
+
+  await expect(page.getByText("2 selected")).toBeVisible();
+  await expect(page.locator("[data-compare-run]")).toHaveCount(2);
+  const selectedCompareRunsRegion = page.getByLabel("Selected compare runs");
+  await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl · oMLX · opencode")).toBeVisible();
+  await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl · LM Studio · manual")).toBeVisible();
+  await expect(page.locator("[data-compare-run] video")).toHaveCount(2);
 });
 
 test("paginates the table mode at 25 records", async ({ page }) => {
@@ -933,7 +979,7 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await page.goto("/");
   await expect(page.locator("body.public-page")).toHaveCount(0);
   await expect(page.locator(".public-header")).toHaveCount(0);
-  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table"]);
+  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table", "Compare"]);
   await expect(page.getByRole("heading", { name: "Prompt comparison" })).toBeVisible();
   await expect(page.locator("#onboardingPanel")).toBeHidden();
   await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);

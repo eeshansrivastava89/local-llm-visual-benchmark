@@ -1,6 +1,6 @@
 import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
-import { join, posix } from "node:path";
-import { assertSafeRunAssetPath, resolveRunAssetPath } from "./asset-paths.ts";
+import { join, posix, resolve } from "node:path";
+import { assertSafePathSegment, assertSafeRunAssetPath, isPathInside, resolveRunAssetPath } from "./asset-paths.ts";
 import { loadBenchmarks } from "./benchmarks.ts";
 import { listRunMetadata } from "./runs.ts";
 import type { BenchmarkRecord, RunCaptureAsset, RunCaptureMetadata, RunMetadata, RunRunnerMetadata } from "./types.ts";
@@ -60,20 +60,24 @@ async function exportRunAssets(
   run: RunMetadata,
   publicExportDirectory: string
 ): Promise<RunMetadata> {
+  const benchmarkId = assertSafePathSegment(run.benchmark.id, "Export path segment");
+  const modelSlug = assertSafePathSegment(run.model.slug, "Export path segment");
+  const runId = assertSafePathSegment(run.runId, "Export path segment");
   const exportRunDirectory = posix.join(
     "export",
     EXPORTED_RUNS_DIRECTORY,
-    run.benchmark.id,
-    run.model.slug,
-    run.runId
+    benchmarkId,
+    modelSlug,
+    runId
   );
   const outputDirectory = join(
     publicExportDirectory,
     EXPORTED_RUNS_DIRECTORY,
-    run.benchmark.id,
-    run.model.slug,
-    run.runId
+    benchmarkId,
+    modelSlug,
+    runId
   );
+  assertPathInsideExportRoot(outputDirectory, publicExportDirectory);
   const assets: RunMetadata["assets"] = {
     metadata: safeAsset(run.assets.metadata ?? "metadata.json"),
     ...(run.assets.preview ? { preview: safeAsset(run.assets.preview) } : {}),
@@ -136,6 +140,12 @@ function safeAsset(asset: string): string {
   return assertSafeRunAssetPath(asset);
 }
 
+function assertPathInsideExportRoot(path: string, root: string): void {
+  if (!isPathInside(resolve(path), resolve(root))) {
+    throw new Error("Export path must stay inside the public export directory.");
+  }
+}
+
 function toStaticBenchmark(benchmark: BenchmarkRecord): BenchmarkRecord {
   return {
     id: benchmark.id,
@@ -152,7 +162,7 @@ function toPublicRunner(runner: RunRunnerMetadata): RunRunnerMetadata {
     ...(runner.intendedRunner ? { intendedRunner: runner.intendedRunner } : {}),
     ...(runner.actualRunner ? { actualRunner: runner.actualRunner } : {}),
     ...(runner.backendLabel ? { backendLabel: runner.backendLabel } : {}),
-    ...(runner.model ? { model: runner.model } : {}),
+    ...(isPublicSafeLabel(runner.model) ? { model: runner.model } : {}),
     ...(typeof runner.retries === "number" ? { retries: runner.retries } : {}),
     ...(runner.fallbacksUsed ? { fallbacksUsed: runner.fallbacksUsed } : {}),
     ...(runner.tokenMetrics?.reported ? { tokenMetrics: runner.tokenMetrics } : {})
@@ -171,7 +181,7 @@ function toPublicCaptureAsset(asset: RunCaptureAsset): RunCaptureAsset {
     status: asset.status,
     ...(asset.capturedAt ? { capturedAt: asset.capturedAt } : {}),
     ...(asset.reason ? { reason: asset.reason } : {}),
-    ...(asset.error?.message ? { error: { message: asset.error.message } } : {}),
+    ...(asset.error?.message ? { error: { message: toPublicErrorMessage(asset.error.message) } } : {}),
     ...(asset.quality
       ? {
           quality: {
@@ -184,6 +194,29 @@ function toPublicCaptureAsset(asset: RunCaptureAsset): RunCaptureAsset {
         }
       : {})
   };
+}
+
+function isPublicSafeLabel(value: string | undefined): value is string {
+  if (!value) return false;
+  return !containsLocalPathOrUrl(value);
+}
+
+function toPublicErrorMessage(message: string): string {
+  if (containsLocalPathOrUrl(message)) {
+    return "Capture failed. See local run evidence for details.";
+  }
+
+  return message;
+}
+
+function containsLocalPathOrUrl(value: string): boolean {
+  return (
+    /\bfile:\/\//iu.test(value) ||
+    /\bhttps?:\/\//iu.test(value) ||
+    /(^|\s)\/[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_. -]+)+/u.test(value) ||
+    /[A-Za-z]:[\\/]/u.test(value) ||
+    /\\\\[A-Za-z0-9_.-]+\\/u.test(value)
+  );
 }
 
 async function writePrettyJson(path: string, value: unknown): Promise<void> {
