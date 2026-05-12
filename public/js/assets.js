@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { staticExportUrl } from "./api.js";
 
-export function assetPath(run, asset) {
+function assetPath(run, asset) {
   if (!asset || !run.runDirectory) return "";
   return String(run.runDirectory).replace(/\/+$/u, "") + "/" + asset;
 }

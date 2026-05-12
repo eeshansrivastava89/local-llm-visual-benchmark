@@ -5,6 +5,7 @@ const title = "Local LLM Visual Benchmark";
 const basePath = import.meta.env.BASE_URL;
 const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
 const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
+const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name}.svg')`;
 ---
 
 <!doctype html>
@@ -13,6 +14,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href={`${basePath}favicon.svg`} />
     <script is:inline>
       try {
         const savedTheme = localStorage.getItem("theme");
@@ -43,16 +45,17 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
           </a>
 
           <div class="flex shrink-0 items-center gap-2">
-            <span class="badge-outline gap-1.5 text-xs operational-control" id="statsPill" title="System stats">
-              <span id="statsDot" class="status-dot" data-state="offline"></span>
-              <span id="statsCompact">Loading…</span>
+            <span class="badge-outline machine-pill gap-1.5 text-xs" id="statsPill" data-tooltip="Machine profile loading." tabindex="0" role="status" aria-label="Machine profile">
+              <span class="ui-icon" aria-hidden="true" style={iconStyle("sparkles")}></span>
+              <span id="statsDot" class="status-dot" data-state="checking"></span>
+              <span id="statsCompact">Machine</span>
             </span>
             <button type="button" class="btn-sm-outline icon-only-btn" id="themeToggle" aria-label="Use dark theme" title="Use dark theme">
               <span id="themeIcon" aria-hidden="true">☾</span>
               <span class="sr-only" id="themeLabel">Dark</span>
             </button>
-            <button type="button" class="btn-sm-outline operational-control" id="setupToggle">Setup</button>
-            <button type="button" class="btn operational-control" id="runToggle">Prepare run</button>
+            <button type="button" class="btn-sm-outline operational-control" id="setupToggle"><span class="ui-icon" aria-hidden="true" style={iconStyle("settings")}></span>Setup</button>
+            <button type="button" class="btn operational-control" id="runToggle"><span class="ui-icon" aria-hidden="true" style={iconStyle("plus")}></span>Prepare run</button>
           </div>
         </div>
       </header>
@@ -77,9 +80,9 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
           <!-- Toolbar -->
           <div class="toolbar">
             <div class="view-tabs">
-              <button type="button" class="view-tab" data-mode="benchmark" aria-pressed="true">By prompt</button>
-              <button type="button" class="view-tab" data-mode="model" aria-pressed="false">By model</button>
-              <button type="button" class="view-tab" data-mode="table" aria-pressed="false">Table</button>
+              <button type="button" class="view-tab" data-mode="benchmark" aria-pressed="true"><span class="ui-icon" aria-hidden="true" style={iconStyle("panels-top-left")}></span>By prompt</button>
+              <button type="button" class="view-tab" data-mode="model" aria-pressed="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("boxes")}></span>By model</button>
+              <button type="button" class="view-tab" data-mode="table" aria-pressed="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("table-2")}></span>Table</button>
             </div>
             <div class="toolbar-filters">
               <div class="dropdown-wrap">
@@ -104,7 +107,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                 aria-label="Search runs"
                 placeholder="Search runs, models, prompts, harnesses"
               />
-              <button type="button" class="btn-sm-outline operational-control" id="refreshRuns">Refresh &amp; capture missing</button>
+              <button type="button" class="btn-sm-outline operational-control" id="refreshRuns" data-icon="refresh-cw"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Refresh</button>
             </div>
           </div>
 
@@ -146,12 +149,12 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
             <p class="muted-copy truncate-line mt-1 text-sm" id="detailSubtitle"></p>
           </div>
           <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <button type="button" class="btn-sm-outline operational-control" id="openHtml" data-operational-available="false">Open HTML</button>
-            <button type="button" class="btn-sm-outline operational-control" id="copyDetailPath" data-operational-available="false">Copy path</button>
-            <button type="button" class="btn-sm-outline operational-control" id="openRunFolder" data-operational-available="false">Open in Finder</button>
-            <button type="button" class="btn-sm-outline operational-control" id="recaptureRun" data-operational-available="false">Recapture media</button>
-            <button type="button" class="btn-sm-danger operational-control" id="deleteRun" data-operational-available="false">Delete run</button>
-            <button type="button" class="btn-sm-outline" id="closeDetail">Close</button>
+            <button type="button" class="btn-sm-outline operational-control" id="openHtml" data-icon="file-code" data-operational-available="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("file-code")}></span>Open HTML</button>
+            <button type="button" class="btn-sm-outline operational-control" id="copyDetailPath" data-icon="copy" data-operational-available="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span>Copy path</button>
+            <button type="button" class="btn-sm-outline operational-control" id="openRunFolder" data-icon="folder-open" data-operational-available="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("folder-open")}></span>Open in Finder</button>
+            <button type="button" class="btn-sm-outline operational-control" id="recaptureRun" data-icon="camera" data-operational-available="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("camera")}></span>Recapture media</button>
+            <button type="button" class="btn-sm-danger operational-control" id="deleteRun" data-icon="trash-2" data-operational-available="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("trash-2")}></span>Delete run</button>
+            <button type="button" class="btn-sm-outline" id="closeDetail"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
           </div>
         </header>
         <div class="detail-body p-5">
@@ -167,7 +170,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                 <h3 id="detailTextTitle">Prompt</h3>
                 <div class="section-actions">
                   <span class="badge-outline" id="promptLength">0 chars</span>
-                  <button type="button" class="btn-sm-outline" id="copyDetailPrompt">Copy prompt</button>
+                  <button type="button" class="btn-sm-outline" id="copyDetailPrompt" data-icon="copy"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span>Copy prompt</button>
                 </div>
               </div>
               <pre class="code-block prompt-block" id="detailPrompt"></pre>
@@ -186,7 +189,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
             <h2 class="truncate-line text-lg font-semibold">Delete run?</h2>
             <p class="muted-copy truncate-line mt-1 text-sm">This removes the run folder from disk.</p>
           </div>
-          <button type="button" class="btn-sm-outline" id="closeDeleteConfirm">Close</button>
+          <button type="button" class="btn-sm-outline" id="closeDeleteConfirm"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
         </header>
         <div class="grid gap-4 p-5">
           <div class="rounded-lg border border-[oklch(0.78_0.06_28)] bg-[oklch(0.97_0.018_28)] p-3">
@@ -198,8 +201,8 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
             <code class="code-inline-path" id="deleteRunPath"></code>
           </div>
           <div class="flex flex-wrap justify-end gap-2">
-            <button type="button" class="btn-sm-outline" id="cancelDeleteRun">Cancel</button>
-            <button type="button" class="btn-sm-danger" id="confirmDeleteRun">Delete folder</button>
+            <button type="button" class="btn-sm-outline" id="cancelDeleteRun"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Cancel</button>
+            <button type="button" class="btn-sm-danger" id="confirmDeleteRun"><span class="ui-icon" aria-hidden="true" style={iconStyle("trash-2")}></span>Delete folder</button>
           </div>
         </div>
       </article>
@@ -238,8 +241,8 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                 <span id="lmStudioStatusText">LM Studio checking</span>
               </span>
             </div>
-            <button class="btn" type="button" id="prepareRun">Prepare slot</button>
-            <button type="button" class="btn-sm-outline" id="closePrep">Close</button>
+            <button class="btn" type="button" id="prepareRun" data-icon="play"><span class="ui-icon" aria-hidden="true" style={iconStyle("play")}></span>Prepare slot</button>
+            <button type="button" class="btn-sm-outline" id="closePrep"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
           </div>
         </header>
         <div class="prep-body p-5">
@@ -300,8 +303,8 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                     </div>
                   </div>
                   <div class="section-actions">
-                    <button type="button" class="btn-sm-outline" id="copyPreparedPath" disabled>Copy path</button>
-                    <button type="button" class="btn-sm-outline" id="copyPrompt" disabled>Copy prompt</button>
+                    <button type="button" class="btn-sm-outline" id="copyPreparedPath" data-icon="copy" disabled><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span>Copy path</button>
+                    <button type="button" class="btn-sm-outline" id="copyPrompt" data-icon="copy" disabled><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span>Copy prompt</button>
                   </div>
                 </div>
                 <textarea id="preparedPrompt" class="input font-mono text-[0.82rem] leading-5" placeholder="Prepare a run slot to generate the prompt for index.html."></textarea>
@@ -321,7 +324,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
             <h2 class="truncate-line text-lg font-semibold">Setup</h2>
             <p class="muted-copy truncate-line mt-1 text-sm">Refresh oMLX or LM Studio models, then prepare runs and save generated artifacts.</p>
           </div>
-          <button type="button" class="btn-sm-outline" id="closeSetup">Close</button>
+          <button type="button" class="btn-sm-outline" id="closeSetup"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
         </header>
         <div class="prep-body setup-body">
           <div class="setup-console-layout">
@@ -343,7 +346,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                   </div>
                   <div class="lm-op-control lm-connect-control">
                     <input id="omlxBaseUrl" class="input flex-1" aria-label="oMLX base URL" value="http://127.0.0.1:8000/v1" />
-                    <button type="button" class="btn" id="refreshOmlx">Refresh</button>
+                    <button type="button" class="btn" id="refreshOmlx" data-icon="refresh-cw"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Refresh</button>
                   </div>
                   <p class="lm-op-message" id="omlxConnectionMessage" aria-live="polite">Waiting for local API.</p>
                 </div>
@@ -355,7 +358,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                   </div>
                   <div class="lm-op-control lm-connect-control">
                     <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
-                    <button type="button" class="btn" id="refreshConnection">Refresh</button>
+                    <button type="button" class="btn" id="refreshConnection" data-icon="refresh-cw"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Refresh</button>
                   </div>
                   <p class="lm-op-message" id="connectionMessage" aria-live="polite">Waiting for local API.</p>
                 </div>
@@ -369,7 +372,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                       <span class="sync-target-path" id="lmConfigPiPath">~/.pi/agent/models.json</span>
                     </div>
                     <img class="sync-target-logo sync-target-logo-pi" src={`${basePath}assets/pi-logo.svg`} alt="" aria-hidden="true" />
-                    <button type="button" class="btn-sm-outline" id="syncPiBtn">Sync Pi</button>
+                    <button type="button" class="btn-sm-outline" id="syncPiBtn"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Sync Pi</button>
                   </div>
                   <div class="lm-op-cell sync-target" id="lmConfigOpenCode">
                     <div class="sync-target-main">
@@ -378,7 +381,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                       <span class="sync-target-path" id="lmConfigOpenCodePath">~/.config/opencode/opencode.json</span>
                     </div>
                     <img class="sync-target-logo sync-target-logo-opencode" src={`${basePath}assets/opencode-logo.svg`} alt="" aria-hidden="true" />
-                    <button type="button" class="btn-sm-outline" id="syncOpenCodeBtn">Sync OpenCode</button>
+                    <button type="button" class="btn-sm-outline" id="syncOpenCodeBtn"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Sync OpenCode</button>
                   </div>
                 </section>
               </div>

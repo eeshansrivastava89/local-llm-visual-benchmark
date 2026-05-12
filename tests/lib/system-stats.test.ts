@@ -28,6 +28,7 @@ describe("getSystemStats", () => {
         usedBytes: expect.any(Number),
         source: expect.any(String)
       },
+      hardware: expect.any(Object),
       gpu: {
         available: expect.any(Boolean),
         telemetryAvailable: expect.any(Boolean),

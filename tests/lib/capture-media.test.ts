@@ -190,6 +190,24 @@ describe("capture media metadata updates", () => {
     expect(metadata.assets.videoMp4).toBeUndefined();
   });
 
+  it("defaults video capture duration to 20 seconds", async () => {
+    const { runsRoot } = await writePreparedRun();
+    let videoDurationMs: number | undefined;
+
+    await captureMissingRunMedia({
+      runsRoot,
+      captureRunMedia: async (capturedRun, options) => {
+        videoDurationMs = options.videoDurationMs;
+        return {
+          captured: true,
+          run: capturedRun
+        };
+      }
+    });
+
+    expect(videoDurationMs).toBe(20_000);
+  });
+
   it("recaptures one run when forced even if preview media already exists", async () => {
     const { runsRoot, run } = await writePreparedRun();
     let forcedOption: boolean | undefined;

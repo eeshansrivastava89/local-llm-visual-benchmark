@@ -32,6 +32,53 @@ const omlxModels = [
   }
 ];
 
+const sampleMachineProfile = {
+  collectedAt: "2026-05-06T19:12:00.000Z",
+  platform: {
+    node: "v26.0.0",
+    platform: "darwin",
+    arch: "arm64"
+  },
+  os: {
+    type: "Darwin",
+    release: "25.0.0",
+    hostname: "sidequest-mac",
+    uptimeSeconds: 12345
+  },
+  hardware: {
+    machineName: "MacBook Pro",
+    machineModel: "Mac16,7",
+    chipType: "Apple M4 Pro",
+    physicalMemory: "48 GB"
+  },
+  cpu: {
+    model: "Apple M4 Pro",
+    cores: 14,
+    usagePercent: null
+  },
+  memory: {
+    totalBytes: 51539607552,
+    availableBytes: 25769803776,
+    freeBytes: 8589934592,
+    usedBytes: 25769803776,
+    pressurePercent: 50,
+    pressureLabel: "low",
+    source: "macOS VM stats"
+  },
+  gpu: {
+    available: true,
+    telemetryAvailable: false,
+    devices: [{
+      name: "Apple M4 Pro",
+      cores: "20",
+      vram: undefined,
+      metalSupport: "Metal 4",
+      displays: ["Color LCD · 1728 x 1080 @ 120.00Hz"]
+    }],
+    reason: "GPU hardware detected."
+  }
+};
+
 const sampleRun = {
   runId: "2026-05-06T19-12-00-000Z",
   benchmark: benchmarks[0],
@@ -202,7 +249,7 @@ test("renders the visual workbench with prompt/model/table modes", async ({ page
   const operationColumns = await page.locator(".lm-operations-grid").evaluate((el) =>
     getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
   );
-  expect(operationColumns).toBe(3);
+  expect(operationColumns).toBe(4);
   const modelRowColumns = await page.locator(".lm-model-row").first().evaluate((el) =>
     getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length
   );
@@ -417,6 +464,22 @@ test("warns in the prepare modal when the selected model source is offline", asy
   await expect(page.locator("#prepModelWarning")).toBeVisible();
   await expect(page.locator("#prepModelWarning")).toContainText("LM Studio is not reachable");
   await expect(page.locator("#prepareRun")).toBeDisabled();
+});
+
+test("refreshes oMLX status when opening the prepare modal", async ({ page }) => {
+  let omlxOnline = false;
+  await mockApi(page, { lmStudioOnline: false, omlxOnline: () => omlxOnline });
+
+  await page.goto("/");
+  await expect(page.locator("#omlxStatusPill")).toHaveAttribute("data-status", "offline");
+
+  omlxOnline = true;
+  await page.getByRole("button", { name: "Prepare run" }).click();
+
+  await expect(page.locator("#prepBackdrop[open]")).toBeVisible();
+  await expect(page.locator("#omlxStatusPill")).toHaveAttribute("data-status", "online");
+  await expect(page.locator("#lmStudioStatusPill")).toHaveAttribute("data-status", "offline");
+  await expect(page.locator("#prepModelSelect option").first()).not.toHaveText("oMLX offline");
 });
 
 test("supports prompt comparison and video-only run details", async ({ page }) => {
@@ -800,7 +863,7 @@ test("refresh reloads prompt files and saved runs", async ({ page }) => {
   ];
   runsResponse = [];
 
-  await page.getByRole("button", { name: "Refresh & capture missing" }).click();
+  await page.getByRole("button", { name: "Refresh" }).click();
 
   await expect(page.getByLabel("Filter by prompt")).toContainText("New Prompt");
   await expect(page.locator("[data-run-id]")).toHaveCount(0);
@@ -898,8 +961,9 @@ test("hides operational chrome when writes are disabled", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Setup" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Refresh & capture missing" })).toHaveCount(0);
-  await expect(page.locator("#statsPill")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Refresh" })).toHaveCount(0);
+  await expect(page.locator("#statsPill")).toBeVisible();
+  await expect(page.locator("#statsPill")).toContainText("M4 Pro");
   await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
   await expect(page.locator("#themeLabel")).toHaveClass(/sr-only/);
 
@@ -926,6 +990,7 @@ test("falls back to exported static data without prepare controls", async ({ pag
         version: 1,
         generatedAt: "2026-05-06T20:00:00.000Z",
         benchmarks,
+        machineProfile: sampleMachineProfile,
         runs: [
           {
             ...sampleRunWithVideo,
@@ -966,8 +1031,9 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Setup" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Refresh & capture missing" })).toHaveCount(0);
-  await expect(page.locator("#statsPill")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Refresh" })).toHaveCount(0);
+  await expect(page.locator("#statsPill")).toBeVisible();
+  await expect(page.locator("#statsPill")).toContainText("M4 Pro");
   await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
   await expect(page.locator("#themeLabel")).toHaveClass(/sr-only/);
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
@@ -985,7 +1051,7 @@ async function mockApi(
   page: Page,
   options: {
     lmStudioOnline: boolean;
-    omlxOnline?: boolean;
+    omlxOnline?: boolean | (() => boolean);
     benchmarks?: () => typeof benchmarks;
     runs?: unknown[] | (() => unknown[]);
     onPrepare?: (payload: unknown) => void;
@@ -1005,22 +1071,7 @@ async function mockApi(
   await page.route("**/api/system-stats", async (route) => {
     await route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({
-        stats: {
-          collectedAt: "2026-05-06T19:12:00.000Z",
-          cpu: {
-            cores: 12,
-            usagePercent: 18.5
-          },
-          memory: {
-            totalBytes: 34359738368,
-            usedBytes: 25769803776
-          },
-          gpu: {
-            devices: [{ name: "Apple M", cores: "20" }]
-          }
-        }
-      })
+      body: JSON.stringify({ stats: sampleMachineProfile })
     });
   });
 
@@ -1085,7 +1136,8 @@ async function mockApi(
   });
 
   await page.route("**/api/omlx/models**", async (route) => {
-    if (options.omlxOnline === false) {
+    const omlxOnline = typeof options.omlxOnline === "function" ? options.omlxOnline() : options.omlxOnline;
+    if (omlxOnline === false) {
       await route.fulfill({
         status: 500,
         contentType: "application/json",

@@ -25,7 +25,7 @@ npm run dev
 
 Model benchmarks are usually abstract: scores, tokens, leaderboards, and tiny deltas that do not always explain what a model can actually do.
 
-This project takes a more practical route. It gives local models small visual build tasks like a solar system, a sakura tree, a macro wildflower scene, or a sunset ocean study. The model has to produce a working HTML artifact. The app captures a screenshot and short video, then lets you compare outputs by model or by prompt.
+This project takes a more practical route. It gives local models small visual build tasks like a solar system, a sakura tree, a macro wildflower scene, or a sunset ocean study. The model has to produce a working HTML artifact. The app captures a screenshot and 20-second preview video, then lets you compare outputs by model or by prompt.
 
 If a model understands layout, animation, visual hierarchy, browser APIs, and instruction-following, the result usually looks better. If it struggles, you can see exactly where it falls apart.
 
@@ -50,10 +50,10 @@ The point of view is intentionally narrow: this is an Apple Silicon daily-driver
 4. Click **Prepare run**, choose a benchmark, model source, model, and harness, then copy the generated prompt.
 5. Paste the prompt into OpenCode, Pi, Hermes, LM Studio chat, or another local tool.
 6. The tool writes `index.html` into the prepared run folder.
-7. Click **Capture media** to generate the preview image and video.
-8. Browse results in the workbench using **By prompt**, **By model**, or **Table**, or use **Compare** to select visual runs for side-by-side inspection.
+7. Click **Refresh** to reload saved runs and capture missing preview media.
+8. Browse results in the workbench using **By prompt**, **By model**, or **Table**. In **Table**, select rows to compare visual runs side by side.
 
-The live site is a static export of captured results. The local app is where run preparation, capture, and config sync happen.
+The live site is the same workbench as a static export of captured results. The local app is where run preparation, capture, deletion, folder-opening, and config sync happen.
 
 ## Setup
 
@@ -99,7 +99,15 @@ dist-static/
 
 The default static build uses the GitHub Pages base path `/local-llm-visual-benchmark/`. To smoke-test that exact output locally, serve `dist-static/` from that path rather than the domain root.
 
-The static export includes benchmark metadata, summary run metadata, preview images, and videos. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, or operational controls.
+The static export includes benchmark metadata, summary run metadata, preview images, videos, and a build-time machine profile for the header pill. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, or operational controls.
+
+## Architecture notes
+
+The browser workbench is intentionally one site, not separate local and public apps. Local dev mode and the static GitHub Pages export share the same Astro page and viewer modules. Static mode only loads `export/manifest.json` and hides local operational controls such as Setup, Prepare run, Refresh/capture, Open in Finder, Recapture, and Delete.
+
+The viewer bootstrap lives in `public/js/app.js`; feature behavior is split into small controller modules under `public/js/` for data loading, model sources, capture, prepare-run, detail actions, workbench rendering, operational-control visibility, icons, and the machine-profile pill.
+
+Captured videos default to 20 seconds. The default is defined in `src/lib/capture-media.ts` as `DEFAULT_VIDEO_DURATION_MS`.
 
 ## Local folders
 
@@ -127,7 +135,7 @@ npm run check         # Astro + TypeScript checks
 
 - Runs are local by default.
 - oMLX and LM Studio stay on your machine.
-- The app only publishes captured media and publish-safe summary metadata when you build the static export.
+- The app only publishes captured media, the benchmark prompt text, publish-safe summary metadata, and a build-time machine profile when you build the static export.
 - Raw generated HTML, prepared run prompts, raw responses, stream logs, launch commands, local service URLs, and local filesystem paths are kept local and are not included in the published workbench.
 
 ## License

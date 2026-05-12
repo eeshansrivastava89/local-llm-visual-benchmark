@@ -38,6 +38,12 @@ export interface SystemStats {
     pressureLabel: "low" | "medium" | "high" | "unknown";
     source: string;
   };
+  hardware: {
+    machineName?: string;
+    machineModel?: string;
+    chipType?: string;
+    physicalMemory?: string;
+  };
   gpu: {
     available: boolean;
     telemetryAvailable: boolean;
@@ -45,6 +51,9 @@ export interface SystemStats {
       name: string;
       cores?: string;
       vendor?: string;
+      vram?: string;
+      metalSupport?: string;
+      displays?: string[];
     }>;
     reason: string;
   };
@@ -57,6 +66,7 @@ interface CpuSample {
 
 let previousCpuSample: CpuSample | undefined;
 let cachedGpuInfo: SystemStats["gpu"] | undefined;
+let cachedHardwareInfo: SystemStats["hardware"] | undefined;
 
 export function getSystemStats(now = new Date()): SystemStats {
   const cpuRecords = cpus();
@@ -84,6 +94,7 @@ export function getSystemStats(now = new Date()): SystemStats {
       usagePercent
     },
     memory,
+    hardware: getHardwareInfo(),
     gpu: getGpuInfo()
   };
 }
@@ -182,6 +193,44 @@ function readVmStatPages(output: string, label: string): number {
   return match ? Number.parseInt(match[1], 10) : 0;
 }
 
+function getHardwareInfo(): SystemStats["hardware"] {
+  cachedHardwareInfo ??= detectHardwareInfo();
+  return cachedHardwareInfo;
+}
+
+function detectHardwareInfo(): SystemStats["hardware"] {
+  const profilerOutput =
+    platform() === "darwin"
+      ? runCommand("system_profiler", ["SPHardwareDataType", "-json"], 2500)
+      : undefined;
+
+  if (profilerOutput) {
+    try {
+      const parsed = JSON.parse(profilerOutput) as {
+        SPHardwareDataType?: Array<Record<string, unknown>>;
+      };
+      const hardware = parsed.SPHardwareDataType?.[0];
+      if (hardware) {
+        return {
+          ...(typeof hardware.machine_name === "string" ? { machineName: hardware.machine_name } : {}),
+          ...(typeof hardware.machine_model === "string" ? { machineModel: hardware.machine_model } : {}),
+          ...(typeof hardware.chip_type === "string" ? { chipType: hardware.chip_type } : {}),
+          ...(typeof hardware.physical_memory === "string" ? { physicalMemory: hardware.physical_memory } : {})
+        };
+      }
+    } catch {
+      // Fall through to sysctl fallback.
+    }
+  }
+
+  return {
+    ...(readCpuModel() ? { chipType: readCpuModel() } : {}),
+    ...(runCommand("sysctl", ["-n", "hw.model"])?.trim()
+      ? { machineModel: runCommand("sysctl", ["-n", "hw.model"])?.trim() }
+      : {})
+  };
+}
+
 function getGpuInfo(): SystemStats["gpu"] {
   cachedGpuInfo ??= detectGpuInfo();
   return cachedGpuInfo;
@@ -207,8 +256,21 @@ function detectGpuInfo(): SystemStats["gpu"] {
               : undefined,
           vendor:
             typeof device.spdisplays_vendor === "string"
-              ? device.spdisplays_vendor
-              : undefined
+              ? cleanProfilerLabel(device.spdisplays_vendor)
+              : undefined,
+          vram:
+            typeof device.spdisplays_vram === "string"
+              ? device.spdisplays_vram
+              : undefined,
+          metalSupport:
+            typeof device.spdisplays_mtlgpufamilysupport === "string"
+              ? cleanProfilerLabel(device.spdisplays_mtlgpufamilysupport)
+              : undefined,
+          displays: Array.isArray(device.spdisplays_ndrvs)
+            ? device.spdisplays_ndrvs
+                .map((display) => displayLabel(display))
+                .filter((display): display is string => Boolean(display))
+            : []
         }))
         .filter((device) => device.name !== "GPU");
 
@@ -232,6 +294,34 @@ function detectGpuInfo(): SystemStats["gpu"] {
     devices: [],
     reason: "GPU hardware telemetry is unavailable in the local API v1."
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function displayLabel(value: unknown): string | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const name = typeof value._name === "string" ? value._name : "Display";
+  const resolution = typeof value._spdisplays_resolution === "string"
+    ? value._spdisplays_resolution
+    : typeof value._spdisplays_pixels === "string"
+      ? value._spdisplays_pixels
+      : undefined;
+  return resolution ? `${name} · ${resolution}` : name;
+}
+
+function cleanProfilerLabel(value: string): string {
+  return value
+    .replace(/^sppci_vendor_/iu, "")
+    .replace(/^spdisplays_/iu, "")
+    .replace(/_/gu, " ")
+    .replace(/\bmtl\b/iu, "Metal")
+    .replace(/\bmetal(\d+)\b/iu, "Metal $1")
+    .trim();
 }
 
 function readCpuModel(): string | undefined {

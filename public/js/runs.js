@@ -1,4 +1,5 @@
 import { state } from "./state.js";
+import { uniqueBy } from "./utils.js";
 
 export function filteredRuns() {
   return state.runs.filter((run) => {
@@ -62,11 +63,11 @@ export function runKind(run) {
   return run.kind ?? "visual";
 }
 
-export function runKindLabel(run) {
+function runKindLabel(run) {
   return runKind(run) === "visual" ? "Visual" : "Unsupported";
 }
 
-export function runnerLabel(run) {
+function runnerLabel(run) {
   const label = run.runner?.harnessLabel ?? run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.runner?.mode ?? run.tool ?? "manual";
   const version = run.runner?.harnessVersion;
   return version ? `${label} ${version}` : label;
@@ -235,14 +236,4 @@ function normalizeIdentityPart(value) {
     .trim()
     .toLowerCase()
     .replace(/\s+/gu, "-");
-}
-
-function uniqueBy(items, keyForItem) {
-  const seen = new Set();
-  return items.filter((item) => {
-    const key = keyForItem(item);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }

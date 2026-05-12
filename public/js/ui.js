@@ -35,7 +35,7 @@ export function updateOnboarding() {
   });
 }
 
-export function onboardingCompletedStep() {
+function onboardingCompletedStep() {
   let step = 0;
   if (state.omlxConnected || state.lmConnected) step = 1;
   if (state.discoveredModels.length > 0) step = 2;

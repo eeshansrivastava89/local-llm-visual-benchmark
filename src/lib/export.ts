@@ -3,6 +3,7 @@ import { join, posix, resolve } from "node:path";
 import { assertSafePathSegment, assertSafeRunAssetPath, isPathInside, resolveRunAssetPath } from "./asset-paths.ts";
 import { loadBenchmarks } from "./benchmarks.ts";
 import { listRunMetadata } from "./runs.ts";
+import { getSystemStats, type SystemStats } from "./system-stats.ts";
 import type { BenchmarkRecord, RunCaptureAsset, RunCaptureMetadata, RunMetadata, RunRunnerMetadata } from "./types.ts";
 
 export interface StaticExportManifest {
@@ -10,6 +11,7 @@ export interface StaticExportManifest {
   generatedAt: string;
   benchmarks: BenchmarkRecord[];
   runs: RunMetadata[];
+  machineProfile: SystemStats;
 }
 
 export interface GenerateStaticExportOptions {
@@ -49,7 +51,8 @@ export async function generateStaticExport(
     version: 1,
     generatedAt: (options.generatedAt ?? new Date()).toISOString(),
     benchmarks: benchmarks.map(toStaticBenchmark),
-    runs: exportedRuns
+    runs: exportedRuns,
+    machineProfile: getSystemStats(options.generatedAt ?? new Date())
   };
 
   await writePrettyJson(join(publicExportDirectory, "manifest.json"), manifest);

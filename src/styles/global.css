@@ -227,6 +227,26 @@ textarea {
   padding-inline: 0;
 }
 
+.ui-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  vertical-align: -0.125em;
+  background-color: currentColor;
+  mask: var(--icon) center / contain no-repeat;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+}
+
+.btn .ui-icon,
+.btn-outline .ui-icon,
+.btn-sm-outline .ui-icon,
+.btn-sm-danger .ui-icon,
+.btn-sm-ghost .ui-icon,
+.view-tab .ui-icon {
+  font-size: 0.95rem;
+}
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -327,6 +347,96 @@ button:disabled,
 
 .help-tooltip-layer[hidden] {
   display: none;
+}
+
+.help-tooltip-layer[data-kind="machine"] {
+  width: min(28rem, calc(100vw - 1.5rem));
+  border-color: color-mix(in oklch, var(--primary), var(--border) 45%);
+  border-radius: 0.9rem;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in oklch, var(--primary), transparent 72%), transparent 34%),
+    linear-gradient(135deg, color-mix(in oklch, var(--card), black 2%), var(--popover));
+  padding: 0;
+  box-shadow:
+    0 24px 70px oklch(0.18 0.008 255 / 0.22),
+    inset 0 1px 0 oklch(1 0 0 / 0.22);
+}
+
+.machine-pill {
+  cursor: help;
+}
+
+.machine-tooltip-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem;
+}
+
+.machine-tooltip-kicker {
+  color: color-mix(in oklch, var(--primary), var(--foreground) 18%);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.machine-tooltip-title {
+  color: var(--foreground);
+  font-size: 1rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.machine-tooltip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.machine-tooltip-metric {
+  display: grid;
+  gap: 0.14rem;
+  min-width: 0;
+  border: 1px solid color-mix(in oklch, var(--border), transparent 25%);
+  border-radius: 0.65rem;
+  background: color-mix(in oklch, var(--subtle-surface), transparent 10%);
+  padding: 0.48rem 0.55rem;
+}
+
+.machine-tooltip-metric span {
+  color: var(--muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.machine-tooltip-metric strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.74rem;
+  font-weight: 680;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.machine-tooltip-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 0.65rem;
+  color: var(--muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.machine-tooltip-footer span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lm-connection-row {
@@ -688,6 +798,8 @@ button:disabled,
 }
 
 .setup-body {
+  min-height: 0;
+  overflow: auto;
   padding: 1rem;
 }
 
@@ -741,7 +853,7 @@ button:disabled,
 
 .lm-operations-grid {
   display: grid;
-  grid-template-columns: minmax(18rem, 1.05fr) repeat(2, minmax(14rem, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.6rem;
   border-top: 1px solid var(--border);
   padding-top: 0.85rem;
@@ -787,6 +899,10 @@ button:disabled,
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.45rem;
+}
+
+.lm-connect-control .btn {
+  padding-inline: 0.7rem;
 }
 
 .lm-op-message,
@@ -902,7 +1018,7 @@ html[data-theme="dark"] .sync-target-logo {
 .lm-studio-shell .available-model-list {
   display: grid;
   gap: 0;
-  max-height: min(28rem, 45dvh);
+  max-height: clamp(12rem, 28dvh, 20rem);
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 0.8rem;
@@ -1121,8 +1237,12 @@ html[data-theme="dark"] .sync-target-logo {
 }
 
 .view-tab {
-  min-height: 1.85rem;
-  padding: 0 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0 0.75rem;
   border: 1px solid transparent;
   border-radius: 0.55rem;
   background: transparent;
@@ -1162,12 +1282,21 @@ html[data-theme="dark"] .sync-target-logo {
 .toolbar-filters .dropdown-wrap .input {
   width: 100%;
   min-width: 0;
+  min-height: 2.35rem;
+  padding-block: 0.5rem;
 }
 
 .toolbar-filters #runsSearch {
   flex: 1 1 12rem;
   width: 14rem;
   min-width: 10rem;
+  min-height: 2.35rem;
+  padding-block: 0.5rem;
+  appearance: none;
+}
+
+.toolbar-filters #refreshRuns {
+  min-height: 2.35rem;
 }
 
 /* ── Phase 2: Onboarding ── */
@@ -1372,6 +1501,70 @@ html[data-theme="dark"] .sync-target-logo {
 
 .run-title-cell {
   min-width: 12rem;
+}
+
+.compare-panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  padding: 0.85rem;
+  box-shadow: var(--shadow);
+}
+
+.compare-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.compare-panel-head h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.compare-panel-head span {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.compare-panel-empty {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.compare-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compare-card {
+  display: grid;
+  min-width: 0;
+  gap: 0.5rem;
+}
+
+.compare-media {
+  display: grid;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .runs-pagination {
@@ -1918,6 +2111,12 @@ html[data-theme="dark"] .sync-target-logo {
 @media (max-width: 1180px) {
   .run-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .lm-operations-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

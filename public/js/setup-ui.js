@@ -1,6 +1,7 @@
 import { els } from "./dom.js";
 import { state } from "./state.js";
 import { modelsFromRuns } from "./runs.js";
+import { canUseOperationalControls } from "./operational-controls.js";
 import { escapeAttribute, escapeHtml, uniqueBy } from "./utils.js";
 
 const SOURCE_STATUS_COPY = {
@@ -80,8 +81,10 @@ export function renderModelInventory() {
   const piExists = state.modelSync.files?.pi?.exists ?? false;
   const ocExists = state.modelSync.files?.opencode?.exists ?? false;
 
+  const liveModelIds = new Set(state.discoveredModels.map((model) => model.id));
+  const historyModels = runModels.filter((model) => !liveModelIds.has(model.id));
   const models = uniqueBy(
-    [...state.discoveredModels, ...runModels],
+    [...state.discoveredModels, ...historyModels],
     (m) => modelKey(m)
   );
 
@@ -273,10 +276,6 @@ function renderStatusCheck(label, isPresent, configExists) {
   );
 }
 
-
-function canUseOperationalControls() {
-  return !state.staticMode && state.writesEnabled;
-}
 
 function modelsForSource(source) {
   return source === "lmstudio"

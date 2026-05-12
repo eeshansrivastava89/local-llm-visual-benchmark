@@ -40,6 +40,7 @@ export const state = {
   captureBusy: false,
   runs: [],
   stats: null,
+  machineProfile: null,
   selectedModel: "all",
   selectedBenchmark: "all",
   selectedHarness: "all",

@@ -1,15 +1,18 @@
 import { assetHref } from "./assets.js";
+import { icon } from "./icons.js";
 import { stackAttemptIdentity } from "./runs.js";
 import { escapeAttribute, escapeHtml } from "./utils.js";
 
 export function renderComparePreviewGrid(selectedRuns) {
+  const heading = '<div class="compare-panel-head"><h3>' + icon("columns-3") + 'Visual comparison</h3><span>' + String(selectedRuns.length) + "/4 selected</span></div>";
   if (selectedRuns.length === 0) {
-    return '<section class="rounded-lg border bg-card p-3 text-sm text-muted-foreground shadow-sm" aria-label="Selected compare runs">Select runs to start comparing visual outputs.</section>';
+    return '<section class="compare-panel" aria-label="Selected compare runs">' + heading + '<p class="compare-panel-empty">Select runs to start comparing visual outputs.</p></section>';
   }
 
   return (
-    '<section class="grid gap-3 rounded-lg border bg-card p-3 shadow-sm md:grid-cols-2" aria-label="Selected compare runs">' +
-      selectedRuns.map(renderComparePreviewCard).join("") +
+    '<section class="compare-panel" aria-label="Selected compare runs">' +
+      heading +
+      '<div class="compare-grid">' + selectedRuns.map(renderComparePreviewCard).join("") + "</div>" +
     "</section>"
   );
 }
@@ -26,8 +29,8 @@ function renderComparePreviewCard(run) {
       : '<div class="preview-placeholder"><strong>No captured media</strong></div>';
 
   return (
-    '<article class="grid min-w-0 gap-2" data-compare-run>' +
-      '<div class="grid aspect-video overflow-hidden rounded-lg bg-muted">' + media + "</div>" +
+    '<article class="compare-card" data-compare-run>' +
+      '<div class="compare-media">' + media + "</div>" +
       '<div class="grid min-w-0 gap-0.5">' +
         '<strong class="truncate-line">' + escapeHtml(title) + "</strong>" +
         '<span class="muted-copy truncate-line">' + escapeHtml(stack.label) + "</span>" +

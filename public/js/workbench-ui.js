@@ -1,6 +1,7 @@
 import { assetHref } from "./assets.js";
 import { compareRunKey, selectedCompareRuns } from "./compare.js";
 import { renderComparePreviewGrid } from "./compare-ui.js";
+import { icon } from "./icons.js";
 import { displayRunError, needsMediaCapture, runCardIdentity, runCardMediaMessage, runCardState, runKind, stackAttemptIdentity } from "./runs.js";
 import { escapeAttribute, escapeHtml, formatDateShort } from "./utils.js";
 
@@ -102,13 +103,13 @@ function renderRunCard(run, mode, context) {
           "</span>" +
         "</span>" +
         '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</span>" +
-        renderRunCaptureAction(run, isCapturing, "card", context) +
+        renderRunCaptureAction(run, isCapturing, context) +
       "</span>" +
     "</article>"
   );
 }
 
-function renderRunCaptureAction(run, isCapturing, placement, context) {
+function renderRunCaptureAction(run, isCapturing, context) {
   const canCapture = context.canOperate &&
     runKind(run) === "visual" &&
     needsMediaCapture(run);
@@ -119,14 +120,12 @@ function renderRunCaptureAction(run, isCapturing, placement, context) {
   const label = "Capture preview";
   const title = run.benchmark?.title ?? run.benchmark?.id ?? "run";
   const model = run.model?.id ?? "unknown model";
-  const className = placement === "table" ? "btn-sm-outline run-capture-btn" : "btn-sm-outline run-card-capture";
-
   return (
-    '<span class="run-card-actions" data-placement="' + escapeAttribute(placement) + '">' +
-      '<button type="button" class="' + className + ' operational-control" data-capture-run-id="' + escapeAttribute(run.runId) + '" ' +
+    '<span class="run-card-actions" data-placement="card">' +
+      '<button type="button" class="btn-sm-outline run-card-capture operational-control" data-capture-run-id="' + escapeAttribute(run.runId) + '" ' +
         'aria-label="' + escapeAttribute(label + " for " + title + " on " + model) + '"' +
         (isCapturing || context.captureBusy ? " disabled" : "") + ">" +
-        escapeHtml(isCapturing ? "Capturing..." : label) +
+        icon("camera") + escapeHtml(isCapturing ? "Capturing..." : label) +
       "</button>" +
     "</span>"
   );
@@ -139,9 +138,9 @@ function renderRunsPagination(showingStart, showingEnd, totalRuns, totalPages, r
         "Showing " + String(showingStart) + "-" + String(showingEnd) + " of " + String(totalRuns) +
       "</span>" +
       '<div class="pagination-controls">' +
-        '<button type="button" class="btn-sm-outline" id="runsPrevPage" ' + (runPage <= 1 ? "disabled" : "") + ">Previous</button>" +
+        '<button type="button" class="btn-sm-outline" id="runsPrevPage" ' + (runPage <= 1 ? "disabled" : "") + ">" + icon("chevron-left") + "Previous</button>" +
         '<span class="badge-outline">Page ' + String(runPage) + " of " + String(totalPages) + "</span>" +
-        '<button type="button" class="btn-sm-outline" id="runsNextPage" ' + (runPage >= totalPages ? "disabled" : "") + ">Next</button>" +
+        '<button type="button" class="btn-sm-outline" id="runsNextPage" ' + (runPage >= totalPages ? "disabled" : "") + ">Next" + icon("chevron-right") + "</button>" +
       "</div>" +
     "</div>"
   );
