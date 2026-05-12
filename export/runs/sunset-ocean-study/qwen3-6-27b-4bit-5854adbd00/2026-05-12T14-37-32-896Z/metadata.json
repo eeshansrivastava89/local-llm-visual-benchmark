@@ -12,13 +12,17 @@
     "id": "Qwen3.6-27B-4bit",
     "slug": "qwen3-6-27b-4bit-5854adbd00"
   },
-  "status": "prepared",
+  "status": "completed",
   "createdAt": "2026-05-12T14:37:32.896Z",
-  "updatedAt": "2026-05-12T14:37:32.896Z",
+  "updatedAt": "2026-05-12T15:58:38.689Z",
   "preparedAt": "2026-05-12T14:37:32.896Z",
+  "completedAt": "2026-05-12T15:58:38.689Z",
   "runDirectory": "export/runs/sunset-ocean-study/qwen3-6-27b-4bit-5854adbd00/2026-05-12T14-37-32-896Z",
   "assets": {
-    "metadata": "metadata.json"
+    "metadata": "metadata.json",
+    "preview": "preview.png",
+    "video": "preview.webm",
+    "videoMp4": "preview.mp4"
   },
   "runner": {
     "mode": "manual",
@@ -27,5 +31,25 @@
     "backendLabel": "oMLX",
     "model": "Qwen3.6-27B-4bit",
     "retries": 0
+  },
+  "capture": {
+    "preview": {
+      "status": "ready",
+      "capturedAt": "2026-05-12T15:58:38.689Z"
+    },
+    "video": {
+      "status": "ready",
+      "capturedAt": "2026-05-12T15:58:38.689Z",
+      "quality": {
+        "measuredFps": 120,
+        "minFps": 12,
+        "sampleMs": 1600,
+        "frames": 192,
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    }
   }
 }
