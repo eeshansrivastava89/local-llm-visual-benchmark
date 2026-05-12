@@ -135,7 +135,7 @@ test("renders the visual workbench with prompt/model/table modes", async ({ page
   await expect(page.getByRole("link", { name: /Runs Metadata & files/ })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /LightEval/i })).toHaveCount(0);
   await expect(page.locator("[data-section]")).toHaveCount(0);
-  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table", "Compare"]);
+  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table"]);
   await expect(page.getByRole("button", { name: "By prompt" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "By model" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "Table" })).toHaveAttribute("aria-pressed", "false");
@@ -247,14 +247,13 @@ test("compares selected visual runs side by side", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: true, runs: compareRuns });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Compare" }).click();
+  await page.getByRole("button", { name: "Table" }).click();
 
-  await expect(page.getByRole("heading", { name: "Compare runs" })).toBeVisible();
-  await expect(page.locator("#viewSubtitle")).toHaveText("Select 2-4 visual runs for side-by-side inspection.");
-  await page.getByRole("checkbox", { name: /Select Sakura Particle Field.*oMLX.*opencode/ }).check();
-  await page.getByRole("checkbox", { name: /Select Sakura Particle Field.*LM Studio.*manual/ }).check();
-
-  await expect(page.getByText("2 selected")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Table" })).toBeVisible();
+  await expect(page.locator("#viewSubtitle")).toHaveText("Select table rows to compare visual outputs.");
+  await expect(page.getByLabel("Filter by harness")).toBeVisible();
+  await page.getByRole("checkbox", { name: /Compare Sakura Particle Field.*opencode/ }).check();
+  await page.getByRole("checkbox", { name: /Compare Sakura Particle Field.*manual/ }).check();
   await expect(page.locator("[data-compare-run]")).toHaveCount(2);
   const selectedCompareRunsRegion = page.getByLabel("Selected compare runs");
   await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl · oMLX · opencode")).toBeVisible();
@@ -263,11 +262,10 @@ test("compares selected visual runs side by side", async ({ page }) => {
   await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("controls", false);
   await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("loop", true);
   await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("muted", true);
-  await expect(page.getByRole("region", { name: "Filtered prompt stack coverage" })).toContainText("Filtered prompt × stack coverage");
-  await expect(page.getByRole("region", { name: "Filtered prompt stack coverage" })).toContainText("1 video");
+  await expect(page.getByRole("region", { name: "Filtered prompt stack coverage" })).toHaveCount(0);
 });
 
-test("paginates the table mode at 25 records", async ({ page }) => {
+test("paginates the table mode at 10 records", async ({ page }) => {
   const manyRuns = Array.from({ length: 30 }, (_, index) => ({
     ...sampleRun,
     runId: `2026-05-06T20-${String(index).padStart(2, "0")}-00-000Z`,
@@ -283,15 +281,15 @@ test("paginates the table mode at 25 records", async ({ page }) => {
   await page.getByRole("button", { name: "Table" }).click();
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
 
-  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(25);
-  await expect(page.locator(".runs-pagination")).toContainText("Showing 1-25 of 30");
-  await expect(page.locator(".runs-pagination")).toContainText("Page 1 of 2");
+  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(10);
+  await expect(page.locator(".runs-pagination")).toContainText("Showing 1-10 of 30");
+  await expect(page.locator(".runs-pagination")).toContainText("Page 1 of 3");
   await page.getByRole("button", { name: "Next" }).click();
-  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(5);
-  await expect(page.locator(".runs-pagination")).toContainText("Showing 26-30 of 30");
-  await expect(page.locator(".runs-pagination")).toContainText("Page 2 of 2");
+  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(10);
+  await expect(page.locator(".runs-pagination")).toContainText("Showing 11-20 of 30");
+  await expect(page.locator(".runs-pagination")).toContainText("Page 2 of 3");
   await page.getByRole("button", { name: "Previous" }).click();
-  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(25);
+  await expect(page.locator(".runs-table [data-run-id]")).toHaveCount(10);
 });
 
 test("toggles and persists the dark theme", async ({ page }) => {
@@ -348,7 +346,7 @@ test("prepares a run slot via modal and shows the generated prompt", async ({ pa
     runner: "manual"
   });
   await expect(page.locator("#prepBackdrop").locator("#preparedPrompt")).toHaveValue(
-    /Save one complete self-contained HTML document/
+    /Write the file as `index\.html` in the current working directory/
   );
   await expect(page.getByText("Run slot prepared")).toBeVisible();
 
@@ -802,7 +800,7 @@ test("refresh reloads prompt files and saved runs", async ({ page }) => {
   ];
   runsResponse = [];
 
-  await page.getByRole("button", { name: "Refresh" }).click();
+  await page.getByRole("button", { name: "Refresh & capture missing" }).click();
 
   await expect(page.getByLabel("Filter by prompt")).toContainText("New Prompt");
   await expect(page.locator("[data-run-id]")).toHaveCount(0);
@@ -900,7 +898,7 @@ test("hides operational chrome when writes are disabled", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Setup" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Refresh" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Refresh & capture missing" })).toHaveCount(0);
   await expect(page.locator("#statsPill")).toBeHidden();
   await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
   await expect(page.locator("#themeLabel")).toHaveClass(/sr-only/);
@@ -962,13 +960,13 @@ test("falls back to exported static data without prepare controls", async ({ pag
   await page.goto("/");
   await expect(page.locator("body.public-page")).toHaveCount(0);
   await expect(page.locator(".public-header")).toHaveCount(0);
-  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table", "Compare"]);
+  await expect(page.locator("[data-mode]")).toHaveText(["By prompt", "By model", "Table"]);
   await expect(page.getByRole("heading", { name: "Prompt comparison" })).toBeVisible();
   await expect(page.locator("#onboardingPanel")).toBeHidden();
   await expect(page.getByRole("button", { name: "Prepare run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Setup" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Capture media" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Refresh" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Refresh & capture missing" })).toHaveCount(0);
   await expect(page.locator("#statsPill")).toBeHidden();
   await expect(page.getByRole("button", { name: "Use dark theme" })).toBeVisible();
   await expect(page.locator("#themeLabel")).toHaveClass(/sr-only/);
@@ -1142,6 +1140,7 @@ async function mockApi(
     });
   });
 
+
   await page.route("**/api/model-sync", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -1201,7 +1200,7 @@ async function mockApi(
               prompt: "prompt.md"
             }
           },
-          prompt: "Save one complete self-contained HTML document to: " + runDirectory + "/index.html",
+          prompt: "Create a complete, self-contained HTML file. Write the file as `index.html` in the current working directory.",
           paths: {
             runDirectory,
             promptPath: runDirectory + "/prompt.md",

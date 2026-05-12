@@ -5,8 +5,9 @@ export function filteredRuns() {
     const workspaceMatch = runKind(run) === "visual";
     const modelMatch = state.selectedModel === "all" || run.model?.id === state.selectedModel;
     const benchmarkMatch = state.selectedBenchmark === "all" || run.benchmark?.id === state.selectedBenchmark;
+    const harnessMatch = state.selectedHarness === "all" || stackAttemptIdentity(run).harness === state.selectedHarness;
     const searchMatch = !state.runsSearch.trim() || searchableRunText(run).includes(state.runsSearch.trim().toLowerCase());
-    return workspaceMatch && modelMatch && benchmarkMatch && searchMatch;
+    return workspaceMatch && modelMatch && benchmarkMatch && harnessMatch && searchMatch;
   });
 }
 
@@ -33,6 +34,16 @@ export function modelsFromRuns(runs) {
       .filter(Boolean)
       .map((id) => ({ id })),
     (m) => m.id
+  );
+}
+
+export function harnessesFromRuns(runs) {
+  return uniqueBy(
+    runs
+      .map((run) => stackAttemptIdentity(run).harness)
+      .filter(Boolean)
+      .map((id) => ({ id })),
+    (item) => item.id
   );
 }
 

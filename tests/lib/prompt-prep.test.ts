@@ -41,13 +41,16 @@ describe("prepareRun", () => {
     expect(prepared.prompt).not.toContain("Benchmark:");
     expect(prepared.prompt).not.toContain("Run folder:");
     expect(prepared.prompt).not.toContain("Output contract:");
-    expect(prepared.prompt).toContain(prepared.paths.htmlPath);
-    expect(prepared.prompt).toContain("Do not print the HTML in chat");
-    expect(prepared.prompt).toContain("Write the file directly to this exact path");
-    expect(prepared.prompt).toContain("1280x720 capture viewport");
-    expect(prepared.prompt).toContain("fully visible and centered");
+    expect(prepared.prompt).not.toContain(prepared.paths.htmlPath);
+    expect(prepared.prompt).not.toContain(prepared.paths.runDirectory);
+    expect(prepared.prompt).toContain("Write the file as `index.html` in the current working directory");
+    expect(prepared.prompt).toContain("Do not create any folders");
+    expect(prepared.prompt).toContain("do not print the HTML in chat");
+    expect(prepared.prompt).not.toContain("1280x720");
+    expect(prepared.prompt).not.toContain("agent-browser open");
+    expect(prepared.prompt).toContain("agent-browser path: /Users/eeshans/.nvm/versions/node/v26.0.0/bin/agent-browser");
+    expect(prepared.prompt).not.toContain("Playwright");
     expect(prepared.prompt).toContain("Animate a cherry blossom tree.");
-    expect(prepared.prompt).not.toContain("screenshot");
     expect(prepared.prompt).not.toContain("preview.png");
     await expect(stat(prepared.paths.runDirectory)).resolves.toBeTruthy();
     await expect(readFile(prepared.paths.promptPath, "utf8")).resolves.toBe(

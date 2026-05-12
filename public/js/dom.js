@@ -58,6 +58,7 @@ export const els = {
   // Filters
   modelFilter: document.querySelector("#modelFilter"),
   benchmarkFilter: document.querySelector("#benchmarkFilter"),
+  harnessFilter: document.querySelector("#harnessFilter"),
   runsSearch: document.querySelector("#runsSearch"),
   // View tabs
   viewTabs: document.querySelectorAll("[data-mode]"),
@@ -84,6 +85,7 @@ export const els = {
   prepOutputLabel: document.querySelector("#prepOutputLabel"),
   preparedPrompt: document.querySelector("#preparedPrompt"),
   preparedPaths: document.querySelector("#preparedPaths"),
+  copyPreparedPath: document.querySelector("#copyPreparedPath"),
   copyPrompt: document.querySelector("#copyPrompt"),
   helpTooltip: document.querySelector("#helpTooltip"),
   // Workbench
@@ -98,6 +100,7 @@ export const els = {
   detailSubtitle: document.querySelector("#detailSubtitle"),
   detailPreview: document.querySelector("#detailPreview"),
   openHtml: document.querySelector("#openHtml"),
+  copyDetailPath: document.querySelector("#copyDetailPath"),
   openRunFolder: document.querySelector("#openRunFolder"),
   recaptureRun: document.querySelector("#recaptureRun"),
   deleteRun: document.querySelector("#deleteRun"),

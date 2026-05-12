@@ -1,5 +1,7 @@
 import { assetHref } from "./assets.js";
-import { displayRunError, needsMediaCapture, runCardIdentity, runCardMediaMessage, runCardState, runKind } from "./runs.js";
+import { compareRunKey, selectedCompareRuns } from "./compare.js";
+import { renderComparePreviewGrid } from "./compare-ui.js";
+import { displayRunError, needsMediaCapture, runCardIdentity, runCardMediaMessage, runCardState, runKind, stackAttemptIdentity } from "./runs.js";
 import { escapeAttribute, escapeHtml, formatDateShort } from "./utils.js";
 
 export function renderRunsTable(runs, context) {
@@ -18,10 +20,12 @@ export function renderRunsTable(runs, context) {
         '<table class="runs-table">' +
           '<thead>' +
             '<tr>' +
-              '<th>Run</th>' +
+              '<th class="runs-table-select"><span class="sr-only">Compare</span></th>' +
+              '<th>Prompt</th>' +
+              '<th>Model</th>' +
+              '<th>Harness</th>' +
               '<th>Status</th>' +
               '<th>Message</th>' +
-              '<th>Actions</th>' +
               '<th>Updated</th>' +
             '</tr>' +
           '</thead>' +
@@ -30,7 +34,8 @@ export function renderRunsTable(runs, context) {
           '</tbody>' +
         '</table>' +
       '</div>' +
-      renderRunsPagination(showingStart, showingEnd, runs.length, totalPages, runPage)
+      renderRunsPagination(showingStart, showingEnd, runs.length, totalPages, runPage) +
+      renderComparePreviewGrid(selectedCompareRuns(runs, context.compareSelection ?? []))
   };
 }
 
@@ -56,16 +61,21 @@ function renderRunsTableRow(run, context) {
     : runCardState(run);
   const title = run.benchmark?.title ?? run.benchmark?.id ?? run.runner?.metricSource ?? "Untitled run";
   const model = run.model?.id ?? run.runner?.model ?? "Unknown model";
+  const stack = stackAttemptIdentity(run);
+  const compareKey = compareRunKey(run);
+  const selected = (context.compareSelection ?? []).includes(compareKey);
+  const compareLabel = "Compare " + title + " " + model + " " + stack.harness;
   return (
     '<tr class="run-row" data-open-run data-run-id="' + escapeAttribute(run.runId) + '" tabindex="0" role="button" aria-label="' +
       escapeAttribute(title + " " + model) + '">' +
-      '<td>' +
-        '<strong class="truncate-line">' + escapeHtml(title) + "</strong>" +
-        '<span class="muted-copy truncate-line">' + escapeHtml(model) + "</span>" +
+      '<td class="runs-table-select">' +
+        '<input type="checkbox" data-compare-select="' + escapeAttribute(compareKey) + '" aria-label="' + escapeAttribute(compareLabel) + '" ' + (selected ? "checked" : "") + " />" +
       "</td>" +
+      '<td class="run-title-cell"><strong class="truncate-line">' + escapeHtml(title) + "</strong></td>" +
+      '<td class="truncate-cell">' + escapeHtml(model) + "</td>" +
+      '<td class="truncate-cell">' + escapeHtml(stack.harness) + "</td>" +
       '<td><span class="run-state-pill"><span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' + escapeHtml(stateLabel.label) + "</span></td>" +
       '<td class="truncate-cell">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</td>" +
-      '<td>' + renderRunCaptureAction(run, isCapturing, "table", context) + "</td>" +
       '<td class="truncate-cell">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</td>" +
     "</tr>"
   );

@@ -21,6 +21,8 @@ export function detailActionAvailability(run) {
   return {
     openHtml: Boolean(isVisualRun && run.runDirectory && run.assets?.html),
     openRunFolder: Boolean(run.runDirectory),
+    copyPath: Boolean(run.runDirectory),
+    showCapture: Boolean(isVisualRun),
     capture: Boolean(isVisualRun && run.runDirectory && run.assets?.html),
     deleteRun: Boolean(run.runDirectory),
     recaptureLabel: run.assets?.preview || hasCapturedVideo(run) ? "Recapture media" : "Capture preview"

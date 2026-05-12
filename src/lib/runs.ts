@@ -177,33 +177,45 @@ async function readMetadataIfPresent(path: string): Promise<RunMetadata | undefi
 
 async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetadata> {
   const declared = metadata.assets ?? {};
+  const candidates = {
+    prompt: declared.prompt ?? "prompt.md",
+    rawResponse: declared.rawResponse ?? "response.raw.txt",
+    request: declared.request ?? "request.json",
+    stream: declared.stream ?? "stream.ndjson",
+    response: declared.response ?? "response.txt",
+    command: declared.command ?? "command.txt",
+    html: declared.html ?? "index.html",
+    preview: declared.preview ?? "preview.png",
+    video: declared.video ?? "preview.webm",
+    videoMp4: declared.videoMp4 ?? "preview.mp4"
+  };
   const checks = await Promise.all([
-    assetExists(metadata, declared.prompt),
-    assetExists(metadata, declared.rawResponse),
-    assetExists(metadata, declared.request),
-    assetExists(metadata, declared.stream),
-    assetExists(metadata, declared.response),
-    assetExists(metadata, declared.command),
-    assetExists(metadata, declared.html),
-    assetExists(metadata, declared.preview),
-    assetExists(metadata, declared.video),
-    assetExists(metadata, declared.videoMp4)
+    assetExists(metadata, candidates.prompt),
+    assetExists(metadata, candidates.rawResponse),
+    assetExists(metadata, candidates.request),
+    assetExists(metadata, candidates.stream),
+    assetExists(metadata, candidates.response),
+    assetExists(metadata, candidates.command),
+    assetExists(metadata, candidates.html),
+    assetExists(metadata, candidates.preview),
+    assetExists(metadata, candidates.video),
+    assetExists(metadata, candidates.videoMp4)
   ]);
 
   const assets: RunMetadata["assets"] = {
     metadata: declared.metadata ?? "metadata.json"
   };
 
-  if (checks[0]) assets.prompt = declared.prompt;
-  if (checks[1]) assets.rawResponse = declared.rawResponse;
-  if (checks[2]) assets.request = declared.request;
-  if (checks[3]) assets.stream = declared.stream;
-  if (checks[4]) assets.response = declared.response;
-  if (checks[5]) assets.command = declared.command;
-  if (checks[6]) assets.html = declared.html;
-  if (checks[7]) assets.preview = declared.preview;
-  if (checks[8]) assets.video = declared.video;
-  if (checks[9]) assets.videoMp4 = declared.videoMp4;
+  if (checks[0]) assets.prompt = candidates.prompt;
+  if (checks[1]) assets.rawResponse = candidates.rawResponse;
+  if (checks[2]) assets.request = candidates.request;
+  if (checks[3]) assets.stream = candidates.stream;
+  if (checks[4]) assets.response = candidates.response;
+  if (checks[5]) assets.command = candidates.command;
+  if (checks[6]) assets.html = candidates.html;
+  if (checks[7]) assets.preview = candidates.preview;
+  if (checks[8]) assets.video = candidates.video;
+  if (checks[9]) assets.videoMp4 = candidates.videoMp4;
 
   const promptText = assets.prompt
     ? await readAssetTextIfPresent(metadata, assets.prompt)

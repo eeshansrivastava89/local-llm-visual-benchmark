@@ -80,7 +80,6 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
               <button type="button" class="view-tab" data-mode="benchmark" aria-pressed="true">By prompt</button>
               <button type="button" class="view-tab" data-mode="model" aria-pressed="false">By model</button>
               <button type="button" class="view-tab" data-mode="table" aria-pressed="false">Table</button>
-              <button type="button" class="view-tab" data-mode="compare" aria-pressed="false">Compare</button>
             </div>
             <div class="toolbar-filters">
               <div class="dropdown-wrap">
@@ -93,14 +92,19 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                   <option value="all">All prompts</option>
                 </select>
               </div>
+              <div class="dropdown-wrap">
+                <select id="harnessFilter" class="input text-sm" aria-label="Filter by harness">
+                  <option value="all">All harnesses</option>
+                </select>
+              </div>
               <input
                 id="runsSearch"
                 class="input text-sm"
                 type="search"
                 aria-label="Search runs"
-                placeholder="Search runs, models, prompts"
+                placeholder="Search runs, models, prompts, harnesses"
               />
-              <button type="button" class="btn-sm-outline operational-control" id="refreshRuns">Refresh</button>
+              <button type="button" class="btn-sm-outline operational-control" id="refreshRuns">Refresh &amp; capture missing</button>
             </div>
           </div>
 
@@ -143,6 +147,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
           </div>
           <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <button type="button" class="btn-sm-outline operational-control" id="openHtml" data-operational-available="false">Open HTML</button>
+            <button type="button" class="btn-sm-outline operational-control" id="copyDetailPath" data-operational-available="false">Copy path</button>
             <button type="button" class="btn-sm-outline operational-control" id="openRunFolder" data-operational-available="false">Open in Finder</button>
             <button type="button" class="btn-sm-outline operational-control" id="recaptureRun" data-operational-available="false">Recapture media</button>
             <button type="button" class="btn-sm-danger operational-control" id="deleteRun" data-operational-available="false">Delete run</button>
@@ -265,7 +270,7 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
               <div class="grid gap-2" id="prepVisualPromptGroup">
                 <div class="field-label-row">
                   <label for="prepBenchmark">Prompt</label>
-                  <button type="button" class="help-pill" data-tooltip="Visual benchmark prompt. The app writes the exact output path into the generated prompt so external tools save in the right run folder.">?</button>
+                  <button type="button" class="help-pill" data-tooltip="Visual benchmark prompt. Run your external tool from the prepared run folder; the generated prompt only asks it to write index.html in the current directory.">?</button>
                 </div>
                 <select id="prepBenchmark" class="input"></select>
               </div>
@@ -291,12 +296,15 @@ const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
                   <div>
                     <div class="field-label-row">
                       <label for="preparedPrompt" id="prepOutputLabel">Visual prompt</label>
-                      <button type="button" class="help-pill" data-tooltip="Generated prompt for this visual run. Copy it after preparing the slot so the output path is exact.">?</button>
+                      <button type="button" class="help-pill" data-tooltip="Generated prompt for this visual run. Copy it after preparing the slot, then run your tool from the prepared run folder.">?</button>
                     </div>
                   </div>
-                  <button type="button" class="btn-sm-outline" id="copyPrompt" disabled>Copy prompt</button>
+                  <div class="section-actions">
+                    <button type="button" class="btn-sm-outline" id="copyPreparedPath" disabled>Copy path</button>
+                    <button type="button" class="btn-sm-outline" id="copyPrompt" disabled>Copy prompt</button>
+                  </div>
                 </div>
-                <textarea id="preparedPrompt" class="input font-mono text-[0.82rem] leading-5" placeholder="Prepare a run slot to generate the exact prompt and output path."></textarea>
+                <textarea id="preparedPrompt" class="input font-mono text-[0.82rem] leading-5" placeholder="Prepare a run slot to generate the prompt for index.html."></textarea>
               </div>
               <p class="muted-copy text-sm" id="preparedPaths">No run slot prepared yet.</p>
             </section>

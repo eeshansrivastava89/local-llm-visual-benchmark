@@ -1,5 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { buildRunPaths, createRunId } from "./paths";
+
+const AGENT_BROWSER_PATH = process.env.AGENT_BROWSER_PATH ?? "/Users/eeshans/.nvm/versions/node/v26.0.0/bin/agent-browser";
 import { writePromptMarkdown, writeRunMetadata } from "./runs";
 import type { BenchmarkRecord, ModelSourceId, PreparedRun, RunnerMode, RunMetadata } from "./types";
 
@@ -29,10 +31,7 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     runId: createRunId(now)
   });
   const prompt = buildToolPrompt({
-    benchmark: input.benchmark,
-    modelId: input.modelId,
-    runDirectory: paths.runDirectory,
-    htmlPath: paths.htmlPath
+    benchmark: input.benchmark
   });
   const timestamp = now.toISOString();
   const modelSource = input.modelSource;
@@ -96,18 +95,14 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
 
 export function buildToolPrompt(input: {
   benchmark: BenchmarkRecord;
-  modelId: string;
-  runDirectory: string;
-  htmlPath: string;
 }): string {
   return [
     "Create a complete, self-contained HTML file for the request below.",
-    "Do not print the HTML in chat. Write the file directly to this exact path:",
-    "",
-    input.htmlPath,
+    "Write the file as `index.html` in the current working directory.",
+    "Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat.",
     "",
     "The HTML must include all CSS and JavaScript inline and must not depend on external network assets.",
-    "Compose for a 1280x720 capture viewport; keep the main subject fully visible and centered at that resolution and common desktop sizes.",
+    "agent-browser path: " + AGENT_BROWSER_PATH,
     "",
     input.benchmark.prompt.trim()
   ].join("\n");

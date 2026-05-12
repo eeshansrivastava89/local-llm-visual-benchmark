@@ -3,9 +3,8 @@ import { state } from "./state.js";
 import { escapeHtml, escapeAttribute, formatBytes, uniqueBy } from "./utils.js";
 import { fetchJson, fetchStaticManifest, postJson, deleteJson } from "./api.js";
 import { compareRunKey, toggleCompareSelection } from "./compare.js";
-import { renderCompareRuns as renderCompareRunsMarkup } from "./compare-ui.js";
 import { detailActionAvailability, detailViewModel } from "./detail-ui.js";
-import { filteredRuns, groupRuns, modelsFromRuns, runSummaryText, runKind, hasCapturedVideo, needsMediaCapture, findRunByDirectoryOrId } from "./runs.js";
+import { filteredRuns, groupRuns, harnessesFromRuns, modelsFromRuns, runSummaryText, runKind, hasCapturedVideo, needsMediaCapture, findRunByDirectoryOrId } from "./runs.js";
 import { renderGroupedRuns as renderGroupedRunsMarkup, renderRunsTable as renderRunsTableMarkup } from "./workbench-ui.js";
 import { openModal, closeModal, currentModal, handleModalKeydown } from "./modals.js";
 import { applyStoredTheme, toggleTheme, setTheme } from "./theme.js";
@@ -62,7 +61,7 @@ function initWorkspaceState() {
 function wireEvents() {
   els.refreshOmlx.addEventListener("click", () => loadOmlxModels({ manual: true }));
   els.refreshConnection.addEventListener("click", () => loadConnection({ manual: true }));
-  els.refreshRuns.addEventListener("click", () => refreshRuns());
+  els.refreshRuns.addEventListener("click", () => refreshAndCaptureMissing());
   els.syncPiBtn.addEventListener("click", () => syncModels(["pi"]));
   els.syncOpenCodeBtn.addEventListener("click", () => syncModels(["opencode"]));
 
@@ -97,6 +96,7 @@ function wireEvents() {
 
   els.deleteRun.addEventListener("click", () => requestDeleteSelectedRun());
   els.openHtml.addEventListener("click", () => openSelectedRunHtml());
+  els.copyDetailPath.addEventListener("click", () => copySelectedRunPath());
   els.openRunFolder.addEventListener("click", () => openSelectedRunFolder(els.openRunFolder, els.detailMeta));
   els.recaptureRun.addEventListener("click", () => captureSelectedRunMedia({ force: true }));
   els.copyDetailPrompt.addEventListener("click", () => copyDetailPrompt());
@@ -111,12 +111,18 @@ function wireEvents() {
     resetRunPage();
     renderRuns();
   });
+  els.harnessFilter.addEventListener("change", () => {
+    state.selectedHarness = els.harnessFilter.value;
+    resetRunPage();
+    renderRuns();
+  });
   els.runsSearch.addEventListener("input", () => {
     state.runsSearch = els.runsSearch.value;
     resetRunPage();
     renderRuns();
   });
   els.prepareRun.addEventListener("click", () => prepareRunSlot());
+  els.copyPreparedPath.addEventListener("click", () => copyPreparedRunPath());
   els.copyPrompt.addEventListener("click", () => copyPreparedPrompt());
   els.prepRunner.addEventListener("change", () => updatePrepareMode());
   els.prepModelSource.addEventListener("change", () => {
@@ -208,6 +214,7 @@ async function loadLocalData() {
     state.runs = runs.runs ?? [];
     renderBenchmarks();
     renderModels();
+    renderHarnesses();
     renderModelSources();
     renderRuns();
     renderPrepOptions();
@@ -240,6 +247,7 @@ async function enterStaticMode(reason) {
     els.statsCompact.textContent = "Static";
     renderBenchmarks();
     renderModels();
+    renderHarnesses();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -434,22 +442,47 @@ async function loadStats() {
   }
 }
 
+async function refreshAndCaptureMissing() {
+  const refreshed = await refreshRuns();
+  if (refreshed) {
+    await captureMissingMedia({ afterRefresh: true });
+  }
+}
+
 async function refreshRuns() {
   if (state.staticMode) {
     await enterStaticMode(new Error("Static refresh"));
-    return;
+    return false;
   }
-  const [benchmarks, runs] = await Promise.all([
-    fetchJson("/api/benchmarks"),
-    fetchJson("/api/runs")
-  ]);
-  state.benchmarks = benchmarks.benchmarks ?? [];
-  state.runs = runs.runs ?? [];
-  renderBenchmarks();
-  renderModels();
-  renderModelSources();
-  renderPrepOptions();
-  renderRuns();
+
+  state.refreshBusy = true;
+  updateWriteControls();
+  els.refreshRuns.textContent = "Refreshing…";
+  els.runSummary.textContent = "Refreshing saved runs…";
+
+  try {
+    const [benchmarks, runs] = await Promise.all([
+      fetchJson("/api/benchmarks"),
+      fetchJson("/api/runs")
+    ]);
+    state.benchmarks = benchmarks.benchmarks ?? [];
+    state.runs = runs.runs ?? [];
+    syncSelectedRunFromState({ rerenderDetail: true });
+    renderBenchmarks();
+    renderModels();
+    renderHarnesses();
+    renderModelSources();
+    renderPrepOptions();
+    renderRuns();
+    return true;
+  } catch (error) {
+    els.runSummary.textContent = "Refresh failed: " + error.message;
+    return false;
+  } finally {
+    state.refreshBusy = false;
+    els.refreshRuns.textContent = "Refresh & capture missing";
+    updateWriteControls();
+  }
 }
 
 async function refreshRunsForPolling() {
@@ -459,13 +492,15 @@ async function refreshRunsForPolling() {
 
   const runs = await fetchJson("/api/runs");
   state.runs = runs.runs ?? [];
+  syncSelectedRunFromState({ rerenderDetail: currentModal() === "detail" });
   renderModels();
+  renderHarnesses();
   renderModelSources();
   renderRuns();
   updateOnboarding();
 }
 
-async function captureMissingMedia() {
+async function captureMissingMedia(options = {}) {
   if (!canUseOperationalControls() || state.captureBusy) {
     els.runSummary.textContent = "Capture requires the local dev server.";
     return;
@@ -473,7 +508,9 @@ async function captureMissingMedia() {
 
   const queue = state.runs.filter((run) => needsMediaCapture(run));
   if (queue.length === 0) {
-    els.runSummary.textContent = "No runs need media capture.";
+    els.runSummary.textContent = options.afterRefresh
+      ? "Refreshed. No runs need media capture."
+      : "No runs need media capture.";
     return;
   }
 
@@ -503,6 +540,7 @@ async function captureMissingMedia() {
 
     state.captureRunDirectory = "";
     renderModels();
+    renderHarnesses();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -520,10 +558,29 @@ async function captureMissingMedia() {
   }
 }
 
+function syncSelectedRunFromState(options = {}) {
+  if (!state.selectedRun) {
+    return;
+  }
+
+  const nextRun = findRunByDirectoryOrId(state.selectedRun);
+  if (!nextRun) {
+    return;
+  }
+
+  state.selectedRun = nextRun;
+  if (options.rerenderDetail) {
+    renderDetail(nextRun);
+  } else {
+    updateDetailActions(nextRun);
+  }
+}
+
 function updateWriteControls() {
   const canWrite = canUseOperationalControls();
   syncOperationalControls();
-  els.refreshRuns.disabled = !canWrite;
+  els.refreshRuns.disabled = !canWrite || state.refreshBusy || state.captureBusy;
+  els.refreshRuns.title = "Reload saved runs from disk, then capture preview/video for runs missing media.";
   if (state.selectedRun) {
     updateDetailActions(state.selectedRun);
   }
@@ -584,6 +641,7 @@ async function captureRunMedia(run, options = {}) {
       state.selectedRun = nextRun;
     }
     renderModels();
+    renderHarnesses();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -611,9 +669,11 @@ async function captureRunMedia(run, options = {}) {
 
 function resetPrepareRunModal() {
   state.preparedPrompt = "";
+  state.preparedRunDirectory = "";
   els.preparedPrompt.value = "";
   els.preparedPaths.textContent = "No run slot prepared yet.";
   els.copyPrompt.disabled = true;
+  els.copyPreparedPath.disabled = true;
 
   if (state.benchmarks[0]) {
     els.prepBenchmark.value = state.benchmarks[0].id;
@@ -652,7 +712,7 @@ function updatePrepareMode() {
   els.prepResultTitle.textContent = "Generated prompt";
   els.prepSubtitle.textContent = "Choose a prompt, model source, model, and harness to generate a run folder.";
   els.prepResultHint.textContent = "Copy this into your selected harness after preparing the slot.";
-  els.preparedPrompt.placeholder = "Prepare a run slot to generate the exact prompt and output path.";
+  els.preparedPrompt.placeholder = "Prepare a run slot to generate the prompt for index.html.";
   els.prepOutputLabel.textContent = "Visual prompt";
   els.copyPrompt.textContent = "Copy prompt";
   els.prepareRun.textContent = "Prepare slot";
@@ -689,21 +749,27 @@ async function prepareRunSlot() {
     });
     const prepared = data.preparedRun;
     const output = prepared.prompt;
-    const statusText = "Run slot prepared for " + modelSourceLabel(modelSource) + " via " + harnessLabel(runner) + ". Copy the prompt into your harness.";
+    const runDirectory = prepared.paths?.runDirectory ?? prepared.run?.runDirectory ?? "";
+    const statusText = "Run slot prepared for " + modelSourceLabel(modelSource) + " via " + harnessLabel(runner) + ". Run folder: " + runDirectory;
     state.preparedPrompt = output;
+    state.preparedRunDirectory = runDirectory;
     els.preparedPrompt.value = output;
     els.preparedPaths.textContent = statusText;
     els.copyPrompt.disabled = !output;
+    els.copyPreparedPath.disabled = !runDirectory;
     updatePreparedCopyState();
     state.runs = [availablePreparedRun(prepared.run), ...state.runs.filter((run) => run.runId !== prepared.run.runId)];
     renderModels();
+    renderHarnesses();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
   } catch (error) {
     els.preparedPrompt.value = "";
     els.preparedPaths.textContent = "Prepare failed: " + error.message;
+    state.preparedRunDirectory = "";
     els.copyPrompt.disabled = true;
+    els.copyPreparedPath.disabled = true;
     updatePreparedCopyState();
   }
 }
@@ -713,6 +779,14 @@ function harnessLabel(runner) {
   if (runner === "pi") return "Pi";
   if (runner === "hermes") return "Hermes";
   return "manual chat";
+}
+
+async function copyPreparedRunPath() {
+  if (!state.preparedRunDirectory) {
+    return;
+  }
+  await copyTextToClipboard(state.preparedRunDirectory, els.copyPreparedPath, "Copy path");
+  els.preparedPaths.textContent = "Run folder copied. Open a terminal there, then copy the prompt.";
 }
 
 async function copyPreparedPrompt() {
@@ -725,7 +799,9 @@ async function copyPreparedPrompt() {
 
 function updatePreparedCopyState() {
   const value = els.preparedPrompt.value.trim();
+  const hasPath = Boolean(state.preparedRunDirectory);
   els.copyPrompt.disabled = !value;
+  els.copyPreparedPath.disabled = !hasPath;
 }
 
 async function copyDetailPrompt() {
@@ -775,6 +851,7 @@ async function confirmDeleteSelectedRun() {
     closeModal("detail");
     state.selectedRun = null;
     renderModels();
+    renderHarnesses();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -804,6 +881,15 @@ async function openSelectedRunHtml() {
   } finally {
     updateDetailActions(run);
   }
+}
+
+async function copySelectedRunPath() {
+  const run = state.selectedRun;
+  if (!run?.runDirectory) {
+    return;
+  }
+
+  await copyTextToClipboard(run.runDirectory, els.copyDetailPath, "Copy path");
 }
 
 async function openSelectedRunFolder(button = els.openRunFolder, errorTarget = els.detailMeta) {
@@ -866,6 +952,22 @@ function renderModels() {
       '<option value="' + escapeAttribute(m.id) + '">' + escapeHtml(m.id) + "</option>"
     )
   ].join("");
+  els.modelFilter.value = state.selectedModel;
+}
+
+function renderHarnesses() {
+  const runHarnesses = harnessesFromRuns(runsForCurrentWorkspace());
+  if (state.selectedHarness !== "all" && !runHarnesses.some((harness) => harness.id === state.selectedHarness)) {
+    state.selectedHarness = "all";
+    els.harnessFilter.value = "all";
+  }
+  els.harnessFilter.innerHTML = [
+    '<option value="all">All harnesses</option>',
+    ...runHarnesses.map((harness) =>
+      '<option value="' + escapeAttribute(harness.id) + '">' + escapeHtml(harness.id) + "</option>"
+    )
+  ].join("");
+  els.harnessFilter.value = state.selectedHarness;
 }
 
 function renderModelSources() {
@@ -920,20 +1022,16 @@ function renderRuns() {
     ? "Model attempts"
     : state.mode === "table"
     ? "Table"
-    : state.mode === "compare"
-      ? "Compare runs"
-      : state.mode === "benchmark"
-        ? "Prompt comparison"
-        : "Prompt comparison";
+    : state.mode === "benchmark"
+      ? "Prompt comparison"
+      : "Prompt comparison";
   els.viewSubtitle.textContent = state.mode === "model"
     ? "Group attempts by model and prompt."
     : state.mode === "table"
-    ? "Scan visual runs in a compact table."
-    : state.mode === "compare"
-      ? "Select 2-4 visual runs for side-by-side inspection."
-      : state.mode === "benchmark"
-        ? "Compare one prompt across models."
-        : "Compare one prompt across models.";
+    ? "Select table rows to compare visual outputs."
+    : state.mode === "benchmark"
+      ? "Compare one prompt across models."
+      : "Compare one prompt across models.";
 
   if (runs.length === 0) {
     const emptyBase = '<div class="empty">No runs match the current filters.</div>';
@@ -950,11 +1048,6 @@ function renderRuns() {
 
   if (state.mode === "table") {
     renderRunsTable(runs);
-    return;
-  }
-
-  if (state.mode === "compare") {
-    renderCompareRuns(runs);
     return;
   }
 
@@ -979,14 +1072,16 @@ function renderRuns() {
   );
 }
 
-function renderCompareRuns(runs) {
-  els.runsSurface.innerHTML = renderCompareRunsMarkup(runs, state.compareSelection);
-  wireCompareSelection(runs);
-}
-
 function wireCompareSelection(runs) {
   document.querySelectorAll("[data-compare-select]").forEach((input) => {
-    input.addEventListener("change", () => {
+    input.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+    input.addEventListener("keydown", (event) => {
+      event.stopPropagation();
+    });
+    input.addEventListener("change", (event) => {
+      event.stopPropagation();
       const run = runs.find((candidate) => compareRunKey(candidate) === input.dataset.compareSelect);
       state.compareSelection = toggleCompareSelection(state.compareSelection, run);
       renderRuns();
@@ -998,6 +1093,7 @@ function renderRunsTable(runs) {
   const rendered = renderRunsTableMarkup(runs, workbenchRenderContext());
   state.runPage = rendered.runPage;
   els.runsSurface.innerHTML = rendered.html;
+  wireCompareSelection(runs);
   wireRunCards();
   wireRunsPagination(rendered.totalPages);
 }
@@ -1012,6 +1108,7 @@ function workbenchRenderContext() {
     canOperate: canUseOperationalControls(),
     captureBusy: state.captureBusy,
     captureRunDirectory: state.captureRunDirectory,
+    compareSelection: state.compareSelection,
     runPage: state.runPage,
     runsPerPage: state.runsPerPage
   };
@@ -1094,16 +1191,21 @@ function renderDetail(run) {
 function updateDetailActions(run) {
   const availability = detailActionAvailability(run);
   setOperationalAvailability(els.openHtml, availability.openHtml);
+  setOperationalAvailability(els.copyDetailPath, availability.copyPath);
   setOperationalAvailability(els.openRunFolder, availability.openRunFolder);
-  setOperationalAvailability(els.recaptureRun, availability.capture);
+  setOperationalAvailability(els.recaptureRun, availability.showCapture);
   setOperationalAvailability(els.deleteRun, availability.deleteRun);
   syncOperationalControls();
 
   const canOperate = canUseOperationalControls();
   els.openHtml.disabled = !canOperate || !availability.openHtml;
+  els.copyDetailPath.disabled = !canOperate || !availability.copyPath;
   els.openRunFolder.disabled = !canOperate || !availability.openRunFolder;
   els.recaptureRun.disabled = !canOperate || !availability.capture || state.captureBusy;
   els.deleteRun.disabled = !canOperate || !availability.deleteRun;
+  els.recaptureRun.title = availability.capture
+    ? ""
+    : "Recapture needs index.html in this run folder. Click Refresh & capture missing after adding the file.";
   if (state.captureBusy && state.captureRunDirectory === run.runDirectory) {
     els.recaptureRun.textContent = "Capturing…";
     return;
