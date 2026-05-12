@@ -60,4 +60,66 @@ describe("stackAttemptIdentity", () => {
     expect(identity.key).toBe("lm-studio|local/qwen2.5-vl|manual");
     expect(identity.label).toBe("local/qwen2.5-vl · LM Studio · manual");
   });
+
+  it("infers historical source labels from local backend URLs when runner source fields are missing", () => {
+    const identity = stackAttemptIdentity({
+      model: {
+        id: "local/qwen2.5-vl"
+      },
+      runner: {
+        mode: "manual",
+        baseUrl: "http://127.0.0.1:8000/v1"
+      }
+    });
+
+    expect(identity.key).toBe("omlx|local/qwen2.5-vl|manual");
+    expect(identity.label).toBe("local/qwen2.5-vl · oMLX · manual");
+  });
+
+  it("uses source-unrecorded instead of unknown-source when historical runs have no source metadata", () => {
+    const identity = stackAttemptIdentity({
+      model: {
+        id: "qwen3.6-35b-a3b",
+        slug: "qwen3-6-35b-a3b-d371aa3160"
+      }
+    });
+
+    expect(identity.key).toBe("source-unrecorded|qwen3-6-35b-a3b-d371aa3160|manual");
+    expect(identity.label).toBe("qwen3.6-35b-a3b · source unrecorded · manual");
+    expect(identity.label).not.toContain("unknown-source");
+  });
+
+  it("does not treat harness-like backend labels as model sources", () => {
+    const identity = stackAttemptIdentity({
+      model: {
+        id: "qwen3.6-35b-a3b"
+      },
+      runner: {
+        mode: "manual",
+        backendLabel: "manual"
+      }
+    });
+
+    expect(identity.key).toBe("source-unrecorded|qwen3.6-35b-a3b|manual");
+    expect(identity.label).toBe("qwen3.6-35b-a3b · source unrecorded · manual");
+    expect(identity.label).not.toContain("manual · manual");
+  });
+
+  it("includes optional harness version labels when present", () => {
+    const identity = stackAttemptIdentity({
+      model: {
+        id: "local/qwen2.5-vl"
+      },
+      runner: {
+        mode: "external",
+        modelSource: "omlx",
+        backendLabel: "oMLX",
+        harnessLabel: "OpenCode",
+        harnessVersion: "0.11.0"
+      }
+    });
+
+    expect(identity.harness).toBe("OpenCode 0.11.0");
+    expect(identity.label).toBe("local/qwen2.5-vl · oMLX · OpenCode 0.11.0");
+  });
 });

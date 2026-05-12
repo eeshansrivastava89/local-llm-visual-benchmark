@@ -260,6 +260,11 @@ test("compares selected visual runs side by side", async ({ page }) => {
   await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl · oMLX · opencode")).toBeVisible();
   await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl · LM Studio · manual")).toBeVisible();
   await expect(page.locator("[data-compare-run] video")).toHaveCount(2);
+  await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("controls", false);
+  await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("loop", true);
+  await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("muted", true);
+  await expect(page.getByRole("region", { name: "Filtered prompt stack coverage" })).toContainText("Filtered prompt × stack coverage");
+  await expect(page.getByRole("region", { name: "Filtered prompt stack coverage" })).toContainText("1 video");
 });
 
 test("paginates the table mode at 25 records", async ({ page }) => {
@@ -474,13 +479,10 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
   await expect(page.getByRole("button", { name: "Copy prompt" })).toBeVisible();
   await page.getByRole("button", { name: "Copy prompt" }).click();
   await expect.poll(() => copiedText).toBe(benchmarks[0].prompt);
-  await expect(page.getByRole("heading", { name: "Run folder" })).toBeVisible();
-  await expect(page.locator("#detailRunFolderPath")).toHaveText(sampleRunWithVideo.runDirectory);
+  await expect(page.getByRole("heading", { name: "Run folder" })).toHaveCount(0);
   await expect(page.locator("#detailBackdrop")).not.toContainText("HTML source:");
   await expect(page.locator("#detailBackdrop")).not.toContainText("Preview:");
   await expect(page.locator("#detailBackdrop")).not.toContainText("Video:");
-  await page.getByRole("button", { name: "Copy path" }).click();
-  await expect.poll(() => copiedText).toBe(sampleRunWithVideo.runDirectory);
   await expect(page.getByRole("link", { name: "Prompt file" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Raw response" })).toHaveCount(0);
   await expect(page.locator("#detailMeta")).not.toContainText("Tool");
@@ -855,8 +857,7 @@ test("keeps the viewer usable on mobile widths", async ({ page }) => {
   expect(overflow).toBe(false);
 });
 
-test("keeps visual detail prompt and run folder usable on mobile widths", async ({ page }) => {
-  let copiedText = "";
+test("keeps visual detail prompt usable on mobile widths", async ({ page }) => {
   const longPrompt = Array.from({ length: 24 }, (_item, index) =>
     `Prompt instruction ${index + 1}: Create a sakura animation with layered petals and keep the full tree visible.`
   ).join("\n");
@@ -867,20 +868,6 @@ test("keeps visual detail prompt and run folder usable on mobile widths", async 
       prompt: longPrompt
     }
   };
-  await page.exposeFunction("recordClipboardWrite", (value: string) => {
-    copiedText = String(value);
-  });
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, "clipboard", {
-      value: {
-        writeText: (value: string) =>
-          (window as unknown as { recordClipboardWrite: (text: string) => Promise<void> }).recordClipboardWrite(
-            value
-          )
-      },
-      configurable: true
-    });
-  });
   await mockApi(page, { lmStudioOnline: true, runs: [mobileRun] });
   await page.setViewportSize({ width: 390, height: 900 });
 
@@ -892,16 +879,12 @@ test("keeps visual detail prompt and run folder usable on mobile widths", async 
   const detailDialog = page.locator("#detailBackdrop[open]");
   await expect(detailDialog).toBeVisible();
   await expect(detailDialog.getByRole("heading", { name: "Prompt", exact: true })).toBeVisible();
-  await expect(detailDialog.getByRole("heading", { name: "Run folder" })).toBeVisible();
-  await expect(page.locator("#detailRunFolderPath")).toHaveText(mobileRun.runDirectory);
+  await expect(detailDialog.getByRole("heading", { name: "Run folder" })).toHaveCount(0);
 
   const promptScrolls = await page.locator("#detailPrompt").evaluate((element) =>
     element.scrollHeight > element.clientHeight
   );
   expect(promptScrolls).toBe(true);
-
-  await page.getByRole("button", { name: "Copy path" }).click();
-  await expect.poll(() => copiedText).toBe(mobileRun.runDirectory);
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth

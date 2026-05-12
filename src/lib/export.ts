@@ -161,6 +161,8 @@ function toPublicRunner(runner: RunRunnerMetadata): RunRunnerMetadata {
     ...(runner.modelSource ? { modelSource: runner.modelSource } : {}),
     ...(runner.intendedRunner ? { intendedRunner: runner.intendedRunner } : {}),
     ...(runner.actualRunner ? { actualRunner: runner.actualRunner } : {}),
+    ...(isPublicSafeLabel(runner.harnessLabel) ? { harnessLabel: runner.harnessLabel } : {}),
+    ...(isPublicSafeLabel(runner.harnessVersion) ? { harnessVersion: runner.harnessVersion } : {}),
     ...(runner.backendLabel ? { backendLabel: runner.backendLabel } : {}),
     ...(isPublicSafeLabel(runner.model) ? { model: runner.model } : {}),
     ...(typeof runner.retries === "number" ? { retries: runner.retries } : {}),

@@ -56,20 +56,21 @@ export function runKindLabel(run) {
 }
 
 export function runnerLabel(run) {
-  return run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.runner?.mode ?? run.tool ?? "manual";
+  const label = run.runner?.harnessLabel ?? run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.runner?.mode ?? run.tool ?? "manual";
+  const version = run.runner?.harnessVersion;
+  return version ? `${label} ${version}` : label;
 }
 
 export function stackAttemptIdentity(run) {
   const modelArtifact = run.model?.slug ?? run.model?.id ?? "unknown-model";
-  const modelSource = run.runner?.modelSource ?? run.runner?.backendLabel ?? "unknown-source";
+  const source = stackSource(run);
   const harness = runnerLabel(run);
-  const sourceLabel = run.runner?.backendLabel ?? modelSource;
   const modelLabel = run.model?.id ?? modelArtifact;
 
   return {
-    key: [modelSource, modelArtifact, harness].map(normalizeIdentityPart).join("|"),
-    label: [modelLabel, sourceLabel, harness].filter(Boolean).join(" · "),
-    modelSource,
+    key: [source.key, modelArtifact, harness].map(normalizeIdentityPart).join("|"),
+    label: [modelLabel, source.label, harness].filter(Boolean).join(" · "),
+    modelSource: source.key,
     modelArtifact,
     harness
   };
@@ -145,10 +146,6 @@ export function runRecordText(run) {
   };
 }
 
-export function canOpenVisualDetail(run) {
-  return runKind(run) === "visual" && Boolean(run.assets?.html || run.assets?.preview || hasCapturedVideo(run) || run.status === "prepared");
-}
-
 export function findRunByDirectoryOrId(run) {
   return state.runs.find((candidate) =>
     (run.runDirectory && candidate.runDirectory === run.runDirectory) ||
@@ -181,6 +178,45 @@ function searchableRunText(run) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+function stackSource(run) {
+  if (run.runner?.modelSource) {
+    return {
+      key: run.runner.modelSource,
+      label: run.runner.backendLabel ?? modelSourceLabel(run.runner.modelSource)
+    };
+  }
+
+  if (isBackendSourceLabel(run.runner?.backendLabel)) {
+    return {
+      key: run.runner.backendLabel,
+      label: run.runner.backendLabel
+    };
+  }
+
+  const baseUrl = run.runner?.baseUrl;
+  if (/127\.0\.0\.1:8000|localhost:8000/iu.test(baseUrl ?? "")) {
+    return { key: "omlx", label: "oMLX" };
+  }
+  if (/127\.0\.0\.1:1234|localhost:1234/iu.test(baseUrl ?? "")) {
+    return { key: "lmstudio", label: "LM Studio" };
+  }
+
+  return {
+    key: "source-unrecorded",
+    label: "source unrecorded"
+  };
+}
+
+function isBackendSourceLabel(label) {
+  return /^(omlx|lm studio|lmstudio|llama\.cpp)$/iu.test(label ?? "");
+}
+
+function modelSourceLabel(source) {
+  if (source === "omlx") return "oMLX";
+  if (source === "lmstudio") return "LM Studio";
+  return source;
 }
 
 function normalizeIdentityPart(value) {

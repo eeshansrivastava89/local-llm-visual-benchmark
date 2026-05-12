@@ -1,9 +1,11 @@
 import { els } from "./js/dom.js";
 import { state } from "./js/state.js";
 import { clamp, escapeHtml, escapeAttribute, formatBytes, formatDate, formatDateShort, uniqueBy } from "./js/utils.js";
-import { fetchJson, fetchStaticManifest, postJson, deleteJson, staticExportUrl } from "./js/api.js";
-import { compareRunKey, selectedCompareRuns, toggleCompareSelection } from "./js/compare.js";
-import { filteredRuns, groupRuns, modelsFromRuns, runSummaryText, runKind, hasCapturedVideo, needsMediaCapture, runCardState, displayRunError, runCardMediaMessage, runCardIdentity, runRecordText, canOpenVisualDetail, findRunByDirectoryOrId, stackAttemptIdentity } from "./js/runs.js";
+import { fetchJson, fetchStaticManifest, postJson, deleteJson } from "./js/api.js";
+import { assetHref } from "./js/assets.js";
+import { compareRunKey, toggleCompareSelection } from "./js/compare.js";
+import { renderCompareRuns as renderCompareRunsMarkup } from "./js/compare-ui.js";
+import { filteredRuns, groupRuns, modelsFromRuns, runSummaryText, runKind, hasCapturedVideo, needsMediaCapture, runCardState, displayRunError, runCardMediaMessage, runCardIdentity, runRecordText, findRunByDirectoryOrId } from "./js/runs.js";
 import { openModal, closeModal, currentModal, handleModalKeydown } from "./js/modals.js";
 import { applyStoredTheme, toggleTheme, setTheme } from "./js/theme.js";
 import { startHtmlPolling } from "./js/polling.js";
@@ -96,7 +98,6 @@ function wireEvents() {
   els.openRunFolder.addEventListener("click", () => openSelectedRunFolder(els.openRunFolder, els.detailMeta));
   els.recaptureRun.addEventListener("click", () => captureSelectedRunMedia({ force: true }));
   els.copyDetailPrompt.addEventListener("click", () => copyDetailPrompt());
-  els.copyRunFolder.addEventListener("click", () => copySelectedRunFolder(els.copyRunFolder));
 
   els.modelFilter.addEventListener("change", () => {
     state.selectedModel = els.modelFilter.value;
@@ -115,14 +116,14 @@ function wireEvents() {
   });
   els.prepareRun.addEventListener("click", () => prepareRunSlot());
   els.copyPrompt.addEventListener("click", () => copyPreparedPrompt());
-  els.prepRunner.addEventListener("change", () => updatePrepareMode({ preserveCommand: false }));
+  els.prepRunner.addEventListener("change", () => updatePrepareMode());
   els.prepModelSource.addEventListener("change", () => {
     state.selectedModelSource = els.prepModelSource.value;
     renderPrepOptions();
   });
   els.prepBenchmark.addEventListener("change", () => updatePrepareMode());
   els.prepModelSelect.addEventListener("change", () => {
-    updatePrepareMode({ preserveCommand: false });
+    updatePrepareMode();
   });
 
   els.viewTabs.forEach((button) => {
@@ -517,7 +518,6 @@ async function loadLocalData() {
     state.runs = runs.runs ?? [];
     renderBenchmarks();
     renderModels();
-    renderRunFilters();
     renderModelSources();
     renderRuns();
     renderPrepOptions();
@@ -545,12 +545,11 @@ async function enterStaticMode(reason) {
     state.writesEnabled = false;
     setSourceStatus("omlx", "static", 0, "oMLX status requires the local dev server.");
     setSourceStatus("lmstudio", "static", 0, "LM Studio status requires the local dev server.");
-    setConnection("static", "Static", "Browsing exported runs. Sync requires the local dev server.");
+    setConnectionMessage("Browsing exported runs. Sync requires the local dev server.");
     els.statsDot.dataset.state = "static";
     els.statsCompact.textContent = "Static";
     renderBenchmarks();
     renderModels();
-    renderRunFilters();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -558,7 +557,7 @@ async function enterStaticMode(reason) {
     updateLmStepStates();
     updateWriteControls();
   } catch (staticError) {
-    setConnection("offline", "Unavailable", (reason?.message ?? "Local API unavailable.") + " " + staticError.message);
+    setConnectionMessage((reason?.message ?? "Local API unavailable.") + " " + staticError.message);
     els.statsDot.dataset.state = "offline";
     els.statsCompact.textContent = "Unavailable";
     els.runsSurface.innerHTML = '<div class="empty">No local API or static export was found.</div>';
@@ -758,7 +757,6 @@ async function refreshRuns() {
   state.runs = runs.runs ?? [];
   renderBenchmarks();
   renderModels();
-  renderRunFilters();
   renderModelSources();
   renderPrepOptions();
   renderRuns();
@@ -772,7 +770,6 @@ async function refreshRunsForPolling() {
   const runs = await fetchJson("/api/runs");
   state.runs = runs.runs ?? [];
   renderModels();
-  renderRunFilters();
   renderModelSources();
   renderRuns();
   updateOnboarding();
@@ -816,7 +813,6 @@ async function captureMissingMedia() {
 
     state.captureRunDirectory = "";
     renderModels();
-    renderRunFilters();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -898,7 +894,6 @@ async function captureRunMedia(run, options = {}) {
       state.selectedRun = nextRun;
     }
     renderModels();
-    renderRunFilters();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -939,7 +934,7 @@ function resetPrepareRunModal() {
   els.prepModelSource.value = state.selectedModelSource;
   const firstModel = modelsForSelectedSource()[0]?.id ?? "";
   els.prepModelSelect.value = firstModel;
-  updatePrepareMode({ preserveCommand: false });
+  updatePrepareMode();
 
   if (!canUseOperationalControls()) {
     els.prepareRun.disabled = true;
@@ -949,7 +944,7 @@ function resetPrepareRunModal() {
   }
 }
 
-function updatePrepareMode(options = {}) {
+function updatePrepareMode() {
   const workflow = "visual";
   els.prepBackendHelperGroup.hidden = false;
   els.prepModelSourceGroup.hidden = false;
@@ -1007,12 +1002,11 @@ async function prepareRunSlot() {
     const statusText = "Run slot prepared for " + modelSourceLabel(modelSource) + " via " + harnessLabel(runner) + ". Copy the prompt into your harness.";
     state.preparedPrompt = output;
     els.preparedPrompt.value = output;
-    els.preparedPaths.textContent = statusText + " Run folder: " + prepared.paths.runDirectory;
+    els.preparedPaths.textContent = statusText;
     els.copyPrompt.disabled = !output;
     updatePreparedCopyState();
     state.runs = [availablePreparedRun(prepared.run), ...state.runs.filter((run) => run.runId !== prepared.run.runId)];
     renderModels();
-    renderRunFilters();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -1047,11 +1041,6 @@ function updatePreparedCopyState() {
 async function copyDetailPrompt() {
   const text = els.detailPrompt.textContent ?? "";
   await copyTextToClipboard(text, els.copyDetailPrompt, "Copy prompt");
-}
-
-async function copySelectedRunFolder(button = els.copyRunFolder) {
-  const runFolder = state.selectedRun?.runDirectory ?? "";
-  await copyTextToClipboard(runFolder, button, "Copy path");
 }
 
 async function copyTextToClipboard(text, button, label) {
@@ -1096,7 +1085,6 @@ async function confirmDeleteSelectedRun() {
     closeModal("detail");
     state.selectedRun = null;
     renderModels();
-    renderRunFilters();
     renderModelSources();
     renderPrepOptions();
     renderRuns();
@@ -1190,10 +1178,6 @@ function renderModels() {
   ].join("");
 }
 
-function renderRunFilters() {
-  // The workbench now keeps filters to model, prompt, and search.
-}
-
 function renderModelSources() {
   renderModelInventory();
 }
@@ -1221,7 +1205,7 @@ function renderPrepOptions() {
   if (!sourceModels.some((model) => model.id === els.prepModelSelect.value) && sourceModels[0]) {
     els.prepModelSelect.value = sourceModels[0].id;
   }
-  updatePrepareMode({ preserveCommand: true });
+  updatePrepareMode();
 }
 
 function modelsForSelectedSource() {
@@ -1306,70 +1290,8 @@ function renderRuns() {
 }
 
 function renderCompareRuns(runs) {
-  const selectedRuns = selectedCompareRuns(runs, state.compareSelection);
-  els.runsSurface.innerHTML =
-    '<div class="grid gap-4">' +
-      '<section class="grid gap-3 rounded-lg border bg-card p-3 shadow-sm" aria-label="Compare run selection">' +
-        '<div class="flex flex-wrap items-baseline justify-between gap-2">' +
-          '<strong>' + String(selectedRuns.length) + " selected</strong>" +
-          '<span class="muted-copy text-sm">Choose up to 4 visual runs.</span>' +
-        "</div>" +
-        '<div class="grid gap-2 md:grid-cols-2">' + runs.map(renderCompareCandidate).join("") + "</div>" +
-      "</section>" +
-      renderComparePreviewGrid(selectedRuns) +
-    "</div>";
+  els.runsSurface.innerHTML = renderCompareRunsMarkup(runs, state.compareSelection);
   wireCompareSelection(runs);
-}
-
-function renderCompareCandidate(run) {
-  const stack = stackAttemptIdentity(run);
-  const key = compareRunKey(run);
-  const selected = state.compareSelection.includes(key);
-  const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
-  const label = "Select " + title + " " + stack.label;
-  return (
-    '<label class="flex min-w-0 cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors data-[selected=true]:border-accent data-[selected=true]:bg-accent-soft" data-selected="' + String(selected) + '">' +
-      '<input type="checkbox" data-compare-select="' + escapeAttribute(key) + '" aria-label="' + escapeAttribute(label) + '" ' + (selected ? "checked" : "") + " />" +
-      '<span class="grid min-w-0 gap-0.5">' +
-        '<strong class="truncate-line">' + escapeHtml(title) + "</strong>" +
-        '<span class="muted-copy truncate-line">' + escapeHtml(stack.label) + "</span>" +
-      "</span>" +
-    "</label>"
-  );
-}
-
-function renderComparePreviewGrid(selectedRuns) {
-  if (selectedRuns.length === 0) {
-    return '<section class="rounded-lg border bg-card p-3 text-sm text-muted-foreground shadow-sm" aria-label="Selected compare runs">Select runs to start comparing visual outputs.</section>';
-  }
-
-  return (
-    '<section class="grid gap-3 rounded-lg border bg-card p-3 shadow-sm md:grid-cols-2" aria-label="Selected compare runs">' +
-      selectedRuns.map(renderComparePreviewCard).join("") +
-    "</section>"
-  );
-}
-
-function renderComparePreviewCard(run) {
-  const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
-  const stack = stackAttemptIdentity(run);
-  const videoHref = assetHref(run, run.assets?.videoMp4 ?? run.assets?.video);
-  const previewHref = assetHref(run, run.assets?.preview);
-  const media = videoHref
-    ? '<video class="h-full w-full object-cover" controls muted playsinline src="' + escapeAttribute(videoHref) + '"></video>'
-    : previewHref
-      ? '<img class="h-full w-full object-cover" src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />'
-      : '<div class="preview-placeholder"><strong>No captured media</strong></div>';
-
-  return (
-    '<article class="grid min-w-0 gap-2" data-compare-run>' +
-      '<div class="grid aspect-video overflow-hidden rounded-lg bg-muted">' + media + "</div>" +
-      '<div class="grid min-w-0 gap-0.5">' +
-        '<strong class="truncate-line">' + escapeHtml(title) + "</strong>" +
-        '<span class="muted-copy truncate-line">' + escapeHtml(stack.label) + "</span>" +
-      "</div>" +
-    "</article>"
-  );
 }
 
 function wireCompareSelection(runs) {
@@ -1611,8 +1533,6 @@ function renderDetail(run) {
   els.promptLength.textContent = textRecord.value ? textRecord.value.length.toLocaleString() + " chars" : "missing";
   els.copyDetailPrompt.textContent = textRecord.copyLabel;
   els.copyDetailPrompt.disabled = !textRecord.value;
-  els.detailRunFolderPath.textContent = run.runDirectory ?? "Run folder unavailable";
-  els.copyRunFolder.disabled = !run.runDirectory;
   const stateLabel = runCardState(run);
   els.detailMeta.innerHTML =
     '<span class="meta-label">State</span><strong>' + escapeHtml(stateLabel.label) + "</strong>" +
@@ -1676,7 +1596,7 @@ function renderDetailArtifact(run) {
     "</span>";
 }
 
-function setConnection(stateName, label, message) {
+function setConnectionMessage(message) {
   els.connectionMessage.textContent = message;
 }
 
@@ -1684,40 +1604,6 @@ function groupSummary(group, mode) {
   const count = group.subtitles.length;
   const item = mode === "model" ? "prompt" : "model";
   return String(count) + " " + item + (count === 1 ? "" : "s");
-}
-
-function assetPath(run, asset) {
-  if (!asset || !run.runDirectory) return "";
-  return String(run.runDirectory).replace(/\/+$/u, "") + "/" + asset;
-}
-
-function assetHref(run, asset) {
-  const path = assetPath(run, asset);
-  if (!path) return null;
-  const version = assetVersion(run, asset);
-  if (/^[a-z][a-z0-9+.-]*:/iu.test(path)) return path;
-  if (state.staticMode || path.startsWith("export/")) {
-    return appendAssetVersion(staticExportUrl(path), version);
-  }
-  return "/api/run-asset?runDirectory=" + encodeURIComponent(run.runDirectory) +
-    "&asset=" + encodeURIComponent(asset) +
-    (version ? "&v=" + encodeURIComponent(version) : "");
-}
-
-function assetVersion(run, asset) {
-  if (!asset) return "";
-  if (asset === run.assets?.preview) {
-    return run.capture?.preview?.capturedAt ?? run.updatedAt ?? "";
-  }
-  if (asset === run.assets?.video || asset === run.assets?.videoMp4) {
-    return run.capture?.video?.capturedAt ?? run.updatedAt ?? "";
-  }
-  return run.updatedAt ?? "";
-}
-
-function appendAssetVersion(path, version) {
-  if (!version) return path;
-  return path + (path.includes("?") ? "&" : "?") + "v=" + encodeURIComponent(version);
 }
 
 function availablePreparedRun(run) {

@@ -105,7 +105,5 @@ export const els = {
   detailTextTitle: document.querySelector("#detailTextTitle"),
   promptLength: document.querySelector("#promptLength"),
   copyDetailPrompt: document.querySelector("#copyDetailPrompt"),
-  detailMeta: document.querySelector("#detailMeta"),
-  detailRunFolderPath: document.querySelector("#detailRunFolderPath"),
-  copyRunFolder: document.querySelector("#copyRunFolder")
+  detailMeta: document.querySelector("#detailMeta")
 };

@@ -52,7 +52,6 @@ export const state = {
   selectedRun: null,
   compareSelection: [],
   captureRunDirectory: "",
-  modalFocusReturn: {},
   onboardingDismissed: false,
   htmlPollInterval: null
 };

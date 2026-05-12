@@ -37,12 +37,6 @@ export function formatDateShort(value) {
     : "-";
 }
 
-export function normalizeBaseUrlInput(value) {
-  const trimmed = String(value || "").trim().replace(/\/+$/u, "");
-  if (!trimmed) return "http://localhost:1234/v1";
-  return trimmed.endsWith("/v1") ? trimmed : trimmed + "/v1";
-}
-
 export function uniqueBy(items, keyForItem) {
   const seen = new Set();
   return items.filter((item) => {

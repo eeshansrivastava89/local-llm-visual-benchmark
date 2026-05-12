@@ -12,14 +12,6 @@ export type RunnerMode =
   | "openai-compatible"
   | "external";
 
-export const RUN_STATUSES: readonly RunStatus[] = [
-  "prepared",
-  "completed",
-  "failed",
-  "cancelled",
-  "skipped"
-] as const;
-
 export interface BenchmarkRecord {
   id: string;
   title: string;
@@ -121,6 +113,8 @@ export interface RunRunnerMetadata {
   modelSource?: ModelSourceId;
   intendedRunner?: string;
   actualRunner?: string;
+  harnessLabel?: string;
+  harnessVersion?: string;
   backendLabel?: string;
   baseUrl?: string;
   model?: string;

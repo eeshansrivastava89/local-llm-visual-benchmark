@@ -97,6 +97,8 @@ That creates a static site in:
 dist-static/
 ```
 
+The default static build uses the GitHub Pages base path `/local-llm-visual-benchmark/`. To smoke-test that exact output locally, serve `dist-static/` from that path rather than the domain root.
+
 The static export includes benchmark metadata, summary run metadata, preview images, and videos. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, or operational controls.
 
 ## Local folders
