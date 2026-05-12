@@ -1,0 +1,236 @@
+import { els } from "./dom.js";
+import { state } from "./state.js";
+import { escapeAttribute, escapeHtml, uniqueBy } from "./utils.js";
+import { compareRunKey, toggleCompareSelection } from "./compare.js";
+import { filteredRuns, groupRuns, harnessesFromRuns, modelsFromRuns, runKind, runSummaryText } from "./runs.js";
+import { renderGroupedRuns as renderGroupedRunsMarkup, renderRunsTable as renderRunsTableMarkup } from "./workbench-ui.js";
+import { renderModelInventory } from "./setup-ui.js";
+import { openModal } from "./modals.js";
+
+let captureRunMediaHandler = () => {};
+let openDetailHandler = () => {};
+let canUseOperationalControlsHandler = () => false;
+
+export function configureWorkbenchController(options = {}) {
+  captureRunMediaHandler = options.onCaptureRunMedia ?? captureRunMediaHandler;
+  openDetailHandler = options.onOpenDetail ?? openDetailHandler;
+  canUseOperationalControlsHandler = options.canUseOperationalControls ?? canUseOperationalControlsHandler;
+}
+
+export function runsForCurrentWorkspace() {
+  return state.runs.filter((run) => runKind(run) === "visual");
+}
+
+export function renderBenchmarks() {
+  const allLabel = "All prompts";
+  const optionRuns = runsForCurrentWorkspace();
+  const runOptions = optionRuns
+    .map((run) => ({
+      id: run.benchmark?.id,
+      label: run.benchmark?.title ?? run.benchmark?.id
+    }))
+    .filter((item) => item.id && item.label);
+  const benchmarkOptions = state.benchmarks.map((benchmark) => ({ id: benchmark.id, label: benchmark.title }));
+  const options = uniqueBy([...benchmarkOptions, ...runOptions], (item) => item.id);
+  if (state.selectedBenchmark !== "all" && !options.some((option) => option.id === state.selectedBenchmark)) {
+    state.selectedBenchmark = "all";
+  }
+  els.benchmarkFilter.innerHTML = [
+    '<option value="all">' + escapeHtml(allLabel) + "</option>",
+    ...options.map((option) =>
+      '<option value="' + escapeAttribute(option.id) + '">' + escapeHtml(option.label) + "</option>"
+    )
+  ].join("");
+  els.benchmarkFilter.value = state.selectedBenchmark;
+}
+
+export function renderModels() {
+  const runModels = modelsFromRuns(runsForCurrentWorkspace());
+  if (state.selectedModel !== "all" && !runModels.some((m) => m.id === state.selectedModel)) {
+    state.selectedModel = "all";
+    els.modelFilter.value = "all";
+  }
+  els.modelFilter.innerHTML = [
+    '<option value="all">All run models</option>',
+    ...runModels.map((m) =>
+      '<option value="' + escapeAttribute(m.id) + '">' + escapeHtml(m.id) + "</option>"
+    )
+  ].join("");
+  els.modelFilter.value = state.selectedModel;
+}
+
+export function renderHarnesses() {
+  const runHarnesses = harnessesFromRuns(runsForCurrentWorkspace());
+  if (state.selectedHarness !== "all" && !runHarnesses.some((harness) => harness.id === state.selectedHarness)) {
+    state.selectedHarness = "all";
+    els.harnessFilter.value = "all";
+  }
+  els.harnessFilter.innerHTML = [
+    '<option value="all">All harnesses</option>',
+    ...runHarnesses.map((harness) =>
+      '<option value="' + escapeAttribute(harness.id) + '">' + escapeHtml(harness.id) + "</option>"
+    )
+  ].join("");
+  els.harnessFilter.value = state.selectedHarness;
+}
+
+export function renderModelSources() {
+  renderModelInventory();
+}
+
+export function resetRunPage() {
+  state.runPage = 1;
+}
+
+export function renderRuns() {
+  const runs = filteredRuns();
+  els.runCount.textContent = String(runs.length);
+  els.runSummary.textContent = runSummaryText(runs);
+  els.viewTitle.textContent = state.mode === "model"
+    ? "Model attempts"
+    : state.mode === "table"
+    ? "Table"
+    : state.mode === "benchmark"
+      ? "Prompt comparison"
+      : "Prompt comparison";
+  els.viewSubtitle.textContent = state.mode === "model"
+    ? "Group attempts by model and prompt."
+    : state.mode === "table"
+    ? "Select table rows to compare visual outputs."
+    : state.mode === "benchmark"
+      ? "Compare one prompt across models."
+      : "Compare one prompt across models.";
+
+  if (runs.length === 0) {
+    const emptyBase = '<div class="empty">No runs match the current filters.</div>';
+    const emptyWithAction = !canUseOperationalControlsHandler()
+      ? emptyBase
+      : '<div class="empty">No runs match the current filters.<div class="empty-state-action"><button type="button" class="btn-sm-ghost" id="emptyPrepRun">Prepare a run</button></div></div>';
+    els.runsSurface.innerHTML = emptyWithAction;
+    const emptyPrep = document.querySelector("#emptyPrepRun");
+    if (emptyPrep) {
+      emptyPrep.addEventListener("click", () => openModal("prep"));
+    }
+    return;
+  }
+
+  if (state.mode === "table") {
+    renderRunsTable(runs);
+    return;
+  }
+
+  if (state.mode === "model") {
+    renderGroupedRuns(
+      groupRuns(runs, (r) => r.model?.id ?? "Unknown model", (r) => r.benchmark?.title ?? r.benchmark?.id ?? "Unknown prompt"),
+      "model"
+    );
+    return;
+  }
+
+  if (state.mode === "benchmark") {
+    renderGroupedRuns(
+      groupRuns(runs, (r) => r.benchmark?.title ?? r.benchmark?.id ?? "Unknown prompt", (r) => r.model?.id ?? "Unknown model"),
+      "benchmark"
+    );
+    return;
+  }
+  renderGroupedRuns(
+    groupRuns(runs, (r) => r.benchmark?.title ?? r.benchmark?.id ?? "Unknown prompt", (r) => r.model?.id ?? "Unknown model"),
+    "benchmark"
+  );
+}
+
+function wireCompareSelection(runs) {
+  document.querySelectorAll("[data-compare-select]").forEach((input) => {
+    input.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+    input.addEventListener("keydown", (event) => {
+      event.stopPropagation();
+    });
+    input.addEventListener("change", (event) => {
+      event.stopPropagation();
+      const run = runs.find((candidate) => compareRunKey(candidate) === input.dataset.compareSelect);
+      state.compareSelection = toggleCompareSelection(state.compareSelection, run);
+      renderRuns();
+    });
+  });
+}
+
+function renderRunsTable(runs) {
+  const rendered = renderRunsTableMarkup(runs, workbenchRenderContext());
+  state.runPage = rendered.runPage;
+  els.runsSurface.innerHTML = rendered.html;
+  wireCompareSelection(runs);
+  wireRunCards();
+  wireRunsPagination(rendered.totalPages);
+}
+
+function renderGroupedRuns(groups, mode) {
+  els.runsSurface.innerHTML = renderGroupedRunsMarkup(groups, mode, workbenchRenderContext());
+  wireRunCards();
+}
+
+function workbenchRenderContext() {
+  return {
+    canOperate: canUseOperationalControlsHandler(),
+    captureBusy: state.captureBusy,
+    captureRunDirectory: state.captureRunDirectory,
+    compareSelection: state.compareSelection,
+    runPage: state.runPage,
+    runsPerPage: state.runsPerPage
+  };
+}
+
+function wireRunsPagination(totalPages) {
+  const previous = document.querySelector("#runsPrevPage");
+  const next = document.querySelector("#runsNextPage");
+  previous?.addEventListener("click", () => {
+    state.runPage = Math.max(1, state.runPage - 1);
+    renderRuns();
+  });
+  next?.addEventListener("click", () => {
+    state.runPage = Math.min(totalPages, state.runPage + 1);
+    renderRuns();
+  });
+}
+
+function wireRunCards() {
+  els.runsSurface.querySelectorAll("[data-capture-run-id]").forEach((button) => {
+    button.addEventListener("keydown", (event) => {
+      event.stopPropagation();
+    });
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const runId = button.dataset.captureRunId;
+      const run = state.runs.find((r) => r.runId === runId);
+      if (run) {
+        void captureRunMediaHandler(run);
+      }
+    });
+  });
+
+  els.runsSurface.querySelectorAll("[data-open-run]").forEach((card) => {
+    card.addEventListener("click", () => {
+      const runId = card.dataset.runId;
+      const run = state.runs.find((r) => r.runId === runId);
+      if (run) {
+        openRunFromCurrentView(run);
+      }
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        const runId = card.dataset.runId;
+        const run = state.runs.find((r) => r.runId === runId);
+        if (run) {
+          openRunFromCurrentView(run);
+        }
+      }
+    });
+  });
+}
+
+function openRunFromCurrentView(run) {
+  openDetailHandler(run);
+}

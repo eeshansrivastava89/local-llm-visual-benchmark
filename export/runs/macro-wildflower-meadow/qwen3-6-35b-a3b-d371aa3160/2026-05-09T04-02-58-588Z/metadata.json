@@ -1,10 +1,11 @@
 {
+  "kind": "visual",
   "runId": "2026-05-09T04-02-58-588Z",
   "benchmark": {
     "id": "macro-wildflower-meadow",
     "title": "Macro Wildflower Meadow",
     "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
-    "prompt": "Create a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show about five to seven large foreground flowers with detailed petals, stems, leaves, and pollen centers, rather than a huge field of tiny flowers. Around them, animate a few butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, and adapt to any viewport size. Use a full-page canvas or SVG and no external libraries. Use the most efficient complete approach, then use Playwright screenshots to see the output yourself, check for errors, review and adjust the output until it looks correct. If you don't have access to Playwright, still double check for errors and adjust the output."
+    "prompt": "Create a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show about five to seven large foreground flowers with detailed petals, stems, leaves, and pollen centers, rather than a huge field of tiny flowers. Around them, animate a few butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
   },
   "model": {
     "id": "qwen3.6-35b-a3b",
@@ -14,10 +15,10 @@
   "createdAt": "2026-05-09T04:02:58.588Z",
   "updatedAt": "2026-05-09T05:08:44.643Z",
   "preparedAt": "2026-05-09T04:02:58.588Z",
+  "completedAt": "2026-05-09T05:08:44.643Z",
   "runDirectory": "export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-02-58-588Z",
   "assets": {
     "metadata": "metadata.json",
-    "prompt": "prompt.md",
     "preview": "preview.png",
     "video": "preview.webm",
     "videoMp4": "preview.mp4"
@@ -25,12 +26,10 @@
   "capture": {
     "preview": {
       "status": "ready",
-      "path": "preview.png",
       "capturedAt": "2026-05-09T05:08:44.643Z"
     },
     "video": {
       "status": "ready",
-      "path": "preview.webm",
       "capturedAt": "2026-05-09T05:08:44.643Z",
       "quality": {
         "measuredFps": 13.7,
@@ -40,16 +39,8 @@
         "viewport": {
           "width": 1280,
           "height": 720
-        },
-        "launchArgs": [
-          "--ignore-gpu-blocklist",
-          "--enable-gpu-rasterization",
-          "--use-gl=angle",
-          "--use-angle=metal"
-        ]
+        }
       }
     }
-  },
-  "completedAt": "2026-05-09T05:08:44.643Z",
-  "promptText": "Model label: qwen3.6-35b-a3b\nBenchmark: Macro Wildflower Meadow (macro-wildflower-meadow)\nRun folder: export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-02-58-588Z\n\nRequired output:\n- Save one complete self-contained HTML document to: export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-02-58-588Z/index.html\n- Do not place the final HTML in any other folder.\n- Do not require external network assets.\n- Only create index.html; the benchmark viewer captures preview media after index.html exists.\n\nCreate a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show about five to seven large foreground flowers with detailed petals, stems, leaves, and pollen centers, rather than a huge field of tiny flowers. Around them, animate a few butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, and adapt to any viewport size. Use a full-page canvas or SVG and no external libraries. Use the most efficient complete approach, then use Playwright screenshots to see the output yourself, check for errors, review and adjust the output until it looks correct. If you don't have access to Playwright, still double check for errors and adjust the output.\n\nOutput contract:\n- Return exactly one complete self-contained HTML document.\n- The document must include <!doctype html>, <html>, <head>, and <body>.\n- Do not depend on external network assets or CDN libraries.\n- Inline small helper functions if useful, but keep the final artifact portable as one file.\n- Use no explanations, Markdown fences, commentary, or extra text before or after the HTML."
+  }
 }

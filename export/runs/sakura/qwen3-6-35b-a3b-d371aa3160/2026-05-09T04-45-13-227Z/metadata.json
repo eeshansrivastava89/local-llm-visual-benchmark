@@ -1,10 +1,11 @@
 {
+  "kind": "visual",
   "runId": "2026-05-09T04-45-13-227Z",
   "benchmark": {
     "id": "sakura",
     "title": "Sakura Tree",
     "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
-    "prompt": "Animate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport at all common screen sizes: the full crown, outer blossoms, side branches, trunk, and base must stay visible with at least 8-10% empty margin from the top and left/right edges. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nPlease make sure the entire tree fits cleanly within the viewport. Use the most efficient complete approach, then use Playwright screenshots to see the output yourself, check for errors, review and adjust the output until it looks correct. If you don't have access to Playwright, still double check for errors and adjust the output."
+    "prompt": "Animate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport at all common screen sizes: the full crown, outer blossoms, side branches, trunk, and base must stay visible with at least 8-10% empty margin from the top and left/right edges. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
   },
   "model": {
     "id": "qwen3.6-35b-a3b",
@@ -12,12 +13,12 @@
   },
   "status": "completed",
   "createdAt": "2026-05-09T04:45:13.227Z",
-  "updatedAt": "2026-05-09T04:59:35.518Z",
+  "updatedAt": "2026-05-12T04:59:15.933Z",
   "preparedAt": "2026-05-09T04:45:13.227Z",
+  "completedAt": "2026-05-12T04:59:15.933Z",
   "runDirectory": "export/runs/sakura/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-45-13-227Z",
   "assets": {
     "metadata": "metadata.json",
-    "prompt": "prompt.md",
     "preview": "preview.png",
     "video": "preview.webm",
     "videoMp4": "preview.mp4"
@@ -25,31 +26,21 @@
   "capture": {
     "preview": {
       "status": "ready",
-      "path": "preview.png",
-      "capturedAt": "2026-05-09T04:59:35.518Z"
+      "capturedAt": "2026-05-12T04:59:15.933Z"
     },
     "video": {
       "status": "ready",
-      "path": "preview.webm",
-      "capturedAt": "2026-05-09T04:59:35.518Z",
+      "capturedAt": "2026-05-12T04:59:15.933Z",
       "quality": {
-        "measuredFps": 26,
+        "measuredFps": 120,
         "minFps": 12,
-        "sampleMs": 1617,
-        "frames": 42,
+        "sampleMs": 1600,
+        "frames": 192,
         "viewport": {
           "width": 1280,
           "height": 720
-        },
-        "launchArgs": [
-          "--ignore-gpu-blocklist",
-          "--enable-gpu-rasterization",
-          "--use-gl=angle",
-          "--use-angle=metal"
-        ]
+        }
       }
     }
-  },
-  "completedAt": "2026-05-09T04:59:35.518Z",
-  "promptText": "Model label: qwen3.6-35b-a3b\nBenchmark: Sakura Tree (sakura)\nRun folder: export/runs/sakura/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-45-13-227Z\n\nRequired output:\n- Save one complete self-contained HTML document to: export/runs/sakura/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-45-13-227Z/index.html\n- Do not place the final HTML in any other folder.\n- Do not require external network assets.\n- Only create index.html; the benchmark viewer captures preview media after index.html exists.\n\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport at all common screen sizes: the full crown, outer blossoms, side branches, trunk, and base must stay visible with at least 8-10% empty margin from the top and left/right edges. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nPlease make sure the entire tree fits cleanly within the viewport. Use the most efficient complete approach, then use Playwright screenshots to see the output yourself, check for errors, review and adjust the output until it looks correct. If you don't have access to Playwright, still double check for errors and adjust the output.\n\nOutput contract:\n- Return exactly one complete self-contained HTML document.\n- The document must include <!doctype html>, <html>, <head>, and <body>.\n- Do not depend on external network assets or CDN libraries.\n- Inline small helper functions if useful, but keep the final artifact portable as one file.\n- Use no explanations, Markdown fences, commentary, or extra text before or after the HTML."
+  }
 }

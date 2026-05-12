@@ -1,0 +1,239 @@
+import { state } from "./state.js";
+import { uniqueBy } from "./utils.js";
+
+export function filteredRuns() {
+  return state.runs.filter((run) => {
+    const workspaceMatch = runKind(run) === "visual";
+    const modelMatch = state.selectedModel === "all" || run.model?.id === state.selectedModel;
+    const benchmarkMatch = state.selectedBenchmark === "all" || run.benchmark?.id === state.selectedBenchmark;
+    const harnessMatch = state.selectedHarness === "all" || stackAttemptIdentity(run).harness === state.selectedHarness;
+    const searchMatch = !state.runsSearch.trim() || searchableRunText(run).includes(state.runsSearch.trim().toLowerCase());
+    return workspaceMatch && modelMatch && benchmarkMatch && harnessMatch && searchMatch;
+  });
+}
+
+export function groupRuns(runs, titleForRun, subtitleForRun) {
+  const groups = new Map();
+  for (const run of runs) {
+    const title = titleForRun(run);
+    const group = groups.get(title) ?? { title, subtitles: new Set(), runs: [] };
+    group.subtitles.add(subtitleForRun(run));
+    group.runs.push(run);
+    groups.set(title, group);
+  }
+  return Array.from(groups.values()).map((g) => ({
+    title: g.title,
+    subtitles: Array.from(g.subtitles),
+    runs: g.runs
+  }));
+}
+
+export function modelsFromRuns(runs) {
+  return uniqueBy(
+    runs
+      .map((run) => run.model?.id)
+      .filter(Boolean)
+      .map((id) => ({ id })),
+    (m) => m.id
+  );
+}
+
+export function harnessesFromRuns(runs) {
+  return uniqueBy(
+    runs
+      .map((run) => stackAttemptIdentity(run).harness)
+      .filter(Boolean)
+      .map((id) => ({ id })),
+    (item) => item.id
+  );
+}
+
+export function runSummaryText(runs) {
+  const prepared = runs.filter((r) => r.status === "prepared" && !hasCapturedVideo(r)).length;
+  const videoReady = runs.filter((r) => hasCapturedVideo(r)).length;
+  const needsCapture = runs.filter((r) => needsMediaCapture(r)).length;
+  const failed = runs.filter((r) => r.status === "failed").length;
+  if (state.mode === "table") {
+    return String(runs.length) + " visual, " + videoReady + " with video, " + needsCapture + " need capture, " + failed + " failed";
+  }
+  return videoReady + " with video, " + needsCapture + " need capture, " + prepared + " prepared, " + failed + " failed";
+}
+
+export function runKind(run) {
+  return run.kind ?? "visual";
+}
+
+function runKindLabel(run) {
+  return runKind(run) === "visual" ? "Visual" : "Unsupported";
+}
+
+function runnerLabel(run) {
+  const label = run.runner?.harnessLabel ?? run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.runner?.mode ?? run.tool ?? "manual";
+  const version = run.runner?.harnessVersion;
+  return version ? `${label} ${version}` : label;
+}
+
+export function stackAttemptIdentity(run) {
+  const modelArtifact = run.model?.slug ?? run.model?.id ?? "unknown-model";
+  const source = stackSource(run);
+  const harness = runnerLabel(run);
+  const modelLabel = run.model?.id ?? modelArtifact;
+
+  return {
+    key: [source.key, modelArtifact, harness].map(normalizeIdentityPart).join("|"),
+    label: [modelLabel, source.label, harness].filter(Boolean).join(" · "),
+    modelSource: source.key,
+    modelArtifact,
+    harness
+  };
+}
+
+export function hasCapturedVideo(run) {
+  return Boolean(run.assets?.video || run.assets?.videoMp4);
+}
+
+export function needsMediaCapture(run) {
+  return Boolean(run.runDirectory && run.assets?.html && (!run.assets?.preview || !hasCapturedVideo(run)));
+}
+
+export function runCardState(run) {
+  if (hasCapturedVideo(run)) {
+    return { status: "completed", label: "video" };
+  }
+  if (run.status === "failed" || run.status === "cancelled") {
+    return { status: run.status, label: run.status };
+  }
+  if (run.assets?.html) {
+    return { status: "prepared", label: "capture" };
+  }
+  if (run.assets?.preview) {
+    return { status: "completed", label: "preview" };
+  }
+  return { status: "prepared", label: "slot" };
+}
+
+export function displayRunError(run) {
+  const message = run.capture?.video?.error?.message ?? run.error?.message;
+  if (!message) return null;
+  if (/rendered too slowly/iu.test(message)) return message;
+  if (/chat completion timed out/iu.test(message)) return "External tool timed out before writing an artifact.";
+  if (/LM Studio.*chat completion/iu.test(message)) return "External tool failed to produce an artifact.";
+  if (/LM Studio/iu.test(message)) return "External tool error. Open details for the original message.";
+  return message;
+}
+
+export function runCardMediaMessage(run, isCapturing) {
+  if (isCapturing) return "Capturing preview media";
+  if (hasCapturedVideo(run)) return "Video ready";
+  if (run.status === "failed" || run.capture?.video?.status === "failed") {
+    return displayRunError(run) ?? "Capture failed";
+  }
+  if (run.assets?.html) return "Needs media capture";
+  if (run.assets?.preview) return "Preview ready";
+  return "Waiting for index.html source";
+}
+
+export function runCardIdentity(run, mode) {
+  const promptTitle = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
+  const modelId = run.model?.id ?? "Unknown model";
+  const stack = stackAttemptIdentity(run);
+
+  if (mode === "benchmark") {
+    return { primary: modelId, secondary: stack.label.replace(modelId, "").replace(/^\s*·\s*/u, "") };
+  }
+
+  if (mode === "model") {
+    return { primary: promptTitle, secondary: stack.harness };
+  }
+
+  return { primary: promptTitle, secondary: stack.label };
+}
+
+export function runRecordText(run) {
+  return {
+    title: "Prompt",
+    value: run.promptText ?? run.benchmark?.prompt ?? "",
+    emptyText: "Prompt unavailable in run folder.",
+    copyLabel: "Copy prompt"
+  };
+}
+
+export function findRunByDirectoryOrId(run) {
+  return state.runs.find((candidate) =>
+    (run.runDirectory && candidate.runDirectory === run.runDirectory) ||
+    (run.runId && candidate.runId === run.runId)
+  );
+}
+
+function searchableRunText(run) {
+  return [
+    run.runId,
+    runKindLabel(run),
+    run.status,
+    runnerLabel(run),
+    run.benchmark?.id,
+    run.benchmark?.title,
+    run.benchmark?.description,
+    run.benchmark?.prompt,
+    run.model?.id,
+    run.model?.slug,
+    stackAttemptIdentity(run).key,
+    stackAttemptIdentity(run).label,
+    run.runner?.backendLabel,
+    run.runner?.baseUrl,
+    run.runner?.launchCommand,
+    run.runner?.metricSource,
+    run.runDirectory,
+    run.notes,
+    ...Object.values(run.assets ?? {})
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function stackSource(run) {
+  if (run.runner?.modelSource) {
+    return {
+      key: run.runner.modelSource,
+      label: run.runner.backendLabel ?? modelSourceLabel(run.runner.modelSource)
+    };
+  }
+
+  if (isBackendSourceLabel(run.runner?.backendLabel)) {
+    return {
+      key: run.runner.backendLabel,
+      label: run.runner.backendLabel
+    };
+  }
+
+  const baseUrl = run.runner?.baseUrl;
+  if (/127\.0\.0\.1:8000|localhost:8000/iu.test(baseUrl ?? "")) {
+    return { key: "omlx", label: "oMLX" };
+  }
+  if (/127\.0\.0\.1:1234|localhost:1234/iu.test(baseUrl ?? "")) {
+    return { key: "lmstudio", label: "LM Studio" };
+  }
+
+  return {
+    key: "source-unrecorded",
+    label: "source unrecorded"
+  };
+}
+
+function isBackendSourceLabel(label) {
+  return /^(omlx|lm studio|lmstudio|llama\.cpp)$/iu.test(label ?? "");
+}
+
+function modelSourceLabel(source) {
+  if (source === "omlx") return "oMLX";
+  if (source === "lmstudio") return "LM Studio";
+  return source;
+}
+
+function normalizeIdentityPart(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/gu, "-");
+}
