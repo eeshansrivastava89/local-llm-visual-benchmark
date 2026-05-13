@@ -71,7 +71,8 @@ async function writeRun(runsRoot: string) {
       rawResponse: "response.raw.txt",
       html: "index.html",
       preview: "preview.png",
-      video: "preview.webm"
+      video: "preview.webm",
+      videoMp4: "preview.mp4"
     },
     capture: {
       preview: {
@@ -105,6 +106,7 @@ async function writeRun(runsRoot: string) {
   await writeFile(join(runDirectory, "index.html"), "<!doctype html><html></html>", "utf8");
   await writeFile(join(runDirectory, "preview.png"), "png bytes", "utf8");
   await writeFile(join(runDirectory, "preview.webm"), "webm bytes", "utf8");
+  await writeFile(join(runDirectory, "preview.mp4"), "mp4 bytes", "utf8");
   return { runDirectory, metadata };
 }
 
@@ -143,7 +145,7 @@ describe("generateStaticExport", () => {
           assets: {
             metadata: "metadata.json",
             preview: "preview.png",
-            video: "preview.webm"
+            videoMp4: "preview.mp4"
           }
         }
       ]
@@ -163,14 +165,17 @@ describe("generateStaticExport", () => {
     );
     await expect(readFile(join(exportedRunDirectory, "preview.png"), "utf8"))
       .resolves.toBe("png bytes");
-    await expect(readFile(join(exportedRunDirectory, "preview.webm"), "utf8"))
-      .resolves.toBe("webm bytes");
+    await expect(readFile(join(exportedRunDirectory, "preview.mp4"), "utf8"))
+      .resolves.toBe("mp4 bytes");
+    await expect(stat(join(exportedRunDirectory, "preview.webm")))
+      .rejects.toMatchObject({ code: "ENOENT" });
     await expect(stat(join(exportedRunDirectory, "index.html")))
       .rejects.toMatchObject({ code: "ENOENT" });
     await expect(stat(join(exportedRunDirectory, "response.raw.txt")))
       .rejects.toMatchObject({ code: "ENOENT" });
     await expect(stat(join(exportedRunDirectory, "prompt.md")))
       .rejects.toMatchObject({ code: "ENOENT" });
+    expect(JSON.stringify(manifest)).not.toContain("preview.webm");
     expect(JSON.stringify(manifest)).not.toContain("localhost");
     expect(JSON.stringify(manifest)).not.toContain("llama-server");
     expect(JSON.stringify(manifest)).not.toContain("/Users/test");
@@ -380,5 +385,40 @@ describe("static build script", () => {
     await expect(
       readFile(join(staticOutputDirectory, "index.html"), "utf8")
     ).resolves.not.toContain("Daily-driver stack evidence");
+  });
+
+  it("can build from an existing committed export without reading local runs", async () => {
+    const root = await createTempRoot("llm-visual-static-existing-export-");
+    const benchmarkDirectory = join(root, "benchmarks");
+    const runsRoot = join(root, "runs");
+    const publicExportDirectory = join(root, "public-export");
+    const staticOutputDirectory = join(root, "dist-static");
+    await writeBenchmark(benchmarkDirectory);
+    await writeRun(runsRoot);
+    await generateStaticExport({
+      benchmarkDirectory,
+      runsRoot,
+      publicExportDirectory,
+      generatedAt: new Date("2026-05-06T20:00:00.000Z")
+    });
+
+    await execFileAsync("node", ["scripts/build-static.mjs"], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        STATIC_USE_EXISTING_EXPORT: "true",
+        STATIC_BENCHMARK_DIR: join(root, "missing-benchmarks"),
+        STATIC_RUNS_ROOT: join(root, "missing-runs"),
+        STATIC_EXPORT_DIR: publicExportDirectory,
+        STATIC_OUTPUT_DIR: staticOutputDirectory
+      }
+    });
+
+    await expect(
+      readFile(join(staticOutputDirectory, "export", "manifest.json"), "utf8")
+    ).resolves.toContain("2026-05-06T20:00:00.000Z");
+    await expect(
+      readFile(join(staticOutputDirectory, "export", "manifest.json"), "utf8")
+    ).resolves.toContain("2026-05-06T19-12-00-000Z");
   });
 });

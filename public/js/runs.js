@@ -83,6 +83,7 @@ export function stackAttemptIdentity(run) {
     key: [source.key, modelArtifact, harness].map(normalizeIdentityPart).join("|"),
     label: [modelLabel, source.label, harness].filter(Boolean).join(" · "),
     modelSource: source.key,
+    backend: source.label,
     modelArtifact,
     harness
   };
@@ -222,7 +223,7 @@ function stackSource(run) {
 }
 
 function isBackendSourceLabel(label) {
-  return /^(omlx|lm studio|lmstudio|llama\.cpp)$/iu.test(label ?? "");
+  return /^(omlx|lm studio|lmstudio|llama\.cpp|ollama|mlx|base mlx)$/iu.test(label ?? "");
 }
 
 function modelSourceLabel(source) {

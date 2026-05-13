@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { stat } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -31,7 +31,7 @@ import {
   listRunMetadata as defaultListRunMetadata
 } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
-import type { BenchmarkRecord, LMStudioModel, ModelSourceId, OmlxModel, PreparedRun, RunKind, RunMetadata } from "../lib/types";
+import type { BenchmarkRecord, LMStudioModel, ModelSourceId, OmlxModel, PreparedRun, RunKind, RunMetadata, RunRunnerMetadata } from "../lib/types";
 import type { PrepareRunRunner } from "../lib/prompt-prep";
 
 const STATUS_TIMEOUT_MS = 2000;
@@ -63,6 +63,12 @@ export interface MirrorModelsRequest {
 
 export interface DeleteRunRequest {
   runDirectory?: string;
+}
+
+export interface UpdateRunMetadataRequest {
+  runDirectory?: string;
+  backend?: unknown;
+  harness?: unknown;
 }
 
 export interface CaptureMediaRequest {
@@ -109,6 +115,7 @@ export interface LocalApi {
   getSystemStats(): Promise<SystemStatsResponse>;
   getSavedRuns(): Promise<SavedRunsResponse>;
   deleteSavedRun(request: DeleteRunRequest): Promise<DeleteRunResponse>;
+  updateSavedRunMetadata(request: UpdateRunMetadataRequest): Promise<UpdateRunMetadataResponse>;
   prepareRun(request: PrepareRunRequest): Promise<PrepareRunResponse>;
   getModelSyncState(): Promise<ModelSyncStateResponse>;
   mirrorModels(request: MirrorModelsRequest): Promise<MirrorModelsResponse>;
@@ -157,6 +164,10 @@ export interface PrepareRunResponse {
 export interface DeleteRunResponse {
   deleted: true;
   runDirectory: string;
+}
+
+export interface UpdateRunMetadataResponse {
+  run: RunMetadata;
 }
 
 export interface ModelSyncStateResponse {
@@ -282,6 +293,18 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       return {
         deleted: true,
         runDirectory
+      };
+    },
+
+    async updateSavedRunMetadata(request) {
+      assertWritesEnabled(enableWrites);
+      return {
+        run: await updateRunMetadataFile({
+          runsRoot,
+          runDirectory: readRequiredString(request.runDirectory, "runDirectory"),
+          backend: readRunBackend(request.backend),
+          harness: readRunHarness(request.harness)
+        })
       };
     },
 
@@ -425,6 +448,109 @@ function readModelSource(value: unknown): ModelSourceId | undefined {
   throw new ApiRequestError(400, "modelSource must be omlx or lmstudio.");
 }
 
+interface RunMetadataPatchInput {
+  runsRoot: string;
+  runDirectory: string;
+  backend: EditableRunBackend;
+  harness: EditableRunHarness;
+}
+
+type EditableRunBackend = "unrecorded" | "omlx" | "lmstudio" | "llama.cpp" | "ollama" | "mlx";
+type EditableRunHarness = "manual" | "pi" | "opencode" | "hermes";
+
+async function updateRunMetadataFile(input: RunMetadataPatchInput): Promise<RunMetadata> {
+  const runDirectory = await resolveRunDirectoryPath({
+    runsRoot: input.runsRoot,
+    runDirectory: input.runDirectory
+  });
+  const metadataPath = join(runDirectory, "metadata.json");
+  const current = JSON.parse(await readFile(metadataPath, "utf8")) as RunMetadata;
+  const now = new Date().toISOString();
+  const next: RunMetadata = {
+    ...current,
+    runDirectory,
+    updatedAt: now,
+    runner: updateRunnerMetadata(current.runner, input.backend, input.harness)
+  };
+
+  await writeFile(metadataPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  return next;
+}
+
+function updateRunnerMetadata(
+  runner: RunRunnerMetadata | undefined,
+  backend: EditableRunBackend,
+  harness: EditableRunHarness
+): RunRunnerMetadata {
+  return {
+    ...(runner ?? { mode: harness === "manual" ? "manual" : "external" }),
+    mode: harness === "manual" ? "manual" : "external",
+    ...runnerBackendPatch(backend),
+    intendedRunner: harnessLabel(harness),
+    actualRunner: undefined,
+    harnessLabel: undefined
+  };
+}
+
+function runnerBackendPatch(backend: EditableRunBackend): Pick<RunRunnerMetadata, "modelSource" | "backendLabel"> {
+  if (backend === "unrecorded") {
+    return {
+      modelSource: undefined,
+      backendLabel: undefined
+    };
+  }
+  if (backend === "omlx") {
+    return {
+      modelSource: "omlx",
+      backendLabel: "oMLX"
+    };
+  }
+  if (backend === "lmstudio") {
+    return {
+      modelSource: "lmstudio",
+      backendLabel: "LM Studio"
+    };
+  }
+  return {
+    modelSource: undefined,
+    backendLabel: backend === "mlx" ? "Base MLX" : backend
+  };
+}
+
+function harnessLabel(harness: EditableRunHarness): string {
+  if (harness === "pi") return "Pi";
+  if (harness === "opencode") return "OpenCode";
+  if (harness === "hermes") return "Hermes";
+  return "manual";
+}
+
+function readRunBackend(value: unknown): EditableRunBackend {
+  if (value === undefined || value === null || value === "") {
+    return "unrecorded";
+  }
+  if (
+    value === "unrecorded" ||
+    value === "omlx" ||
+    value === "lmstudio" ||
+    value === "llama.cpp" ||
+    value === "ollama" ||
+    value === "mlx"
+  ) {
+    return value;
+  }
+  throw new ApiRequestError(400, "backend must be unrecorded, omlx, lmstudio, llama.cpp, ollama, or mlx.");
+}
+
+function readRunHarness(value: unknown): EditableRunHarness {
+  if (value === undefined || value === null || value === "") {
+    return "manual";
+  }
+  if (value === "manual" || value === "pi" || value === "opencode" || value === "hermes") {
+    return value;
+  }
+  throw new ApiRequestError(400, "harness must be manual, pi, opencode, or hermes.");
+}
+
 async function defaultOpenFile(path: string): Promise<void> {
   await execFileAsync("open", [path]);
 }
@@ -507,7 +633,7 @@ export async function apiJsonResponse<T>(
 }
 
 export function assertTrustedWriteRequest(request: Request): void {
-  if (request.method !== "POST" && request.method !== "DELETE") {
+  if (request.method !== "POST" && request.method !== "PATCH" && request.method !== "DELETE") {
     return;
   }
 

@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -325,6 +325,59 @@ describe("createLocalApi", () => {
       runDirectory
     });
     await expect(stat(runDirectory)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("updates editable saved run metadata inside the configured runs root", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "local-visual-runs-update-"));
+    const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(
+      join(runDirectory, "metadata.json"),
+      JSON.stringify({
+        runId: "run-1",
+        benchmark: benchmarks[0],
+        model: { id: "model-a", slug: "model-a" },
+        status: "completed",
+        createdAt: "2026-05-06T01:00:00.000Z",
+        updatedAt: "2026-05-06T01:00:00.000Z",
+        runDirectory,
+        assets: { metadata: "metadata.json" },
+        runner: {
+          mode: "manual",
+          intendedRunner: "manual"
+        }
+      }),
+      "utf8"
+    );
+    const api = createLocalApi({ runsRoot });
+
+    const response = await api.updateSavedRunMetadata({
+      runDirectory,
+      backend: "omlx",
+      harness: "pi"
+    });
+
+    expect(response.run.runner).toMatchObject({
+      mode: "external",
+      modelSource: "omlx",
+      backendLabel: "oMLX",
+      intendedRunner: "Pi"
+    });
+    expect(response.run.updatedAt).not.toBe("2026-05-06T01:00:00.000Z");
+    await expect(readFile(join(runDirectory, "metadata.json"), "utf8"))
+      .resolves.toContain('"backendLabel": "oMLX"');
+  });
+
+  it("rejects updating saved run metadata when writes are disabled", async () => {
+    const api = createLocalApi({ enableWrites: false });
+
+    await expect(
+      api.updateSavedRunMetadata({
+        runDirectory: "/runs/sakura/model-a/run-1",
+        backend: "omlx",
+        harness: "pi"
+      })
+    ).rejects.toThrow(/Write actions are only available in dev server mode/);
   });
 
   it("rejects preparing run slots when writes are disabled", async () => {

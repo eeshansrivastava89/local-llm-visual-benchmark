@@ -84,7 +84,6 @@ async function exportRunAssets(
   const assets: RunMetadata["assets"] = {
     metadata: safeAsset(run.assets.metadata ?? "metadata.json"),
     ...(run.assets.preview ? { preview: safeAsset(run.assets.preview) } : {}),
-    ...(run.assets.video ? { video: safeAsset(run.assets.video) } : {}),
     ...(run.assets.videoMp4 ? { videoMp4: safeAsset(run.assets.videoMp4) } : {})
   };
   const exportedRun: RunMetadata = {
@@ -112,7 +111,6 @@ async function exportRunAssets(
   await Promise.all([
     writePrettyJson(join(outputDirectory, assets.metadata), exportedRun),
     copyAssetIfPresent(run, outputDirectory, assets.preview),
-    copyAssetIfPresent(run, outputDirectory, assets.video),
     copyAssetIfPresent(run, outputDirectory, assets.videoMp4)
   ]);
 

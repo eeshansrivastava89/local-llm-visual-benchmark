@@ -89,9 +89,12 @@ After you capture some runs locally:
 
 ```bash
 npm run build:static
+git add public/export
+git commit -m "data: publish gallery update"
+git push
 ```
 
-That creates a static site in:
+That refreshes the publish-safe gallery snapshot in `public/export/` and creates a smoke-testable static site in:
 
 ```text
 dist-static/
@@ -99,11 +102,11 @@ dist-static/
 
 The default static build uses the GitHub Pages base path `/local-llm-visual-benchmark/`. To smoke-test that exact output locally, serve `dist-static/` from that path rather than the domain root.
 
-For this repository, GitHub Pages is deployed by `.github/workflows/deploy-pages.yml` on every push to `main`. The live site should be configured to use **GitHub Actions** as its Pages source; do not manually update a serving branch after normal code changes.
+For this repository, GitHub Pages is deployed by `.github/workflows/deploy-pages.yml` on every push to `main`. The live site should be configured to use **GitHub Actions** as its Pages source. There is no separate gallery branch: `main` contains the app code plus the publish-safe `public/export/` snapshot that the workflow deploys.
 
-The workflow rebuilds the app shell from `main` and reuses the current published `export/` snapshot so existing gallery media is not lost when local `runs/` are absent in CI. New captured results still start locally in `runs/`; publish them with a local static build when you intentionally want to refresh the public gallery data.
+New captured results still start locally in ignored `runs/`. Running `npm run build:static` copies only the public-safe parts into `public/export/`; CI then reuses that committed snapshot rather than reading local `runs/`.
 
-The static export includes benchmark metadata, summary run metadata, preview images, videos, and a build-time machine profile for the header pill. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, or operational controls.
+The static export includes benchmark metadata, summary run metadata, preview images, MP4 preview videos, and a build-time machine profile for the header pill. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, local WebM captures, or operational controls.
 
 ## Architecture notes
 
@@ -111,7 +114,7 @@ The browser workbench is intentionally one site, not separate local and public a
 
 The viewer bootstrap lives in `public/js/app.js`; feature behavior is split into small controller modules under `public/js/` for data loading, model sources, capture, prepare-run, detail actions, workbench rendering, operational-control visibility, icons, and the machine-profile pill.
 
-Captured videos default to 20 seconds. The default is defined in `src/lib/capture-media.ts` as `DEFAULT_VIDEO_DURATION_MS`.
+Captured videos default to 20 seconds at 1600×900. The defaults are defined in `src/lib/capture-media.ts` as `DEFAULT_VIDEO_DURATION_MS` and `DEFAULT_VIEWPORT`.
 
 ## Local folders
 
@@ -119,10 +122,10 @@ Captured videos default to 20 seconds. The default is defined in `src/lib/captur
 |---|---|
 | `benchmarks/` | Source benchmark prompts |
 | `runs/` | Local run folders, generated prompts, HTML, screenshots, and videos |
-| `public/export/` | Temporary export manifest and copied media |
+| `public/export/` | Tracked publish-safe gallery snapshot: manifest plus copied preview media |
 | `dist-static/` | Final static site artifact |
 
-`runs/`, `public/export/`, and `dist-static/` are ignored by git so local experiments do not get committed accidentally.
+`runs/` and `dist-static/` are ignored by git so local experiments and build output do not get committed accidentally. `public/export/` is tracked because it is the public gallery data source.
 
 ## Commands
 

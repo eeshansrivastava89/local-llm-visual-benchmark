@@ -24,12 +24,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Checkout current published export
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: previous-pages
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -48,7 +42,7 @@ jobs:
       - name: Build static site
         run: npm run build:static
         env:
-          STATIC_PREBUILT_EXPORT_DIR: ${{ github.workspace }}/previous-pages/export
+          STATIC_USE_EXISTING_EXPORT: "true"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

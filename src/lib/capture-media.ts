@@ -7,8 +7,8 @@ import { listRunMetadata } from "./runs";
 import type { RunCaptureAsset, RunMetadata, ViewportSettings } from "./types";
 
 const DEFAULT_VIEWPORT: ViewportSettings = {
-  width: 1280,
-  height: 720
+  width: 1600,
+  height: 900
 };
 const DEFAULT_CAPTURE_AT_MS = 5000;
 const DEFAULT_VIDEO_DURATION_MS = 20_000;

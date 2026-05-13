@@ -4,8 +4,7 @@ node_modules/
 .astro/
 dist/
 dist-static/
-public/export/
-runs/
+/runs/
 test-results/
 playwright-report/
 .litellm_cache/

@@ -1,7 +1,7 @@
 import { els } from "./dom.js";
 import { state } from "./state.js";
-import { escapeHtml } from "./utils.js";
-import { deleteJson, postJson } from "./api.js";
+import { escapeAttribute, escapeHtml } from "./utils.js";
+import { deleteJson, patchJson, postJson } from "./api.js";
 import { detailActionAvailability, detailViewModel } from "./detail-ui.js";
 import { closeModal, openModal } from "./modals.js";
 import { canUseOperationalControls, setOperationalAvailability, syncOperationalControls } from "./operational-controls.js";
@@ -119,7 +119,116 @@ export function renderDetail(run) {
   els.promptLength.textContent = detail.promptLength;
   setButtonLabel(els.copyDetailPrompt, detail.textRecord.copyLabel, "copy");
   els.copyDetailPrompt.disabled = !detail.canCopyPrompt;
-  els.detailMeta.innerHTML = detail.metaHtml;
+  els.detailMeta.innerHTML = detail.metaHtml + renderMetadataEditor(run);
+  wireMetadataEditor(run);
+}
+
+function renderMetadataEditor(run) {
+  if (!canUseOperationalControls() || !run?.runDirectory) {
+    return "";
+  }
+
+  return (
+    '<form class="metadata-editor" id="detailMetadataEditor">' +
+      '<div class="metadata-editor-head">' +
+        '<span class="meta-label">Edit metadata</span>' +
+        '<span class="metadata-editor-status" id="detailMetadataEditorStatus" aria-live="polite"></span>' +
+      '</div>' +
+      '<label class="metadata-editor-field">' +
+        '<span>Backend</span>' +
+        '<select class="input" name="backend">' + renderBackendOptions(currentBackendValue(run)) + '</select>' +
+      '</label>' +
+      '<label class="metadata-editor-field">' +
+        '<span>Coding harness</span>' +
+        '<select class="input" name="harness">' + renderHarnessOptions(currentHarnessValue(run)) + '</select>' +
+      '</label>' +
+      '<button type="submit" class="btn-sm-outline">Save metadata</button>' +
+    '</form>'
+  );
+}
+
+function wireMetadataEditor(run) {
+  const form = document.querySelector("#detailMetadataEditor");
+  if (!form) return;
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void saveMetadataEditor(run, form);
+  });
+}
+
+async function saveMetadataEditor(run, form) {
+  const button = form.querySelector('button[type="submit"]');
+  const status = form.querySelector("#detailMetadataEditorStatus");
+  button.disabled = true;
+  status.textContent = "Saving…";
+  try {
+    const data = await patchJson("/api/runs", {
+      runDirectory: run.runDirectory,
+      backend: form.elements.backend.value,
+      harness: form.elements.harness.value
+    });
+    const nextRun = data.run;
+    state.runs = state.runs.map((item) =>
+      item.runDirectory === nextRun.runDirectory ? nextRun : item
+    );
+    state.selectedRun = nextRun;
+    renderHarnesses();
+    renderModelSources();
+    renderPrepOptions();
+    renderRuns();
+    renderDetail(nextRun);
+    document.querySelector("#detailMetadataEditorStatus").textContent = "Saved.";
+  } catch (error) {
+    status.textContent = "Save failed: " + error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function renderBackendOptions(selected) {
+  return [
+    ["unrecorded", "Source unrecorded"],
+    ["omlx", "oMLX"],
+    ["lmstudio", "LM Studio"],
+    ["llama.cpp", "llama.cpp"],
+    ["ollama", "Ollama"],
+    ["mlx", "Base MLX"]
+  ].map(([value, label]) => renderOption(value, label, selected)).join("");
+}
+
+function renderHarnessOptions(selected) {
+  return [
+    ["manual", "Manual chat"],
+    ["pi", "Pi"],
+    ["opencode", "OpenCode"],
+    ["hermes", "Hermes"]
+  ].map(([value, label]) => renderOption(value, label, selected)).join("");
+}
+
+function renderOption(value, label, selected) {
+  return '<option value="' + escapeAttribute(value) + '" ' + (value === selected ? "selected" : "") + ">" + escapeHtml(label) + "</option>";
+}
+
+function currentBackendValue(run) {
+  if (run.runner?.modelSource === "omlx" || run.runner?.modelSource === "lmstudio") {
+    return run.runner.modelSource;
+  }
+  const backend = String(run.runner?.backendLabel ?? "").toLowerCase();
+  if (/lm studio|lmstudio/u.test(backend)) return "lmstudio";
+  if (/omlx/u.test(backend)) return "omlx";
+  if (/llama\.cpp/u.test(backend)) return "llama.cpp";
+  if (/ollama/u.test(backend)) return "ollama";
+  if (/mlx/u.test(backend)) return "mlx";
+  return "unrecorded";
+}
+
+function currentHarnessValue(run) {
+  const harness = String(run.runner?.harnessLabel ?? run.runner?.actualRunner ?? run.runner?.intendedRunner ?? run.tool ?? run.runner?.mode ?? "manual").toLowerCase();
+  if (/opencode/u.test(harness)) return "opencode";
+  if (/hermes/u.test(harness)) return "hermes";
+  if (/\bpi\b/u.test(harness)) return "pi";
+  return "manual";
 }
 
 export function updateDetailActions(run) {

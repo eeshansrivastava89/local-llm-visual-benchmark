@@ -16,10 +16,10 @@ const staticOutputDirectory =
 const clientBuildDirectory =
   process.env.STATIC_CLIENT_BUILD_DIR ?? join(repoRoot, "dist", "client");
 const astroBase = process.env.ASTRO_BASE ?? "/local-llm-visual-benchmark/";
-const prebuiltExportDirectory = process.env.STATIC_PREBUILT_EXPORT_DIR;
+const useExistingExport = process.env.STATIC_USE_EXISTING_EXPORT === "true";
 
-const manifest = prebuiltExportDirectory
-  ? await copyPrebuiltExport(prebuiltExportDirectory, publicExportDirectory)
+const manifest = useExistingExport
+  ? await readExistingExport(publicExportDirectory)
   : await generateStaticExport({
       benchmarkDirectory,
       runsRoot,
@@ -27,7 +27,7 @@ const manifest = prebuiltExportDirectory
     });
 
 process.stdout.write(
-  `${prebuiltExportDirectory ? "Using prebuilt" : "Generated"} static export with ${manifest.benchmarks.length} benchmarks and ${manifest.runs.length} runs.\n`
+  `${useExistingExport ? "Using existing" : "Generated"} static export with ${manifest.benchmarks.length} benchmarks and ${manifest.runs.length} runs.\n`
 );
 
 await run("npm", ["run", "build"], repoRoot);
@@ -41,14 +41,18 @@ await writeFile(join(staticOutputDirectory, ".nojekyll"), "", "utf8");
 
 process.stdout.write(`Wrote static publish build to ${staticOutputDirectory}.\n`);
 
-async function copyPrebuiltExport(sourceDirectory, targetDirectory) {
-  await rm(targetDirectory, { recursive: true, force: true });
-  await cp(sourceDirectory, targetDirectory, { recursive: true });
+async function readExistingExport(directory) {
+  try {
+    return JSON.parse(await readFile(join(directory, "manifest.json"), "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw new Error(
+        `STATIC_USE_EXISTING_EXPORT=true requires ${join(directory, "manifest.json")} to exist.`
+      );
+    }
 
-  const manifest = JSON.parse(
-    await readFile(join(targetDirectory, "manifest.json"), "utf8")
-  );
-  return manifest;
+    throw error;
+  }
 }
 
 async function run(command, args, cwd) {

@@ -1,0 +1,718 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-13T06:55:54.021Z",
+  "benchmarks": [
+    {
+      "id": "jumping-cats",
+      "title": "Jumping Cats",
+      "description": "Creating an animated scene of 7 cats jumping in different directions, inside of a living room.",
+      "prompt": "Create a full-screen animated scene of 7 cats jumping in different directions, inside of a living room. The cats should be realistic and have distinct body shapes and colors, with each cat jumping in a unique direction. The scene should be bright and colorful, with a day time atmosphere.\n\nThe composition should be clean and as realistic as possible. The cats should be the main focus, with their jumps and movements clearly visible. They usually jump in a straight line, but can also jump diagonally or in a curved motion. When they jump their arms and legs should move with the cat, not just stand still. At least one cat should be jumping straight at the camera, with their arms and legs moving along with their body.\n\nCats faces should be as accurate as possible, with their eyes, mouths, and facial features clearly visible. They should be jumping in slow motion, not high speed. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep all cats visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+    },
+    {
+      "id": "macro-wildflower-meadow",
+      "title": "Macro Wildflower Meadow",
+      "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+      "prompt": "Create a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show about five to seven large foreground flowers with detailed petals, stems, leaves, and pollen centers, rather than a huge field of tiny flowers. Around them, animate a few butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+    },
+    {
+      "id": "sakura",
+      "title": "Sakura Tree",
+      "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+      "prompt": "Animate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport at all common screen sizes: the full crown, outer blossoms, side branches, trunk, and base must stay visible with at least 8-10% empty margin from the top and left/right edges. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+    },
+    {
+      "id": "snow-globe-village",
+      "title": "Snow Globe Village",
+      "description": "Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.",
+      "prompt": "Create a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport at all common screen sizes, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.\n\nAnimate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.\n\nMake the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.\n\nThe animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+    },
+    {
+      "id": "solar-system",
+      "title": "Solar System",
+      "description": "Realistic animated solar system with visible planets and orbital motion.",
+      "prompt": "Build an HTML animation of the solar system with the Sun at the center and all planets orbiting around it. Make the scene as realistic as practical while keeping all planets visible: the Sun should glow clearly but must not be so large that it hides or overwhelms Mercury, Venus, Earth, or Mars. Preserve the relative scale of orbital distances, use accurate orbital shapes, realistic planet colors, and visible rings where appropriate. Show the system from roughly a 30-degree viewing angle rather than directly overhead. Include as many realistic visual details as possible while keeping the animation smooth.\n\nMake sure the full solar system composition fits cleanly within the browser viewport without cropping important planets or orbital paths.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+    },
+    {
+      "id": "sunset-ocean-study",
+      "title": "Sunset Ocean Study",
+      "description": "Golden-hour ocean scene with rolling waves, reflected sunlight, and atmospheric rays.",
+      "prompt": "Create a full-screen animated ocean sunset viewed from low above the water, looking toward the horizon. The sun should be partially visible, with about one third of the disk above the horizon and two thirds below it, so the scene feels like late golden hour rather than midday. Use a warm palette of amber, peach, coral, rose, lavender, and deep blue shadows. The ocean should have broad rolling waves moving toward the viewer, with smaller ripples layered on top and bright reflected highlights forming a shimmering path from the sun to the foreground.\n\nAdd soft volumetric-looking sun rays breaking through thin clouds, but keep them subtle and elegant. Clouds should be stretched horizontally near the horizon, with glowing edges and darker undersides. The water should show changing reflections, foam accents on a few wave crests, and gentle color shifts from warm near the sun to cooler blue-violet in the foreground. Keep the composition clean: one horizon line, one sun, a readable wave rhythm, and no cluttered objects. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the horizon, sun, and wave composition visible without awkward cropping.\n\nKeep the implementation performant while maximizing creativity. Use no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+    }
+  ],
+  "runs": [
+    {
+      "kind": "visual",
+      "runId": "2026-05-09T06-30-30-089Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show about five to seven large foreground flowers with detailed petals, stems, leaves, and pollen centers, rather than a huge field of tiny flowers. Around them, animate a few butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "google/gemma-4-26b-a4b",
+        "slug": "google-gemma-4-26b-a4b-166a091ef8"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-09T06:30:30.089Z",
+      "updatedAt": "2026-05-13T06:55:19.409Z",
+      "preparedAt": "2026-05-09T06:30:30.089Z",
+      "completedAt": "2026-05-13T06:55:19.409Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/google-gemma-4-26b-a4b-166a091ef8/2026-05-09T06-30-30-089Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "lmstudio",
+        "intendedRunner": "OpenCode",
+        "backendLabel": "LM Studio"
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:55:19.409Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:55:19.409Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "kind": "visual",
+      "runId": "2026-05-09T04-02-58-588Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show about five to seven large foreground flowers with detailed petals, stems, leaves, and pollen centers, rather than a huge field of tiny flowers. Around them, animate a few butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "qwen3.6-35b-a3b",
+        "slug": "qwen3-6-35b-a3b-d371aa3160"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-09T04:02:58.588Z",
+      "updatedAt": "2026-05-13T06:54:55.081Z",
+      "preparedAt": "2026-05-09T04:02:58.588Z",
+      "completedAt": "2026-05-13T06:54:55.081Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-02-58-588Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "lmstudio",
+        "intendedRunner": "OpenCode",
+        "backendLabel": "LM Studio"
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:54:55.081Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:54:55.081Z",
+          "quality": {
+            "measuredFps": 44.8,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 72,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "kind": "visual",
+      "runId": "2026-05-09T07-33-28-507Z",
+      "benchmark": {
+        "id": "sunset-ocean-study",
+        "title": "Sunset Ocean Study",
+        "description": "Golden-hour ocean scene with rolling waves, reflected sunlight, and atmospheric rays.",
+        "prompt": "Create a full-screen animated ocean sunset viewed from low above the water, looking toward the horizon. The sun should be partially visible, with about one third of the disk above the horizon and two thirds below it, so the scene feels like late golden hour rather than midday. Use a warm palette of amber, peach, coral, rose, lavender, and deep blue shadows. The ocean should have broad rolling waves moving toward the viewer, with smaller ripples layered on top and bright reflected highlights forming a shimmering path from the sun to the foreground.\n\nAdd soft volumetric-looking sun rays breaking through thin clouds, but keep them subtle and elegant. Clouds should be stretched horizontally near the horizon, with glowing edges and darker undersides. The water should show changing reflections, foam accents on a few wave crests, and gentle color shifts from warm near the sun to cooler blue-violet in the foreground. Keep the composition clean: one horizon line, one sun, a readable wave rhythm, and no cluttered objects. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the horizon, sun, and wave composition visible without awkward cropping.\n\nKeep the implementation performant while maximizing creativity. Use no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "google/gemma-4-26b-a4b",
+        "slug": "google-gemma-4-26b-a4b-166a091ef8"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-09T07:33:28.507Z",
+      "updatedAt": "2026-05-13T06:54:31.424Z",
+      "preparedAt": "2026-05-09T07:33:28.507Z",
+      "completedAt": "2026-05-13T06:54:31.424Z",
+      "runDirectory": "export/runs/sunset-ocean-study/google-gemma-4-26b-a4b-166a091ef8/2026-05-09T07-33-28-507Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "lmstudio",
+        "intendedRunner": "OpenCode",
+        "backendLabel": "LM Studio"
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:54:31.424Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:54:31.424Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "kind": "visual",
+      "runId": "2026-05-09T05-20-36-090Z",
+      "benchmark": {
+        "id": "sunset-ocean-study",
+        "title": "Sunset Ocean Study",
+        "description": "Golden-hour ocean scene with rolling waves, reflected sunlight, and atmospheric rays.",
+        "prompt": "Create a full-screen animated ocean sunset viewed from low above the water, looking toward the horizon. The sun should be partially visible, with about one third of the disk above the horizon and two thirds below it, so the scene feels like late golden hour rather than midday. Use a warm palette of amber, peach, coral, rose, lavender, and deep blue shadows. The ocean should have broad rolling waves moving toward the viewer, with smaller ripples layered on top and bright reflected highlights forming a shimmering path from the sun to the foreground.\n\nAdd soft volumetric-looking sun rays breaking through thin clouds, but keep them subtle and elegant. Clouds should be stretched horizontally near the horizon, with glowing edges and darker undersides. The water should show changing reflections, foam accents on a few wave crests, and gentle color shifts from warm near the sun to cooler blue-violet in the foreground. Keep the composition clean: one horizon line, one sun, a readable wave rhythm, and no cluttered objects. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the horizon, sun, and wave composition visible without awkward cropping.\n\nKeep the implementation performant while maximizing creativity. Use no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "qwen3.6-35b-a3b",
+        "slug": "qwen3-6-35b-a3b-d371aa3160"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-09T05:20:36.090Z",
+      "updatedAt": "2026-05-13T06:54:07.871Z",
+      "preparedAt": "2026-05-09T05:20:36.090Z",
+      "completedAt": "2026-05-13T06:54:07.871Z",
+      "runDirectory": "export/runs/sunset-ocean-study/qwen3-6-35b-a3b-d371aa3160/2026-05-09T05-20-36-090Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "lmstudio",
+        "intendedRunner": "Pi",
+        "backendLabel": "LM Studio"
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:54:07.871Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:54:07.871Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "kind": "visual",
+      "runId": "2026-05-09T05-01-00-191Z",
+      "benchmark": {
+        "id": "solar-system",
+        "title": "Solar System",
+        "description": "Realistic animated solar system with visible planets and orbital motion.",
+        "prompt": "Build an HTML animation of the solar system with the Sun at the center and all planets orbiting around it. Make the scene as realistic as practical while keeping all planets visible: the Sun should glow clearly but must not be so large that it hides or overwhelms Mercury, Venus, Earth, or Mars. Preserve the relative scale of orbital distances, use accurate orbital shapes, realistic planet colors, and visible rings where appropriate. Show the system from roughly a 30-degree viewing angle rather than directly overhead. Include as many realistic visual details as possible while keeping the animation smooth.\n\nMake sure the full solar system composition fits cleanly within the browser viewport without cropping important planets or orbital paths.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "qwen3.6-35b-a3b",
+        "slug": "qwen3-6-35b-a3b-d371aa3160"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-09T05:01:00.191Z",
+      "updatedAt": "2026-05-13T06:53:44.509Z",
+      "preparedAt": "2026-05-09T05:01:00.191Z",
+      "completedAt": "2026-05-13T06:53:44.509Z",
+      "runDirectory": "export/runs/solar-system/qwen3-6-35b-a3b-d371aa3160/2026-05-09T05-01-00-191Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "lmstudio",
+        "intendedRunner": "Pi",
+        "backendLabel": "LM Studio"
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:53:44.509Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:53:44.509Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "kind": "visual",
+      "runId": "2026-05-09T07-42-19-897Z",
+      "benchmark": {
+        "id": "solar-system",
+        "title": "Solar System",
+        "description": "Realistic animated solar system with visible planets and orbital motion.",
+        "prompt": "Build an HTML animation of the solar system with the Sun at the center and all planets orbiting around it. Make the scene as realistic as practical while keeping all planets visible: the Sun should glow clearly but must not be so large that it hides or overwhelms Mercury, Venus, Earth, or Mars. Preserve the relative scale of orbital distances, use accurate orbital shapes, realistic planet colors, and visible rings where appropriate. Show the system from roughly a 30-degree viewing angle rather than directly overhead. Include as many realistic visual details as possible while keeping the animation smooth.\n\nMake sure the full solar system composition fits cleanly within the browser viewport without cropping important planets or orbital paths.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "google/gemma-4-26b-a4b",
+        "slug": "google-gemma-4-26b-a4b-166a091ef8"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-09T07:42:19.897Z",
+      "updatedAt": "2026-05-13T06:53:21.350Z",
+      "preparedAt": "2026-05-09T07:42:19.897Z",
+      "completedAt": "2026-05-13T06:53:21.350Z",
+      "runDirectory": "export/runs/solar-system/google-gemma-4-26b-a4b-166a091ef8/2026-05-09T07-42-19-897Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "lmstudio",
+        "intendedRunner": "Pi",
+        "backendLabel": "LM Studio"
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:53:21.350Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:53:21.350Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "kind": "visual",
+      "runId": "2026-05-09T04-45-13-227Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Animate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport at all common screen sizes: the full crown, outer blossoms, side branches, trunk, and base must stay visible with at least 8-10% empty margin from the top and left/right edges. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "qwen3.6-35b-a3b",
+        "slug": "qwen3-6-35b-a3b-d371aa3160"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-09T04:45:13.227Z",
+      "updatedAt": "2026-05-13T06:52:57.952Z",
+      "preparedAt": "2026-05-09T04:45:13.227Z",
+      "completedAt": "2026-05-13T06:52:57.952Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-45-13-227Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX"
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:52:57.952Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:52:57.952Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "kind": "visual",
+      "runId": "2026-05-09T07-08-59-089Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Animate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport at all common screen sizes: the full crown, outer blossoms, side branches, trunk, and base must stay visible with at least 8-10% empty margin from the top and left/right edges. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "google/gemma-4-26b-a4b",
+        "slug": "google-gemma-4-26b-a4b-166a091ef8"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-09T07:08:59.089Z",
+      "updatedAt": "2026-05-13T06:52:34.596Z",
+      "preparedAt": "2026-05-09T07:08:59.089Z",
+      "completedAt": "2026-05-13T06:52:34.596Z",
+      "runDirectory": "export/runs/sakura/google-gemma-4-26b-a4b-166a091ef8/2026-05-09T07-08-59-089Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX"
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:52:34.596Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:52:34.596Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-05-13T03-42-34-629Z",
+      "benchmark": {
+        "id": "solar-system",
+        "title": "Solar System",
+        "description": "Realistic animated solar system with visible planets and orbital motion.",
+        "prompt": "Build an HTML animation of the solar system with the Sun at the center and all planets orbiting around it. Make the scene as realistic as practical while keeping all planets visible: the Sun should glow clearly but must not be so large that it hides or overwhelms Mercury, Venus, Earth, or Mars. Preserve the relative scale of orbital distances, use accurate orbital shapes, realistic planet colors, and visible rings where appropriate. Show the system from roughly a 30-degree viewing angle rather than directly overhead. Include as many realistic visual details as possible while keeping the animation smooth.\n\nMake sure the full solar system composition fits cleanly within the browser viewport without cropping important planets or orbital paths.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "Qwen3.6-27B-4bit",
+        "slug": "qwen3-6-27b-4bit-5854adbd00"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-13T03:42:34.629Z",
+      "updatedAt": "2026-05-13T06:52:11.027Z",
+      "preparedAt": "2026-05-13T03:42:34.629Z",
+      "completedAt": "2026-05-13T06:52:11.027Z",
+      "runDirectory": "export/runs/solar-system/qwen3-6-27b-4bit-5854adbd00/2026-05-13T03-42-34-629Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-27B-4bit",
+        "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:52:11.027Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:52:11.027Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-05-12T16-01-07-957Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Animate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport at all common screen sizes: the full crown, outer blossoms, side branches, trunk, and base must stay visible with at least 8-10% empty margin from the top and left/right edges. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "Qwen3.6-27B-4bit",
+        "slug": "qwen3-6-27b-4bit-5854adbd00"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-12T16:01:07.957Z",
+      "updatedAt": "2026-05-13T06:51:46.890Z",
+      "preparedAt": "2026-05-12T16:01:07.957Z",
+      "completedAt": "2026-05-13T06:51:46.890Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-27b-4bit-5854adbd00/2026-05-12T16-01-07-957Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-27B-4bit",
+        "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:51:46.890Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:51:46.890Z",
+          "quality": {
+            "measuredFps": 30.5,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 49,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-05-12T14-37-32-896Z",
+      "benchmark": {
+        "id": "sunset-ocean-study",
+        "title": "Sunset Ocean Study",
+        "description": "Golden-hour ocean scene with rolling waves, reflected sunlight, and atmospheric rays.",
+        "prompt": "Create a full-screen animated ocean sunset viewed from low above the water, looking toward the horizon. The sun should be partially visible, with about one third of the disk above the horizon and two thirds below it, so the scene feels like late golden hour rather than midday. Use a warm palette of amber, peach, coral, rose, lavender, and deep blue shadows. The ocean should have broad rolling waves moving toward the viewer, with smaller ripples layered on top and bright reflected highlights forming a shimmering path from the sun to the foreground.\n\nAdd soft volumetric-looking sun rays breaking through thin clouds, but keep them subtle and elegant. Clouds should be stretched horizontally near the horizon, with glowing edges and darker undersides. The water should show changing reflections, foam accents on a few wave crests, and gentle color shifts from warm near the sun to cooler blue-violet in the foreground. Keep the composition clean: one horizon line, one sun, a readable wave rhythm, and no cluttered objects. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the horizon, sun, and wave composition visible without awkward cropping.\n\nKeep the implementation performant while maximizing creativity. Use no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "Qwen3.6-27B-4bit",
+        "slug": "qwen3-6-27b-4bit-5854adbd00"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-12T14:37:32.896Z",
+      "updatedAt": "2026-05-13T06:51:22.844Z",
+      "preparedAt": "2026-05-12T14:37:32.896Z",
+      "completedAt": "2026-05-13T06:51:22.844Z",
+      "runDirectory": "export/runs/sunset-ocean-study/qwen3-6-27b-4bit-5854adbd00/2026-05-12T14-37-32-896Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-27B-4bit",
+        "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:51:22.844Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:51:22.844Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-05-13T05-12-27-263Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show about five to seven large foreground flowers with detailed petals, stems, leaves, and pollen centers, rather than a huge field of tiny flowers. Around them, animate a few butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "Qwen3.6-27B-4bit",
+        "slug": "qwen3-6-27b-4bit-5854adbd00"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-13T05:12:27.263Z",
+      "updatedAt": "2026-05-13T06:50:58.629Z",
+      "preparedAt": "2026-05-13T05:12:27.263Z",
+      "completedAt": "2026-05-13T06:50:58.629Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/qwen3-6-27b-4bit-5854adbd00/2026-05-13T05-12-27-263Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-27B-4bit",
+        "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:50:58.629Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-13T06:50:58.629Z",
+          "quality": {
+            "measuredFps": 119.7,
+            "minFps": 12,
+            "sampleMs": 1604,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    }
+  ],
+  "machineProfile": {
+    "collectedAt": "2026-05-13T06:55:54.021Z",
+    "platform": {
+      "node": "v26.0.0",
+      "platform": "darwin",
+      "arch": "arm64"
+    },
+    "os": {
+      "type": "Darwin",
+      "release": "25.4.0",
+      "hostname": "Eeshans-MacBook-Pro-16.local",
+      "uptimeSeconds": 385831
+    },
+    "cpu": {
+      "model": "Apple M4 Pro",
+      "cores": 14,
+      "usagePercent": null
+    },
+    "memory": {
+      "totalBytes": 51539607552,
+      "availableBytes": 32919437312,
+      "freeBytes": 10817241088,
+      "usedBytes": 18620170240,
+      "pressurePercent": 36.1,
+      "pressureLabel": "low",
+      "source": "macOS VM stats, cached and purgeable memory excluded"
+    },
+    "hardware": {
+      "machineName": "MacBook Pro",
+      "machineModel": "Mac16,7",
+      "chipType": "Apple M4 Pro",
+      "physicalMemory": "48 GB"
+    },
+    "gpu": {
+      "available": true,
+      "telemetryAvailable": false,
+      "devices": [
+        {
+          "name": "Apple M4 Pro",
+          "cores": "20",
+          "vendor": "Apple",
+          "metalSupport": "Metal 4",
+          "displays": [
+            "Color LCD · 1728 x 1080 @ 120.00Hz"
+          ]
+        }
+      ],
+      "reason": "GPU hardware detected. Live GPU utilization is not available from the local API v1."
+    }
+  }
+}

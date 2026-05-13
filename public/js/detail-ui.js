@@ -1,12 +1,12 @@
 import { assetHref } from "./assets.js";
-import { displayRunError, hasCapturedVideo, runCardState, runKind, runRecordText } from "./runs.js";
-import { escapeAttribute, escapeHtml, formatDate } from "./utils.js";
+import { displayRunError, hasCapturedVideo, runCardState, runKind, runRecordText, stackAttemptIdentity } from "./runs.js";
+import { escapeAttribute, escapeHtml, formatDateTime } from "./utils.js";
 
 export function detailViewModel(run) {
   const textRecord = runRecordText(run);
   return {
     title: run.benchmark?.title ?? "Run detail",
-    subtitle: (run.model?.id ?? "Unknown model") + " · " + (run.runId ?? ""),
+    subtitle: (run.model?.id ?? "Unknown model") + " · updated " + formatDateTime(run.updatedAt ?? run.createdAt),
     previewHtml: renderDetailArtifact(run),
     textRecord,
     promptText: textRecord.value || textRecord.emptyText,
@@ -31,10 +31,16 @@ export function detailActionAvailability(run) {
 
 function renderDetailMeta(run) {
   const stateLabel = runCardState(run);
+  const stack = stackAttemptIdentity(run);
+  const completedAt = run.completedAt || run.capture?.video?.capturedAt || run.capture?.preview?.capturedAt;
   return (
     '<span class="meta-label">State</span><strong>' + escapeHtml(stateLabel.label) + "</strong>" +
+    '<span class="meta-label">Backend</span><strong>' + escapeHtml(stack.backend ?? "source unrecorded") + "</strong>" +
+    '<span class="meta-label">Harness</span><strong>' + escapeHtml(stack.harness ?? "manual") + "</strong>" +
     '<span class="meta-label">Model</span><strong>' + escapeHtml(run.model?.id ?? "-") + "</strong>" +
-    '<span class="meta-label">Updated</span><strong>' + escapeHtml(formatDate(run.updatedAt)) + "</strong>"
+    '<span class="meta-label">Created</span><strong>' + escapeHtml(formatDateTime(run.createdAt)) + "</strong>" +
+    '<span class="meta-label">Updated</span><strong>' + escapeHtml(formatDateTime(run.updatedAt)) + "</strong>" +
+    (completedAt ? '<span class="meta-label">Captured</span><strong>' + escapeHtml(formatDateTime(completedAt)) + "</strong>" : "")
   );
 }
 

@@ -18,6 +18,7 @@
     "@astrojs/node": "^10.0.6",
     "@tailwindcss/vite": "^4.2.4",
     "astro": "^6.2.2",
+    "daisyui": "^5.5.19",
     "gray-matter": "^4.0.3",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3"

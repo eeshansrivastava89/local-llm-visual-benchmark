@@ -23,6 +23,10 @@ export async function postJson(url, body) {
   return sendJson(url, "POST", body);
 }
 
+export async function patchJson(url, body) {
+  return sendJson(url, "PATCH", body);
+}
+
 export async function deleteJson(url, body) {
   return sendJson(url, "DELETE", body);
 }

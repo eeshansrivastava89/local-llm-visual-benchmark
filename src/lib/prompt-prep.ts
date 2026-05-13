@@ -1,7 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { buildRunPaths, createRunId } from "./paths";
 
-const AGENT_BROWSER_PATH = process.env.AGENT_BROWSER_PATH ?? "/Users/eeshans/.nvm/versions/node/v26.0.0/bin/agent-browser";
 import { writePromptMarkdown, writeRunMetadata } from "./runs";
 import type { BenchmarkRecord, ModelSourceId, PreparedRun, RunnerMode, RunMetadata } from "./types";
 
@@ -102,7 +101,7 @@ export function buildToolPrompt(input: {
     "Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat.",
     "",
     "The HTML must include all CSS and JavaScript inline and must not depend on external network assets.",
-    "agent-browser path: " + AGENT_BROWSER_PATH,
+    "After building the page, run a visual QA pass with agent-browser: open the saved index.html, inspect the rendered result, and fix any obvious layout, animation, console, or viewport issues before you finish.",
     "",
     input.benchmark.prompt.trim()
   ].join("\n");
