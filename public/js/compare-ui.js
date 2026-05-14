@@ -23,7 +23,9 @@ function renderComparePreviewCard(run) {
   const videoHref = assetHref(run, run.assets?.videoMp4 ?? run.assets?.video);
   const previewHref = assetHref(run, run.assets?.preview);
   const media = videoHref
-    ? '<video class="h-full w-full object-cover" autoplay muted loop playsinline src="' + escapeAttribute(videoHref) + '"></video>'
+    ? '<video class="h-full w-full object-cover" data-managed-loop-video autoplay muted playsinline preload="auto" ' +
+      (previewHref ? 'poster="' + escapeAttribute(previewHref) + '" ' : '') +
+      'src="' + escapeAttribute(videoHref) + '"></video>'
     : previewHref
       ? '<img class="h-full w-full object-cover" src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />'
       : '<div class="preview-placeholder"><strong>No captured media</strong></div>';
@@ -37,4 +39,25 @@ function renderComparePreviewCard(run) {
       "</div>" +
     "</article>"
   );
+}
+
+export function syncManagedCompareVideos(root = document) {
+  root.querySelectorAll("[data-managed-loop-video]").forEach((video) => {
+    if (video.dataset.loopManaged === "true") return;
+    video.dataset.loopManaged = "true";
+
+    const resetNearLoopBoundary = () => {
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return;
+      if (video.currentTime >= video.duration - 0.18) {
+        video.currentTime = Math.min(0.05, Math.max(0, video.duration - 0.25));
+        void video.play().catch(() => {});
+      }
+    };
+
+    video.addEventListener("timeupdate", resetNearLoopBoundary);
+    video.addEventListener("ended", () => {
+      video.currentTime = 0.05;
+      void video.play().catch(() => {});
+    });
+  });
 }

@@ -325,7 +325,7 @@ async function captureRunMediaWithPlaywright(
     console.log(`[capture] webm saved: ${videoCapturePath}`);
     await assertVideoHasVisibleFrames(videoCapturePath);
     await rm(videoDirectory, { recursive: true, force: true });
-    convertedMp4 = await convertWebmToMp4IfAvailable(videoCapturePath, mp4CapturePath);
+    convertedMp4 = await convertWebmToMp4IfAvailable(videoCapturePath, mp4CapturePath, options.videoDurationMs);
     if (convertedMp4) {
       console.log(`[capture] mp4 saved: ${mp4CapturePath}`);
     } else {
@@ -675,13 +675,16 @@ async function assertVideoHasVisibleFrames(path: string): Promise<void> {
 
 async function convertWebmToMp4IfAvailable(
   inputPath: string,
-  outputPath: string
+  outputPath: string,
+  durationMs: number
 ): Promise<boolean> {
   try {
     await execFileAsync("ffmpeg", [
       "-y",
       "-i",
       inputPath,
+      "-t",
+      (durationMs / 1000).toFixed(3),
       "-an",
       "-movflags",
       "+faststart",

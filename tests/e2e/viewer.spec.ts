@@ -307,7 +307,9 @@ test("compares selected visual runs side by side", async ({ page }) => {
   await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl · LM Studio · manual")).toBeVisible();
   await expect(page.locator("[data-compare-run] video")).toHaveCount(2);
   await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("controls", false);
-  await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("loop", true);
+  await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("loop", false);
+  await expect(page.locator("[data-compare-run] video").first()).toHaveAttribute("poster", /preview\.png/);
+  await expect(page.locator("[data-compare-run] video").first()).toHaveAttribute("data-loop-managed", "true");
   await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("muted", true);
   await expect(page.getByRole("region", { name: "Filtered prompt stack coverage" })).toHaveCount(0);
 });

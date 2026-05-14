@@ -2,6 +2,7 @@ import { els } from "./dom.js";
 import { state } from "./state.js";
 import { escapeAttribute, escapeHtml, uniqueBy } from "./utils.js";
 import { compareRunKey, toggleCompareSelection } from "./compare.js";
+import { syncManagedCompareVideos } from "./compare-ui.js";
 import { filteredRuns, groupRuns, harnessesFromRuns, modelsFromRuns, runKind, runSummaryText } from "./runs.js";
 import { renderGroupedRuns as renderGroupedRunsMarkup, renderRunsTable as renderRunsTableMarkup } from "./workbench-ui.js";
 import { renderModelInventory } from "./setup-ui.js";
@@ -161,6 +162,7 @@ function renderRunsTable(runs) {
   const rendered = renderRunsTableMarkup(runs, workbenchRenderContext());
   state.runPage = rendered.runPage;
   els.runsSurface.innerHTML = rendered.html;
+  syncManagedCompareVideos(els.runsSurface);
   wireCompareSelection(runs);
   wireRunCards();
   wireRunsPagination(rendered.totalPages);
