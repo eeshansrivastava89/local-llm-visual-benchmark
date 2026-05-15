@@ -4,13 +4,13 @@
 
 **A creative way to see whether your local models are actually good enough: ask them to build visual experiences, then compare the results.**
 
-[![site](https://img.shields.io/badge/demo-live-cb9f6a)](https://eeshansrivastava89.github.io/local-llm-visual-benchmark/)
+[![site](https://img.shields.io/badge/demo-live-cb9f6a)](https://localai.eeshans.com/)
 [![node](https://img.shields.io/badge/node-24%2B-3c873a)](package.json)
 [![astro](https://img.shields.io/badge/built%20with-Astro-ff5d01)](https://astro.build/)
 [![typescript](https://img.shields.io/badge/TypeScript-6.x-3178c6)](https://www.typescriptlang.org/)
 [![platform](https://img.shields.io/badge/platform-Apple%20Silicon-blue)]()
 
-[Live workbench](https://eeshansrivastava89.github.io/local-llm-visual-benchmark/) • [Source](https://github.com/eeshansrivastava89/local-llm-visual-benchmark) • [eeshans.com](https://eeshans.com)
+[Live workbench](https://localai.eeshans.com/) • [Source](https://github.com/eeshansrivastava89/local-llm-visual-benchmark) • [eeshans.com](https://eeshans.com)
 
 ```bash
 npm install
@@ -100,7 +100,7 @@ That refreshes the publish-safe gallery snapshot in `public/export/` and creates
 dist-static/
 ```
 
-The default static build uses the GitHub Pages base path `/local-llm-visual-benchmark/`. To smoke-test that exact output locally, serve `dist-static/` from that path rather than the domain root.
+The GitHub Pages workflow deploys the static build at the custom domain root `https://localai.eeshans.com/` by setting `ASTRO_BASE=/` and publishing `public/CNAME`. To smoke-test a repository-path build instead, run `ASTRO_BASE=/local-llm-visual-benchmark/ npm run build:static` and serve `dist-static/` from that path.
 
 For this repository, GitHub Pages is deployed by `.github/workflows/deploy-pages.yml` on every push to `main`. The live site should be configured to use **GitHub Actions** as its Pages source. There is no separate gallery branch: `main` contains the app code plus the publish-safe `public/export/` snapshot that the workflow deploys.
 

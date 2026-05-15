@@ -18,19 +18,22 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
-    "@astrojs/node": "^10.0.6",
+    "@astrojs/node": "^10.1.1",
     "@clack/prompts": "^1.4.0",
-    "@tailwindcss/vite": "^4.2.4",
-    "astro": "^6.2.2",
+    "@tailwindcss/vite": "^4.3.0",
+    "astro": "^6.3.3",
     "daisyui": "^5.5.19",
     "gray-matter": "^4.0.3",
-    "tailwindcss": "^4.2.4",
+    "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
-    "@types/node": "^25.6.0",
-    "lucide-static": "^1.14.0",
-    "vitest": "^4.1.5"
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.8.0",
+    "lucide-static": "^1.16.0",
+    "vitest": "^4.1.6"
+  },
+  "overrides": {
+    "yaml": "^2.8.4"
   }
 }
