@@ -16,6 +16,7 @@ export interface PrepareRunInput {
   modelSource?: ModelSourceId;
   runner?: PrepareRunRunner;
   baseUrl?: string;
+  backendLabel?: string;
   runsRoot?: string;
   now?: Date;
 }
@@ -34,6 +35,7 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
   });
   const timestamp = now.toISOString();
   const modelSource = input.modelSource;
+  const backendLabel = modelSource ? modelSourceLabel(modelSource, input.backendLabel) : undefined;
   const run: RunMetadata = {
     schemaVersion: 1,
     kind: "visual",
@@ -60,7 +62,7 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
       mode: runnerModeFor(runner),
       ...(modelSource ? { modelSource } : {}),
       intendedRunner: runnerLabel(runner),
-      backendLabel: modelSource ? modelSourceLabel(modelSource) : undefined,
+      backendLabel,
       baseUrl: normalizeOptionalString(input.baseUrl),
       model: input.modelId,
       retries: 0,
@@ -119,9 +121,10 @@ function runnerLabel(runner: PrepareRunRunner): string {
   return "manual";
 }
 
-function modelSourceLabel(source: ModelSourceId): string {
+function modelSourceLabel(source: ModelSourceId, customLabel?: string): string {
   if (source === "omlx") return "oMLX";
-  return "LM Studio";
+  if (source === "lmstudio") return "LM Studio";
+  return normalizeOptionalString(customLabel) ?? "Custom";
 }
 
 function normalizeOptionalString(value: string | undefined): string | undefined {

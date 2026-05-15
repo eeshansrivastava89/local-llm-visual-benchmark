@@ -128,13 +128,32 @@ export async function refreshRunsForPolling() {
   }
 
   const runs = await fetchJson("/api/runs");
-  state.runs = runs.runs ?? [];
+  const nextRuns = runs.runs ?? [];
+  if (runsRenderSignature(nextRuns) === runsRenderSignature(state.runs)) {
+    return;
+  }
+
+  state.runs = nextRuns;
   syncSelectedRunFromState({ rerenderDetail: currentModal() === "detail" });
   renderModels();
   renderHarnesses();
   renderModelSources();
   renderRuns();
   updateOnboarding();
+}
+
+function runsRenderSignature(runs) {
+  return runs.map((run) => [
+    run.runDirectory ?? run.runId ?? "",
+    run.updatedAt ?? "",
+    run.status ?? "",
+    run.assets?.html ?? "",
+    run.assets?.preview ?? "",
+    run.assets?.video ?? "",
+    run.assets?.videoMp4 ?? "",
+    run.capture?.video?.status ?? "",
+    run.capture?.video?.quality?.measuredFps ?? ""
+  ].join("|")).join("\n");
 }
 
 function syncSelectedRunFromState(options = {}) {

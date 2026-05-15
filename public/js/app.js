@@ -5,6 +5,9 @@ import { loadConnection, loadModelSyncState, loadModels, loadOmlxModels, syncMod
 import { captureMissingMedia, captureRunMedia, captureSelectedRunMedia } from "./capture-controller.js";
 import {
   configureWorkbenchController,
+  renderBenchmarks,
+  renderHarnesses,
+  renderModels,
   renderRuns,
   resetRunPage
 } from "./workbench-controller.js";
@@ -154,6 +157,19 @@ function wireEvents() {
     resetRunPage();
     renderRuns();
   });
+  els.clearWorkbenchState.addEventListener("click", () => {
+    state.selectedModel = "all";
+    state.selectedBenchmark = "all";
+    state.selectedHarness = "all";
+    state.runsSearch = "";
+    state.compareSelection = [];
+    els.runsSearch.value = "";
+    resetRunPage();
+    renderBenchmarks();
+    renderModels();
+    renderHarnesses();
+    renderRuns();
+  });
   els.prepareRun.addEventListener("click", () => prepareRunSlot());
   els.copyPreparedPath.addEventListener("click", () => copyPreparedRunPath());
   els.copyPrompt.addEventListener("click", () => copyPreparedPrompt());
@@ -166,6 +182,8 @@ function wireEvents() {
   els.prepModelSelect.addEventListener("change", () => {
     updatePrepareMode();
   });
+  els.prepCustomBackend.addEventListener("input", () => updatePrepareMode());
+  els.prepCustomModel.addEventListener("input", () => updatePrepareMode());
 
   els.viewTabs.forEach((button) => {
     button.addEventListener("click", () => {

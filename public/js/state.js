@@ -55,6 +55,7 @@ export const state = {
   refreshBusy: false,
   selectedRun: null,
   compareSelection: [],
+  comparisonExportBusy: false,
   captureRunDirectory: "",
   onboardingDismissed: false,
   htmlPollInterval: null

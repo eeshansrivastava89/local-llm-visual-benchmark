@@ -135,6 +135,7 @@ function modelKey(model) {
 export function modelSourceLabel(source) {
   if (source === "omlx") return "oMLX";
   if (source === "lmstudio") return "LM Studio";
+  if (source === "custom") return "Custom";
   return "history";
 }
 
@@ -239,6 +240,13 @@ export function updatePrepareModelWarning() {
   if (!els.prepModelWarning || !els.prepModelSelect || !els.prepareRun) return;
 
   const source = state.selectedModelSource;
+  if (source === "custom") {
+    const hasModel = Boolean(els.prepCustomModel?.value.trim());
+    els.prepModelWarning.hidden = true;
+    els.prepModelWarning.textContent = "";
+    els.prepareRun.disabled = !canUseOperationalControls() || !hasModel;
+    return;
+  }
   const sourceModels = modelsForSource(source);
   const health = selectedSourceHealth();
   const copy = SOURCE_STATUS_COPY[source] ?? { label: modelSourceLabel(source), offlineHint: "Start the server, then refresh." };
@@ -278,7 +286,7 @@ function renderStatusCheck(label, isPresent, configExists) {
 
 
 function modelsForSource(source) {
-  return source === "lmstudio"
-    ? state.lmStudioModels
-    : state.omlxModels;
+  if (source === "lmstudio") return state.lmStudioModels;
+  if (source === "omlx") return state.omlxModels;
+  return [];
 }

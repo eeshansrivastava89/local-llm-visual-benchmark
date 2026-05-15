@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { commandFileText, applyCommandArgv, parseLlamaCommandText } from "./command.mjs";
+import { commandFileText, applyCommandArgv, parseLlamaCommand } from "./command.mjs";
 import { PROFILE_DIR, RUN_DIR } from "./paths.mjs";
+import { normalizeServerVariantId, SERVER_VARIANTS } from "./server-variants.mjs";
 
 export function profileDir(id) {
   return join(PROFILE_DIR, sanitizeProfileId(id));
@@ -74,9 +75,10 @@ export async function readProfile(id) {
   profile.commandSource = existsSync(profile.commandPath) ? "file" : "generated";
 
   if (existsSync(profile.commandPath)) {
-    const argv = parseLlamaCommandText(await readFile(profile.commandPath, "utf8"));
+    const command = parseLlamaCommand(await readFile(profile.commandPath, "utf8"));
     profile = normalizeProfile({
-      ...applyCommandArgv(profile, argv),
+      ...applyCommandArgv(profile, command.argv),
+      serverBinary: command.binary,
       profileDir: profile.profileDir,
       profilePath: profile.profilePath,
       commandPath: profile.commandPath,
@@ -130,11 +132,12 @@ export async function writeState(id, state) {
 
 export function normalizeProfile(profile) {
   profile.flags ??= {};
+  profile.serverVariant = normalizeServerVariantId(profile.serverVariant, profile.providerId);
+  profile.providerId ??= SERVER_VARIANTS[profile.serverVariant].providerId;
   profile.flags.host ??= "127.0.0.1";
-  profile.flags.port ??= 8080;
+  profile.flags.port ??= SERVER_VARIANTS[profile.serverVariant].flags.port;
   profile.flags.repeatPenalty ??= 1.0;
   profile.flags.parallel ??= 1;
-  profile.providerId ??= "llama-cpp";
   profile.baseUrl = baseUrlFor(profile.flags);
   profile.harnesses ??= {};
   profile.harnesses.pi ??= { enabled: true, model: `${profile.providerId}/${profile.modelAlias}` };
@@ -176,6 +179,7 @@ function profileForJson(profile) {
     id: profile.id,
     label: profile.label,
     providerId: profile.providerId ?? "llama-cpp",
+    serverVariant: profile.serverVariant ?? normalizeServerVariantId(undefined, profile.providerId),
     ...(profile.preset ? { preset: profile.preset } : {}),
     ...(profile.createdAt ? { createdAt: profile.createdAt } : {}),
     ...(profile.updatedAt ? { updatedAt: profile.updatedAt } : {})

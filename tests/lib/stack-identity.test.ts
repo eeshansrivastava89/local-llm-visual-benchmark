@@ -105,6 +105,23 @@ describe("stackAttemptIdentity", () => {
     expect(identity.label).not.toContain("manual · manual");
   });
 
+  it("uses custom backend labels when model source is custom", () => {
+    const identity = stackAttemptIdentity({
+      model: {
+        id: "ChatGPT",
+        slug: "chatgpt"
+      },
+      runner: {
+        mode: "manual",
+        modelSource: "custom",
+        backendLabel: "cloud"
+      }
+    });
+
+    expect(identity.key).toBe("custom|chatgpt|manual");
+    expect(identity.label).toBe("ChatGPT · cloud · manual");
+  });
+
   it("includes optional harness version labels when present", () => {
     const identity = stackAttemptIdentity({
       model: {

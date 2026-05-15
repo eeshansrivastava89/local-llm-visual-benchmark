@@ -2,7 +2,9 @@ export function compareRunKey(run) {
   return run?.runDirectory || run?.runId || "";
 }
 
-export function toggleCompareSelection(selection, run, maxSelections = 4) {
+export const MAX_COMPARE_SELECTIONS = 6;
+
+export function toggleCompareSelection(selection, run, maxSelections = MAX_COMPARE_SELECTIONS) {
   const key = compareRunKey(run);
   if (!key) return selection.slice();
 

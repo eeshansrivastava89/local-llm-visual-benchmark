@@ -3,6 +3,7 @@ import { compareRunKey, selectedCompareRuns } from "./compare.js";
 import { renderComparePreviewGrid } from "./compare-ui.js";
 import { icon } from "./icons.js";
 import { displayRunError, needsMediaCapture, runCardIdentity, runCardMediaMessage, runCardState, runKind, stackAttemptIdentity } from "./runs.js";
+import { renderStackSummary } from "./stack-pills.js";
 import { escapeAttribute, escapeHtml, formatDateShort } from "./utils.js";
 
 export function renderRunsTable(runs, context) {
@@ -24,7 +25,7 @@ export function renderRunsTable(runs, context) {
               '<th class="runs-table-select"><span class="sr-only">Compare</span></th>' +
               '<th>Prompt</th>' +
               '<th>Model</th>' +
-              '<th>Harness</th>' +
+              '<th>Stack</th>' +
               '<th>Status</th>' +
               '<th>Message</th>' +
               '<th>Updated</th>' +
@@ -36,7 +37,7 @@ export function renderRunsTable(runs, context) {
         '</table>' +
       '</div>' +
       renderRunsPagination(showingStart, showingEnd, runs.length, totalPages, runPage) +
-      renderComparePreviewGrid(selectedCompareRuns(runs, context.compareSelection ?? []))
+      renderComparePreviewGrid(selectedCompareRuns(runs, context.compareSelection ?? []), context)
   };
 }
 
@@ -45,7 +46,10 @@ export function renderGroupedRuns(groups, mode, context) {
     '<section class="group">' +
       '<div class="group-head">' +
         "<div>" +
-          '<h3 class="text-base font-semibold tracking-[-0.01em]">' + escapeHtml(group.title) + "</h3>" +
+          '<span class="group-title-row">' +
+            '<h3 class="text-base font-semibold tracking-[-0.01em]">' + escapeHtml(group.title) + "</h3>" +
+            renderPromptPill(group, mode) +
+          "</span>" +
           '<p class="muted-copy mt-1 text-sm">' + escapeHtml(groupSummary(group, mode)) + "</p>" +
         "</div>" +
         '<span class="badge-outline">' + group.runs.length + "</span>" +
@@ -74,7 +78,7 @@ function renderRunsTableRow(run, context) {
       "</td>" +
       '<td class="run-title-cell"><strong class="truncate-line">' + escapeHtml(title) + "</strong></td>" +
       '<td class="truncate-cell">' + escapeHtml(model) + "</td>" +
-      '<td class="truncate-cell">' + escapeHtml(stack.harness) + "</td>" +
+      '<td class="truncate-cell">' + renderStackSummary(stack) + "</td>" +
       '<td><span class="run-state-pill"><span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' + escapeHtml(stateLabel.label) + "</span></td>" +
       '<td class="truncate-cell">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</td>" +
       '<td class="truncate-cell">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</td>" +
@@ -95,7 +99,7 @@ function renderRunCard(run, mode, context) {
           '<strong class="truncate-line">' + escapeHtml(identity.primary) + "</strong>" +
           '<span class="muted-copy truncate-line">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</span>" +
         "</span>" +
-        (identity.secondary ? '<span class="run-card-subtitle truncate-line">' + escapeHtml(identity.secondary) + "</span>" : "") +
+        '<span class="run-card-subtitle">' + renderStackSummary(stackAttemptIdentity(run)) + "</span>" +
         '<span class="run-card-status-row">' +
           '<span class="run-state-pill">' +
             '<span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' +
@@ -167,6 +171,29 @@ function renderPreview(run, options = {}) {
         '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(run.status === "prepared" ? "Paste the prompt into your tool." : displayRunError(run) ?? "Add preview.png for gallery thumbnails.") + "</span>" +
       "</span>" +
     "</span>"
+  );
+}
+
+function renderPromptPill(group, mode) {
+  const prompt = mode === "benchmark" ? group.runs.find((run) => run.benchmark?.prompt)?.benchmark?.prompt : "";
+  if (!prompt) return "";
+  const title = group.runs.find((run) => run.benchmark?.title)?.benchmark?.title ?? group.title;
+  return (
+    '<button type="button" class="prompt-preview-pill" data-tooltip="Benchmark prompt" data-tooltip-kind="prompt" data-tooltip-html="' +
+      escapeAttribute(renderPromptTooltip(title, prompt)) +
+      '" aria-label="See benchmark prompt for ' + escapeAttribute(title) + '">' +
+      'See prompt' +
+    "</button>"
+  );
+}
+
+function renderPromptTooltip(title, prompt) {
+  return (
+    '<div class="prompt-tooltip-card">' +
+      '<div class="prompt-tooltip-kicker">BENCHMARK PROMPT</div>' +
+      '<div class="prompt-tooltip-title">' + escapeHtml(title) + "</div>" +
+      '<div class="prompt-tooltip-body">' + escapeHtml(prompt) + "</div>" +
+    "</div>"
   );
 }
 

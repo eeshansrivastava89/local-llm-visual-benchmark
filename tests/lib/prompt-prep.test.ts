@@ -62,6 +62,33 @@ describe("prepareRun", () => {
     );
   });
 
+  it("records custom model source metadata for manual cloud runs", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-custom-runs-"));
+    const prepared = await prepareRun({
+      benchmark,
+      modelId: "ChatGPT",
+      modelSource: "custom",
+      backendLabel: "cloud",
+      runner: "manual",
+      runsRoot,
+      now: new Date("2026-05-07T04:00:32.122Z")
+    });
+
+    expect(prepared.run).toMatchObject({
+      model: {
+        id: "ChatGPT",
+        slug: "chatgpt"
+      },
+      runner: {
+        mode: "manual",
+        modelSource: "custom",
+        intendedRunner: "manual",
+        backendLabel: "cloud",
+        model: "ChatGPT"
+      }
+    });
+  });
+
   it("records model source and harness metadata without command artifacts", async () => {
     const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-omlx-runs-"));
     const prepared = await prepareRun({

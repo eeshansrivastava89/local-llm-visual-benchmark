@@ -93,17 +93,19 @@ function modelReasoning(profile) {
 }
 
 function openCodeModelConfig(profile) {
+  const input = modelInput(profile);
   return {
     name: profile.label,
     modalities: {
-      input: modelInput(profile),
+      input,
       output: ["text"]
     },
+    ...(input.includes("image") ? { attachment: true } : {}),
     ...(profile.flags?.ctxSize || profile.flags?.maxTokens
       ? {
           limit: {
-            ...(profile.flags?.ctxSize ? { context: profile.flags.ctxSize } : {}),
-            ...(profile.flags?.maxTokens ? { output: profile.flags.maxTokens } : {})
+            context: profile.flags?.ctxSize ?? 128000,
+            output: profile.flags?.maxTokens ?? 32768
           }
         }
       : {})

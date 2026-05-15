@@ -5,6 +5,7 @@ node_modules/
 dist/
 dist-static/
 /runs/
+comparison-exports/
 test-results/
 playwright-report/
 .litellm_cache/
@@ -32,6 +33,7 @@ app/**/*.webm
 
 # Local browser / QA / tool output
 *.log
+logs/
 .tmp-qa/
 .superpowers/
 .local-llm/

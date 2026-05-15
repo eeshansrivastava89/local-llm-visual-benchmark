@@ -28,16 +28,29 @@ local-llm setup
 
 Shows all downloaded models. Models that already have profiles are marked as set up; choosing one will offer sync/details instead of creating a duplicate.
 
+Setup asks which llama.cpp build to use:
+
+- **Standard llama.cpp**: uses `llama-server`, provider `llama-cpp`, and port `8080`.
+- **MTP llama.cpp**: uses `/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server`, provider `llama-cpp-mtp`, port `8081`, and adds `--spec-type draft-mtp --spec-draft-n-max 2`.
+
+Models with `MTP` in the name default to the MTP choice, but you can override it.
+
 Creates a profile folder:
 
 ```text
 .local-llm/profiles/<profile-id>/
-  profile.json       # small metadata only: id, label, provider
+  profile.json       # small metadata only: id, label, provider, server variant
   llama-server.sh    # source of truth for every launch flag
   notes.md           # scratch notes for this local profile
 ```
 
 For existing profiles, edit `llama-server.sh` directly; `setup <profile> --sync both` only syncs Pi/OpenCode from that command file.
+
+### MTP models
+
+For MTP GGUFs, choose **MTP llama.cpp** during setup. The CLI writes the separate MTP binary and speculative-decoding flags into `llama-server.sh`, stores `providerId: "llama-cpp-mtp"` in `profile.json`, and syncs Pi/OpenCode under that provider.
+
+Only one server can use port `8081` at a time. If you want to run multiple MTP profiles concurrently, edit the `--port` in that profile's `llama-server.sh`, then run `local-llm setup <profile-id> --sync both`.
 
 ### List / inspect
 

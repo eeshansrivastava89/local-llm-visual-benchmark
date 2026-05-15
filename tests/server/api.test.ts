@@ -191,6 +191,47 @@ describe("createLocalApi", () => {
       modelSource: "omlx",
       runner: "opencode",
       baseUrl: "http://127.0.0.1:8000/v1",
+      backendLabel: undefined,
+      runsRoot: "/runs"
+    });
+  });
+
+  it("forwards custom model metadata when preparing manual cloud runs", async () => {
+    const preparedRun = {
+      run: {} as RunMetadata,
+      prompt: "prompt",
+      paths: {
+        runDirectory: "/runs/sakura/chatgpt/run-1",
+        promptPath: "/runs/sakura/chatgpt/run-1/prompt.md",
+        commandPath: "/runs/sakura/chatgpt/run-1/command.txt",
+        htmlPath: "/runs/sakura/chatgpt/run-1/index.html",
+        metadataPath: "/runs/sakura/chatgpt/run-1/metadata.json",
+        previewPath: "/runs/sakura/chatgpt/run-1/preview.png"
+      }
+    };
+    const prepareRun = vi.fn(async () => preparedRun);
+    const api = createLocalApi({
+      runsRoot: "/runs",
+      loadBenchmarks: vi.fn(async () => benchmarks),
+      prepareRun
+    });
+
+    await expect(
+      api.prepareRun({
+        benchmarkId: "sakura",
+        modelId: "ChatGPT",
+        modelSource: "custom",
+        backendLabel: "cloud",
+        runner: "manual"
+      })
+    ).resolves.toEqual({ preparedRun });
+    expect(prepareRun).toHaveBeenCalledWith({
+      benchmark: benchmarks[0],
+      modelId: "ChatGPT",
+      modelSource: "custom",
+      runner: "manual",
+      baseUrl: undefined,
+      backendLabel: "cloud",
       runsRoot: "/runs"
     });
   });
@@ -305,6 +346,40 @@ describe("createLocalApi", () => {
     );
   });
 
+  it("exports selected run videos through the comparison video dependency", async () => {
+    const exportComparisonVideo = vi.fn(async () => ({
+      path: "/exports/sakura/comparison.mp4",
+      runCount: 2,
+      layout: "2x2"
+    }));
+    const api = createLocalApi({
+      runsRoot: "/runs",
+      exportComparisonVideo
+    });
+
+    await expect(
+      api.exportComparisonVideo({
+        runDirectories: ["/runs/sakura/model-a/run-1", "/runs/sakura/model-b/run-2"]
+      })
+    ).resolves.toEqual({
+      path: "/exports/sakura/comparison.mp4",
+      runCount: 2,
+      layout: "2x2"
+    });
+    expect(exportComparisonVideo).toHaveBeenCalledWith({
+      runsRoot: "/runs",
+      runDirectories: ["/runs/sakura/model-a/run-1", "/runs/sakura/model-b/run-2"]
+    });
+  });
+
+  it("rejects comparison video export when writes are disabled", async () => {
+    const api = createLocalApi({ enableWrites: false });
+
+    await expect(
+      api.exportComparisonVideo({ runDirectories: ["/runs/a", "/runs/b"] })
+    ).rejects.toThrow(/Write actions are only available in dev server mode/);
+  });
+
   it("rejects capture when writes are disabled", async () => {
     const api = createLocalApi({ enableWrites: false });
 
@@ -366,6 +441,49 @@ describe("createLocalApi", () => {
     expect(response.run.updatedAt).not.toBe("2026-05-06T01:00:00.000Z");
     await expect(readFile(join(runDirectory, "metadata.json"), "utf8"))
       .resolves.toContain('"backendLabel": "oMLX"');
+  });
+
+  it("updates custom backend and model labels in saved run metadata", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "local-visual-runs-custom-update-"));
+    const runDirectory = join(runsRoot, "sakura", "model-a", "run-1");
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(
+      join(runDirectory, "metadata.json"),
+      JSON.stringify({
+        runId: "run-1",
+        benchmark: benchmarks[0],
+        model: { id: "model-a", slug: "model-a" },
+        status: "completed",
+        createdAt: "2026-05-06T01:00:00.000Z",
+        updatedAt: "2026-05-06T01:00:00.000Z",
+        runDirectory,
+        assets: { metadata: "metadata.json" },
+        runner: {
+          mode: "manual",
+          intendedRunner: "manual",
+          model: "model-a"
+        }
+      }),
+      "utf8"
+    );
+    const api = createLocalApi({ runsRoot });
+
+    const response = await api.updateSavedRunMetadata({
+      runDirectory,
+      backend: "custom",
+      customBackend: "cloud",
+      harness: "manual",
+      modelId: "ChatGPT"
+    });
+
+    expect(response.run.model).toMatchObject({ id: "ChatGPT", slug: "model-a" });
+    expect(response.run.runner).toMatchObject({
+      mode: "manual",
+      modelSource: "custom",
+      backendLabel: "cloud",
+      intendedRunner: "manual",
+      model: "ChatGPT"
+    });
   });
 
   it("rejects updating saved run metadata when writes are disabled", async () => {

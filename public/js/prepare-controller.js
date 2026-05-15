@@ -19,7 +19,7 @@ export function resetPrepareRunModal() {
   if (state.benchmarks[0]) {
     els.prepBenchmark.value = state.benchmarks[0].id;
   }
-  if (state.omlxModels.length === 0 && state.lmStudioModels.length > 0) {
+  if (state.selectedModelSource !== "custom" && state.omlxModels.length === 0 && state.lmStudioModels.length > 0) {
     state.selectedModelSource = "lmstudio";
   }
   els.prepModelSource.value = state.selectedModelSource;
@@ -44,6 +44,10 @@ export function updatePrepareMode() {
   els.prepLayout.dataset.kind = workflow;
   els.prepResult.dataset.panelMode = workflow;
   els.preparedPrompt.readOnly = true;
+  const isCustom = state.selectedModelSource === "custom";
+  els.prepModelSelectGroup.hidden = isCustom;
+  els.prepCustomBackendGroup.hidden = !isCustom;
+  els.prepCustomModelGroup.hidden = !isCustom;
   els.prepModelSelectLabel.textContent = modelSourceLabel(state.selectedModelSource) + " model";
   if (!state.preparedPrompt) {
     els.preparedPrompt.value = "";
@@ -51,7 +55,9 @@ export function updatePrepareMode() {
   }
 
   els.prepResultTitle.textContent = "Generated prompt";
-  els.prepSubtitle.textContent = "Choose a prompt, model source, model, and harness to generate a run folder.";
+  els.prepSubtitle.textContent = isCustom
+    ? "Choose a prompt and enter the backend/model labels to generate a manual run folder."
+    : "Choose a prompt, model source, model, and harness to generate a run folder.";
   els.prepResultHint.textContent = "Copy this into your selected harness after preparing the slot.";
   els.preparedPrompt.placeholder = "Prepare a run slot to generate the prompt for index.html.";
   els.prepOutputLabel.textContent = "Visual prompt";
@@ -66,9 +72,15 @@ export async function prepareRunSlot() {
     return;
   }
   const benchmarkId = els.prepBenchmark.value;
-  const modelId = els.prepModelSelect.value.trim();
+  const modelSource = els.prepModelSource.value;
+  const isCustom = modelSource === "custom";
+  const modelId = isCustom ? els.prepCustomModel.value.trim() : els.prepModelSelect.value.trim();
   if (!benchmarkId || !modelId) {
     updatePrepareModelWarning();
+    if (isCustom) {
+      els.preparedPaths.textContent = "Enter a custom model name.";
+      return;
+    }
     const source = state.selectedModelSource;
     const health = selectedSourceHealth();
     els.preparedPaths.textContent = health.status === "offline"
@@ -77,8 +89,8 @@ export async function prepareRunSlot() {
     return;
   }
   const runner = els.prepRunner.value;
-  const modelSource = els.prepModelSource.value;
-  const baseUrl = modelSource === "lmstudio" ? els.baseUrl.value : els.omlxBaseUrl.value;
+  const baseUrl = modelSource === "lmstudio" ? els.baseUrl.value : modelSource === "omlx" ? els.omlxBaseUrl.value : undefined;
+  const backendLabel = isCustom ? (els.prepCustomBackend.value.trim() || "Custom") : undefined;
   try {
     const data = await postJson("/api/prepare-run", {
       benchmarkId,
@@ -86,12 +98,14 @@ export async function prepareRunSlot() {
       modelSource,
       kind: "visual",
       runner,
-      baseUrl
+      baseUrl,
+      backendLabel
     });
     const prepared = data.preparedRun;
     const output = prepared.prompt;
     const runDirectory = prepared.paths?.runDirectory ?? prepared.run?.runDirectory ?? "";
-    const statusText = "Run slot prepared for " + modelSourceLabel(modelSource) + " via " + harnessLabel(runner) + ". Run folder: " + runDirectory;
+    const sourceLabel = isCustom ? backendLabel : modelSourceLabel(modelSource);
+    const statusText = "Run slot prepared for " + sourceLabel + " via " + harnessLabel(runner) + ". Run folder: " + runDirectory;
     state.preparedPrompt = output;
     state.preparedRunDirectory = runDirectory;
     els.preparedPrompt.value = output;
@@ -153,10 +167,10 @@ export function renderPrepOptions() {
   if (state.benchmarks.some((benchmark) => benchmark.id === selectedBenchmark)) {
     els.prepBenchmark.value = selectedBenchmark;
   }
-  if (!["omlx", "lmstudio"].includes(state.selectedModelSource)) {
+  if (!["omlx", "lmstudio", "custom"].includes(state.selectedModelSource)) {
     state.selectedModelSource = "omlx";
   }
-  if (state.selectedModelSource === "omlx" && state.omlxModels.length === 0 && state.lmStudioModels.length > 0) {
+  if (state.selectedModelSource !== "custom" && state.selectedModelSource === "omlx" && state.omlxModels.length === 0 && state.lmStudioModels.length > 0) {
     state.selectedModelSource = "lmstudio";
   }
   els.prepModelSource.value = state.selectedModelSource;
@@ -176,9 +190,9 @@ function modelsForSelectedSource() {
 }
 
 function modelsForSource(source) {
-  return source === "lmstudio"
-    ? state.lmStudioModels
-    : state.omlxModels;
+  if (source === "lmstudio") return state.lmStudioModels;
+  if (source === "omlx") return state.omlxModels;
+  return [];
 }
 
 function availablePreparedRun(run) {

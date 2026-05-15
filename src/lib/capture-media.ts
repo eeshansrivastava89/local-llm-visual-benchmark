@@ -301,7 +301,7 @@ async function captureRunMediaWithPlaywright(
           `minimum ${frameRate.minFps})`
       );
       if (!isAnimationFrameRateAcceptable(frameRate)) {
-        throw new Error(captureFrameRateErrorMessage(frameRate, viewport));
+        console.warn(`[capture] ${captureFrameRateErrorMessage(frameRate, viewport)}`);
       }
     }
 

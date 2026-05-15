@@ -2,6 +2,7 @@ import { els } from "./dom.js";
 import { state } from "./state.js";
 import { escapeAttribute, escapeHtml, uniqueBy } from "./utils.js";
 import { compareRunKey, toggleCompareSelection } from "./compare.js";
+import { exportSelectedComparisonVideo } from "./comparison-export-controller.js";
 import { syncManagedCompareVideos } from "./compare-ui.js";
 import { filteredRuns, groupRuns, harnessesFromRuns, modelsFromRuns, runKind, runSummaryText } from "./runs.js";
 import { renderGroupedRuns as renderGroupedRunsMarkup, renderRunsTable as renderRunsTableMarkup } from "./workbench-ui.js";
@@ -101,6 +102,7 @@ export function renderRuns() {
     : state.mode === "benchmark"
       ? "Compare one prompt across models."
       : "Compare one prompt across models.";
+  updateClearWorkbenchStateButton();
 
   if (runs.length === 0) {
     const emptyBase = '<div class="empty">No runs match the current filters.</div>';
@@ -164,6 +166,7 @@ function renderRunsTable(runs) {
   els.runsSurface.innerHTML = rendered.html;
   syncManagedCompareVideos(els.runsSurface);
   wireCompareSelection(runs);
+  wireComparisonExport();
   wireRunCards();
   wireRunsPagination(rendered.totalPages);
 }
@@ -173,12 +176,33 @@ function renderGroupedRuns(groups, mode) {
   wireRunCards();
 }
 
+function updateClearWorkbenchStateButton() {
+  if (!els.clearWorkbenchState || !els.clearWorkbenchStateLabel) return;
+  const hasFilters = state.selectedModel !== "all" ||
+    state.selectedBenchmark !== "all" ||
+    state.selectedHarness !== "all" ||
+    state.runsSearch.trim().length > 0;
+  const hasSelection = state.compareSelection.length > 0;
+  els.clearWorkbenchState.hidden = !(hasFilters || hasSelection);
+  els.clearWorkbenchStateLabel.textContent = hasFilters && hasSelection
+    ? "Reset view"
+    : hasSelection
+      ? "Clear selection"
+      : "Clear filters";
+  els.clearWorkbenchState.title = hasFilters && hasSelection
+    ? "Clear filters, search, and selected compare runs."
+    : hasSelection
+      ? "Clear selected compare runs."
+      : "Clear filters and search.";
+}
+
 function workbenchRenderContext() {
   return {
     canOperate: canUseOperationalControlsHandler(),
     captureBusy: state.captureBusy,
     captureRunDirectory: state.captureRunDirectory,
     compareSelection: state.compareSelection,
+    comparisonExportBusy: state.comparisonExportBusy,
     runPage: state.runPage,
     runsPerPage: state.runsPerPage
   };
@@ -194,6 +218,14 @@ function wireRunsPagination(totalPages) {
   next?.addEventListener("click", () => {
     state.runPage = Math.min(totalPages, state.runPage + 1);
     renderRuns();
+  });
+}
+
+function wireComparisonExport() {
+  const button = document.querySelector("[data-export-compare-video]");
+  button?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    void exportSelectedComparisonVideo(button);
   });
 }
 

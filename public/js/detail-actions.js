@@ -135,8 +135,16 @@ function renderMetadataEditor(run) {
         '<span class="metadata-editor-status" id="detailMetadataEditorStatus" aria-live="polite"></span>' +
       '</div>' +
       '<label class="metadata-editor-field">' +
+        '<span>Model</span>' +
+        '<input class="input" name="modelId" value="' + escapeAttribute(run.model?.id ?? "") + '" placeholder="Model name" />' +
+      '</label>' +
+      '<label class="metadata-editor-field">' +
         '<span>Backend</span>' +
         '<select class="input" name="backend">' + renderBackendOptions(currentBackendValue(run)) + '</select>' +
+      '</label>' +
+      '<label class="metadata-editor-field" data-custom-backend-field>' +
+        '<span>Custom backend</span>' +
+        '<input class="input" name="customBackend" value="' + escapeAttribute(currentBackendLabel(run)) + '" placeholder="cloud" />' +
       '</label>' +
       '<label class="metadata-editor-field">' +
         '<span>Coding harness</span>' +
@@ -151,6 +159,13 @@ function wireMetadataEditor(run) {
   const form = document.querySelector("#detailMetadataEditor");
   if (!form) return;
 
+  const backendSelect = form.elements.backend;
+  const customField = form.querySelector("[data-custom-backend-field]");
+  const updateCustomVisibility = () => {
+    customField.hidden = backendSelect.value !== "custom";
+  };
+  backendSelect.addEventListener("change", updateCustomVisibility);
+  updateCustomVisibility();
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     void saveMetadataEditor(run, form);
@@ -166,7 +181,9 @@ async function saveMetadataEditor(run, form) {
     const data = await patchJson("/api/runs", {
       runDirectory: run.runDirectory,
       backend: form.elements.backend.value,
-      harness: form.elements.harness.value
+      customBackend: form.elements.customBackend.value,
+      harness: form.elements.harness.value,
+      modelId: form.elements.modelId.value
     });
     const nextRun = data.run;
     state.runs = state.runs.map((item) =>
@@ -193,7 +210,8 @@ function renderBackendOptions(selected) {
     ["lmstudio", "LM Studio"],
     ["llama.cpp", "llama.cpp"],
     ["ollama", "Ollama"],
-    ["mlx", "Base MLX"]
+    ["mlx", "Base MLX"],
+    ["custom", "Custom…"]
   ].map(([value, label]) => renderOption(value, label, selected)).join("");
 }
 
@@ -214,13 +232,21 @@ function currentBackendValue(run) {
   if (run.runner?.modelSource === "omlx" || run.runner?.modelSource === "lmstudio") {
     return run.runner.modelSource;
   }
+  if (run.runner?.modelSource === "custom") return "custom";
   const backend = String(run.runner?.backendLabel ?? "").toLowerCase();
   if (/lm studio|lmstudio/u.test(backend)) return "lmstudio";
   if (/omlx/u.test(backend)) return "omlx";
   if (/llama\.cpp/u.test(backend)) return "llama.cpp";
   if (/ollama/u.test(backend)) return "ollama";
   if (/mlx/u.test(backend)) return "mlx";
+  if (backend && backend !== "manual") return "custom";
   return "unrecorded";
+}
+
+function currentBackendLabel(run) {
+  const value = currentBackendValue(run);
+  if (value === "custom") return run.runner?.backendLabel ?? "";
+  return "";
 }
 
 function currentHarnessValue(run) {

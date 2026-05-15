@@ -291,7 +291,8 @@ test("compares selected visual runs side by side", async ({ page }) => {
       }
     }
   ];
-  await mockApi(page, { lmStudioOnline: true, runs: compareRuns });
+  const exportPayloads: unknown[] = [];
+  await mockApi(page, { lmStudioOnline: true, runs: compareRuns, onExportComparison: (payload) => { exportPayloads.push(payload); } });
 
   await page.goto("/");
   await page.getByRole("button", { name: "Table" }).click();
@@ -303,14 +304,28 @@ test("compares selected visual runs side by side", async ({ page }) => {
   await page.getByRole("checkbox", { name: /Compare Sakura Particle Field.*manual/ }).check();
   await expect(page.locator("[data-compare-run]")).toHaveCount(2);
   const selectedCompareRunsRegion = page.getByLabel("Selected compare runs");
-  await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl · oMLX · opencode")).toBeVisible();
-  await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl · LM Studio · manual")).toBeVisible();
+  await expect(selectedCompareRunsRegion.getByText("local/qwen2.5-vl").first()).toBeVisible();
+  await expect(selectedCompareRunsRegion.getByText("oMLX")).toBeVisible();
+  await expect(selectedCompareRunsRegion.getByText("opencode")).toBeVisible();
+  await expect(selectedCompareRunsRegion.getByText("LM Studio")).toBeVisible();
+  await expect(selectedCompareRunsRegion.getByText("manual")).toBeVisible();
   await expect(page.locator("[data-compare-run] video")).toHaveCount(2);
   await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("controls", false);
   await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("loop", false);
   await expect(page.locator("[data-compare-run] video").first()).toHaveAttribute("poster", /preview\.png/);
   await expect(page.locator("[data-compare-run] video").first()).toHaveAttribute("data-loop-managed", "true");
   await expect(page.locator("[data-compare-run] video").first()).toHaveJSProperty("muted", true);
+  await expect(page.getByText("2/6 selected")).toBeVisible();
+  await page.getByRole("button", { name: "Export video" }).click();
+  await expect(page.locator("#runSummary")).toContainText("Comparison video exported: /tmp/comparison-exports/comparison.mp4");
+  expect(exportPayloads).toEqual([
+    {
+      runDirectories: compareRuns.map((run) => run.runDirectory)
+    }
+  ]);
+  await page.getByRole("button", { name: "Clear selection" }).click();
+  await expect(page.getByText("0/6 selected")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Clear selection" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Filtered prompt stack coverage" })).toHaveCount(0);
 });
 
@@ -448,6 +463,37 @@ test("prepares LM Studio runs without exposing llama.cpp command controls", asyn
   await expect(page.locator("#preparedPaths")).toContainText("Run slot prepared");
   await expect(page.locator("#preparedPaths")).not.toContainText("command.txt");
 });
+
+test("prepares custom cloud model run slots", async ({ page }) => {
+  let preparePayload: unknown;
+  await mockApi(page, {
+    lmStudioOnline: false,
+    onPrepare: (payload) => {
+      preparePayload = payload;
+    }
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Prepare run" }).click();
+  await page.locator("#prepModelSource").selectOption("custom");
+
+  await expect(page.locator("#prepModelSelectGroup")).toBeHidden();
+  await expect(page.locator("#prepCustomBackendGroup")).toBeVisible();
+  await expect(page.locator("#prepCustomModelGroup")).toBeVisible();
+  await page.locator("#prepCustomBackend").fill("cloud");
+  await page.locator("#prepCustomModel").fill("ChatGPT");
+  await page.locator("#prepRunner").selectOption("manual");
+  await page.locator("#prepBackdrop").getByRole("button", { name: "Prepare slot" }).click();
+
+  await expect.poll(() => preparePayload).toMatchObject({
+    modelSource: "custom",
+    backendLabel: "cloud",
+    modelId: "ChatGPT",
+    runner: "manual"
+  });
+  await expect(page.locator("#preparedPaths")).toContainText("Run slot prepared for cloud");
+});
+
 
 test("warns in the prepare modal when the selected model source is offline", async ({ page }) => {
   await mockApi(page, { lmStudioOnline: false });
@@ -1060,6 +1106,7 @@ async function mockApi(
     onDelete?: (payload: unknown) => void;
     onCapture?: (payload: unknown) => void | Promise<void>;
     onOpenHtml?: (payload: unknown) => void | Promise<void>;
+    onExportComparison?: (payload: unknown) => void | Promise<void>;
     writesEnabled?: boolean;
   }
 ): Promise<void> {
@@ -1194,6 +1241,18 @@ async function mockApi(
     });
   });
 
+  await page.route("**/api/export-comparison-video", async (route) => {
+    const payload = route.request().postDataJSON();
+    await options.onExportComparison?.(payload);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        path: "/tmp/comparison-exports/comparison.mp4",
+        runCount: payload.runDirectories?.length ?? 0,
+        layout: "2x2"
+      })
+    });
+  });
 
   await page.route("**/api/model-sync", async (route) => {
     await route.fulfill({
@@ -1242,7 +1301,7 @@ async function mockApi(
               mode: payload.runner === "manual" ? "manual" : "external",
               modelSource: payload.modelSource,
               intendedRunner: payload.runner ?? "manual",
-              backendLabel: payload.modelSource === "omlx" ? "oMLX" : "LM Studio",
+              backendLabel: payload.modelSource === "custom" ? payload.backendLabel : payload.modelSource === "omlx" ? "oMLX" : "LM Studio",
               baseUrl: payload.baseUrl
             },
             status: "prepared",

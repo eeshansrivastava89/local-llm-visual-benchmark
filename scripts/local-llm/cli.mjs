@@ -11,6 +11,7 @@ import { colors, createPrompt, formatBytes, printHelp, relativeTime, renderRows,
 import { hasOpenCodeModel, hasPiModel, launchHarness, syncOpenCodeConfig, syncPiConfig } from "./harnesses.mjs";
 import { isProfileRunning, serverReady, startServer, stopProfile, waitForReady } from "./process.mjs";
 import { tailFriendly } from "./logs.mjs";
+import { inferServerVariantId, SERVER_VARIANTS, serverBinaryFor } from "./server-variants.mjs";
 
 export async function runCli(argv) {
   const [command = "help", ...args] = argv;
@@ -178,17 +179,24 @@ async function setupCommand(argv) {
       return;
     }
 
+    const serverVariantId = await prompt.choice("llama.cpp build", serverVariantChoices(), inferServerVariantId(model));
+    const serverVariant = SERVER_VARIANTS[serverVariantId];
+    if (serverVariantId !== "standard" && !existsSync(serverVariant.binary)) {
+      console.log(colors.yellow(`MTP binary not found yet: ${serverVariant.binary}`));
+      console.log(colors.dim("Setup can still save the profile, but run will fail until that build exists."));
+    }
+
     const presetIds = Object.keys(PRESETS);
     const presetId = await prompt.choice("Preset", presetIds.map((id) => ({
       value: id,
       label: id,
       hint: PRESETS[id].label
     })), presetIds[0]);
-    const defaults = PRESETS[presetId].flags;
+    const defaults = { ...PRESETS[presetId].flags, ...serverVariant.flags };
 
     const id = sanitizeProfileId(await prompt.text("Profile id", requestedId ?? slugFromLabel(model.label)));
     const modelAlias = await prompt.text("Model alias for Pi/OpenCode", model.aliasSuggestion);
-    console.log(colors.dim(`Host and port use preset defaults: ${defaults.host}:${defaults.port}. Edit llama-server.sh after setup if you need to change them.`));
+    console.log(colors.dim(`Host and port use ${serverVariant.label} defaults: ${defaults.host}:${defaults.port}. Edit llama-server.sh after setup if you need to change them.`));
     const ctxSize = await prompt.number("Context size - prompt window in tokens; larger means more memory", defaults.ctxSize, 1, 1048576);
     const cacheChoices = cacheTypeChoices();
     const cacheTypeK = await prompt.choice("K cache type - KV cache precision; bf16/f16 are stable, q8/q4 use less memory", cacheChoices, defaults.cacheTypeK);
@@ -204,15 +212,16 @@ async function setupCommand(argv) {
     const profile = normalizeProfile({
       id,
       label: model.label,
-      providerId: "llama-cpp",
+      providerId: serverVariant.providerId,
+      serverVariant: serverVariantId,
       modelAlias,
       modelPath: model.path,
       mmprojPath: model.mmprojPath,
       preset: presetId,
       flags,
       harnesses: {
-        pi: { enabled: true, model: `llama-cpp/${modelAlias}` },
-        opencode: { enabled: true, model: `llama-cpp/${modelAlias}` }
+        pi: { enabled: true, model: `${serverVariant.providerId}/${modelAlias}` },
+        opencode: { enabled: true, model: `${serverVariant.providerId}/${modelAlias}` }
       }
     });
 
@@ -299,6 +308,7 @@ async function runProfile(profile, options) {
       console.log(colors.dim(`Stop with: local-llm stop ${profile.id}`));
       return;
     }
+    tail.stop();
     try {
       await launchHarness(profile, withHarness);
     } finally {
@@ -342,6 +352,8 @@ async function renderFullProfile(profile) {
     renderSection("Profile", renderRows([
       ["ID", colors.cyan(profile.id)],
       ["Endpoint", colors.green(profile.baseUrl)],
+      ["Provider", colors.cyan(profile.providerId)],
+      ["Server", colors.dim(serverBinaryFor(profile))],
       ["Alias", colors.cyan(profile.modelAlias)],
       ["Model", colors.dim(profile.modelPath)],
       ["MMProj", profile.mmprojPath ? colors.dim(profile.mmprojPath) : colors.yellow("none")]
@@ -373,6 +385,8 @@ function renderProfileSummary(profile) {
     ["ID", colors.cyan(profile.id)],
     ["Label", colors.bold(profile.label)],
     ["Endpoint", colors.green(profile.baseUrl)],
+    ["Provider", colors.cyan(profile.providerId)],
+    ["Server", colors.dim(serverBinaryFor(profile))],
     ["Alias", colors.cyan(profile.modelAlias)],
     ["Model", colors.dim(profile.modelPath)],
     ["MMProj", profile.mmprojPath ? colors.dim(profile.mmprojPath) : colors.yellow("none")]
@@ -412,6 +426,14 @@ async function readProfileArg(argv) {
 
 function cacheTypeChoices() {
   return ["f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"].map((value) => ({ value }));
+}
+
+function serverVariantChoices() {
+  return Object.entries(SERVER_VARIANTS).map(([value, variant]) => ({
+    value,
+    label: variant.label,
+    hint: variant.hint
+  }));
 }
 
 function syncChoices() {

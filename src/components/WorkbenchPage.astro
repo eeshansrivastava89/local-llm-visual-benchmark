@@ -118,6 +118,7 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
               <p class="muted-copy mt-0.5 text-sm" id="viewSubtitle">{subtitle}</p>
               <p class="muted-copy text-sm" id="runSummary">Loading saved runs.</p>
             </div>
+            <button type="button" class="btn-sm-outline gallery-reset" id="clearWorkbenchState" data-icon="x" hidden><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span><span id="clearWorkbenchStateLabel">Clear filters</span></button>
           </div>
 
           <!-- Surface -->
@@ -265,6 +266,7 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                 <select id="prepModelSource" class="input">
                   <option value="omlx">oMLX</option>
                   <option value="lmstudio">LM Studio</option>
+                  <option value="custom">Custom model</option>
                 </select>
               </div>
               <div class="grid gap-2" id="prepVisualPromptGroup">
@@ -281,6 +283,20 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                 </div>
                 <select id="prepModelSelect" class="input"></select>
                 <p id="prepModelWarning" class="prep-source-warning" hidden></p>
+              </div>
+              <div class="grid gap-2" id="prepCustomBackendGroup" hidden>
+                <div class="field-label-row">
+                  <label for="prepCustomBackend">Custom backend</label>
+                  <button type="button" class="help-pill" data-tooltip="Free-form source label for manually run models, for example cloud, ChatGPT, Claude, OpenRouter, or browser.">?</button>
+                </div>
+                <input id="prepCustomBackend" class="input" value="cloud" placeholder="cloud" />
+              </div>
+              <div class="grid gap-2" id="prepCustomModelGroup" hidden>
+                <div class="field-label-row">
+                  <label for="prepCustomModel">Custom model</label>
+                  <button type="button" class="help-pill" data-tooltip="Free-form model label to record in metadata and use for the run folder, for example ChatGPT or GPT-5.1.">?</button>
+                </div>
+                <input id="prepCustomModel" class="input" placeholder="ChatGPT" />
               </div>
             </section>
 

@@ -26,6 +26,8 @@ import {
   type ModelSyncTarget
 } from "../lib/model-sync";
 import { prepareRun as defaultPrepareRun } from "../lib/prompt-prep";
+import { slugModelId } from "../lib/paths";
+import { exportComparisonVideo as defaultExportComparisonVideo } from "../lib/comparison-video";
 import {
   deleteRunDirectory as defaultDeleteRunDirectory,
   listRunMetadata as defaultListRunMetadata
@@ -53,6 +55,7 @@ export interface PrepareRunRequest {
   kind?: string;
   runner?: string;
   baseUrl?: string;
+  backendLabel?: string;
 }
 
 export interface MirrorModelsRequest {
@@ -68,7 +71,9 @@ export interface DeleteRunRequest {
 export interface UpdateRunMetadataRequest {
   runDirectory?: string;
   backend?: unknown;
+  customBackend?: unknown;
   harness?: unknown;
+  modelId?: unknown;
 }
 
 export interface CaptureMediaRequest {
@@ -83,6 +88,10 @@ export interface OpenRunHtmlRequest {
 
 export interface OpenRunFolderRequest {
   runDirectory?: string;
+}
+
+export interface ExportComparisonVideoRequest {
+  runDirectories?: unknown;
 }
 
 export interface LocalApiDependencies {
@@ -105,6 +114,7 @@ export interface LocalApiDependencies {
   captureMissingRunMedia?: typeof defaultCaptureMissingRunMedia;
   captureSingleRunMedia?: typeof defaultCaptureSingleRunMedia;
   openFile?: (path: string) => Promise<void>;
+  exportComparisonVideo?: typeof defaultExportComparisonVideo;
 }
 
 export interface LocalApi {
@@ -122,6 +132,7 @@ export interface LocalApi {
   captureMissingMedia(request?: CaptureMediaRequest): Promise<CaptureMissingRunMediaResult>;
   openRunHtml(request: OpenRunHtmlRequest): Promise<OpenRunHtmlResponse>;
   openRunFolder(request: OpenRunFolderRequest): Promise<OpenRunFolderResponse>;
+  exportComparisonVideo(request: ExportComparisonVideoRequest): Promise<ExportComparisonVideoResponse>;
 }
 
 export interface StatusResponse {
@@ -190,6 +201,12 @@ export interface OpenRunFolderResponse {
   path: string;
 }
 
+export interface ExportComparisonVideoResponse {
+  path: string;
+  runCount: number;
+  layout: string;
+}
+
 export class ApiRequestError extends Error {
   readonly status: number;
 
@@ -230,6 +247,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   const captureSingleRunMedia =
     dependencies.captureSingleRunMedia ?? defaultCaptureSingleRunMedia;
   const openFile = dependencies.openFile ?? defaultOpenFile;
+  const exportComparisonVideo = dependencies.exportComparisonVideo ?? defaultExportComparisonVideo;
 
   return {
     async getStatus(request = {}) {
@@ -303,7 +321,9 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
           runsRoot,
           runDirectory: readRequiredString(request.runDirectory, "runDirectory"),
           backend: readRunBackend(request.backend),
-          harness: readRunHarness(request.harness)
+          customBackend: readOptionalString(request.customBackend, "customBackend"),
+          harness: readRunHarness(request.harness),
+          modelId: readOptionalString(request.modelId, "modelId")
         })
       };
     },
@@ -326,6 +346,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
           modelSource,
           runner,
           baseUrl: readOptionalString(request.baseUrl, "baseUrl"),
+          backendLabel: readOptionalString(request.backendLabel, "backendLabel"),
           runsRoot
         })
       };
@@ -375,6 +396,12 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
         opened: true,
         path
       };
+    },
+
+    async exportComparisonVideo(request) {
+      assertWritesEnabled(enableWrites);
+      const runDirectories = readStringArray(request.runDirectories, "runDirectories");
+      return exportComparisonVideo({ runsRoot, runDirectories });
     },
 
     async getModelSyncState() {
@@ -445,17 +472,22 @@ function readModelSource(value: unknown): ModelSourceId | undefined {
   if (value === "omlx" || value === "lmstudio") {
     return value;
   }
-  throw new ApiRequestError(400, "modelSource must be omlx or lmstudio.");
+  if (value === "custom") {
+    return value;
+  }
+  throw new ApiRequestError(400, "modelSource must be omlx, lmstudio, or custom.");
 }
 
 interface RunMetadataPatchInput {
   runsRoot: string;
   runDirectory: string;
   backend: EditableRunBackend;
+  customBackend?: string;
   harness: EditableRunHarness;
+  modelId?: string;
 }
 
-type EditableRunBackend = "unrecorded" | "omlx" | "lmstudio" | "llama.cpp" | "ollama" | "mlx";
+type EditableRunBackend = "unrecorded" | "omlx" | "lmstudio" | "llama.cpp" | "ollama" | "mlx" | "custom";
 type EditableRunHarness = "manual" | "pi" | "opencode" | "hermes";
 
 async function updateRunMetadataFile(input: RunMetadataPatchInput): Promise<RunMetadata> {
@@ -466,11 +498,13 @@ async function updateRunMetadataFile(input: RunMetadataPatchInput): Promise<RunM
   const metadataPath = join(runDirectory, "metadata.json");
   const current = JSON.parse(await readFile(metadataPath, "utf8")) as RunMetadata;
   const now = new Date().toISOString();
+  const modelId = input.modelId ?? current.model?.id;
   const next: RunMetadata = {
     ...current,
+    ...(modelId ? { model: { ...(current.model ?? {}), id: modelId, slug: current.model?.slug ?? slugModelId(modelId) } } : {}),
     runDirectory,
     updatedAt: now,
-    runner: updateRunnerMetadata(current.runner, input.backend, input.harness)
+    runner: updateRunnerMetadata(current.runner, input.backend, input.harness, input.customBackend, modelId)
   };
 
   await writeFile(metadataPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
@@ -480,19 +514,22 @@ async function updateRunMetadataFile(input: RunMetadataPatchInput): Promise<RunM
 function updateRunnerMetadata(
   runner: RunRunnerMetadata | undefined,
   backend: EditableRunBackend,
-  harness: EditableRunHarness
+  harness: EditableRunHarness,
+  customBackend?: string,
+  modelId?: string
 ): RunRunnerMetadata {
   return {
     ...(runner ?? { mode: harness === "manual" ? "manual" : "external" }),
     mode: harness === "manual" ? "manual" : "external",
-    ...runnerBackendPatch(backend),
+    ...runnerBackendPatch(backend, customBackend),
+    ...(modelId ? { model: modelId } : {}),
     intendedRunner: harnessLabel(harness),
     actualRunner: undefined,
     harnessLabel: undefined
   };
 }
 
-function runnerBackendPatch(backend: EditableRunBackend): Pick<RunRunnerMetadata, "modelSource" | "backendLabel"> {
+function runnerBackendPatch(backend: EditableRunBackend, customBackend?: string): Pick<RunRunnerMetadata, "modelSource" | "backendLabel"> {
   if (backend === "unrecorded") {
     return {
       modelSource: undefined,
@@ -509,6 +546,12 @@ function runnerBackendPatch(backend: EditableRunBackend): Pick<RunRunnerMetadata
     return {
       modelSource: "lmstudio",
       backendLabel: "LM Studio"
+    };
+  }
+  if (backend === "custom") {
+    return {
+      modelSource: "custom",
+      backendLabel: customBackend ?? "Custom"
     };
   }
   return {
@@ -534,11 +577,12 @@ function readRunBackend(value: unknown): EditableRunBackend {
     value === "lmstudio" ||
     value === "llama.cpp" ||
     value === "ollama" ||
-    value === "mlx"
+    value === "mlx" ||
+    value === "custom"
   ) {
     return value;
   }
-  throw new ApiRequestError(400, "backend must be unrecorded, omlx, lmstudio, llama.cpp, ollama, or mlx.");
+  throw new ApiRequestError(400, "backend must be unrecorded, omlx, lmstudio, llama.cpp, ollama, mlx, or custom.");
 }
 
 function readRunHarness(value: unknown): EditableRunHarness {

@@ -1,5 +1,6 @@
 import { assetHref } from "./assets.js";
 import { displayRunError, hasCapturedVideo, runCardState, runKind, runRecordText, stackAttemptIdentity } from "./runs.js";
+import { renderStackPill } from "./stack-pills.js";
 import { escapeAttribute, escapeHtml, formatDateTime } from "./utils.js";
 
 export function detailViewModel(run) {
@@ -35,8 +36,8 @@ function renderDetailMeta(run) {
   const completedAt = run.completedAt || run.capture?.video?.capturedAt || run.capture?.preview?.capturedAt;
   return (
     '<span class="meta-label">State</span><strong>' + escapeHtml(stateLabel.label) + "</strong>" +
-    '<span class="meta-label">Backend</span><strong>' + escapeHtml(stack.backend ?? "source unrecorded") + "</strong>" +
-    '<span class="meta-label">Harness</span><strong>' + escapeHtml(stack.harness ?? "manual") + "</strong>" +
+    '<span class="meta-label">Backend</span><strong>' + renderStackPill(stack.backend ?? "source unrecorded", "backend") + "</strong>" +
+    '<span class="meta-label">Harness</span><strong>' + renderStackPill(stack.harness ?? "manual", "harness") + "</strong>" +
     '<span class="meta-label">Model</span><strong>' + escapeHtml(run.model?.id ?? "-") + "</strong>" +
     '<span class="meta-label">Created</span><strong>' + escapeHtml(formatDateTime(run.createdAt)) + "</strong>" +
     '<span class="meta-label">Updated</span><strong>' + escapeHtml(formatDateTime(run.updatedAt)) + "</strong>" +

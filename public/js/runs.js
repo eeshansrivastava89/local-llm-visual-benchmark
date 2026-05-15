@@ -82,6 +82,7 @@ export function stackAttemptIdentity(run) {
   return {
     key: [source.key, modelArtifact, harness].map(normalizeIdentityPart).join("|"),
     label: [modelLabel, source.label, harness].filter(Boolean).join(" · "),
+    modelLabel,
     modelSource: source.key,
     backend: source.label,
     modelArtifact,
@@ -125,13 +126,21 @@ export function displayRunError(run) {
 
 export function runCardMediaMessage(run, isCapturing) {
   if (isCapturing) return "Capturing preview media";
-  if (hasCapturedVideo(run)) return "Video ready";
+  if (hasCapturedVideo(run)) return videoReadyMessage(run);
   if (run.status === "failed" || run.capture?.video?.status === "failed") {
     return displayRunError(run) ?? "Capture failed";
   }
   if (run.assets?.html) return "Needs media capture";
   if (run.assets?.preview) return "Preview ready";
   return "Waiting for index.html source";
+}
+
+function videoReadyMessage(run) {
+  const quality = run.capture?.video?.quality;
+  if (quality?.measuredFps && quality?.minFps && quality.measuredFps < quality.minFps) {
+    return "Video ready · slow render " + String(quality.measuredFps) + " FPS";
+  }
+  return "Video ready";
 }
 
 export function runCardIdentity(run, mode) {
@@ -229,6 +238,7 @@ function isBackendSourceLabel(label) {
 function modelSourceLabel(source) {
   if (source === "omlx") return "oMLX";
   if (source === "lmstudio") return "LM Studio";
+  if (source === "custom") return "Custom";
   return source;
 }
 

@@ -1,4 +1,5 @@
 import { basename } from "node:path";
+import { serverBinaryFor, serverExtraArgsFor } from "./server-variants.mjs";
 
 export function buildArgv(profile) {
   if (Array.isArray(profile.commandArgv)) return profile.commandArgv;
@@ -26,17 +27,18 @@ export function buildArgvFromFlags(profile) {
   if (f.repeatPenalty !== undefined) argv.push("--repeat-penalty", String(f.repeatPenalty));
   if (f.batchSize) argv.push("--batch-size", String(f.batchSize));
   if (f.parallel) argv.push("--parallel", String(f.parallel));
+  argv.push(...serverExtraArgsFor(profile));
   return argv;
 }
 
 export function buildShellCommand(profile) {
-  return ["llama-server", ...buildArgv(profile).map(quoteShell)].join(" ");
+  return [quoteShell(serverBinaryFor(profile)), ...buildArgv(profile).map(quoteShell)].join(" ");
 }
 
 export function buildPrettyCommand(profile, options = {}) {
   const argv = buildArgv(profile);
   const prefix = options.exec ? "exec " : "";
-  const lines = [`${prefix}llama-server \\`];
+  const lines = [`${prefix}${quoteShell(serverBinaryFor(profile))} \\`];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = argv[i + 1];
@@ -63,6 +65,10 @@ export function commandFileText(profile) {
 }
 
 export function parseLlamaCommandText(text) {
+  return parseLlamaCommand(text).argv;
+}
+
+export function parseLlamaCommand(text) {
   const logical = text.replace(/\\\r?\n/gu, " ");
   for (const rawLine of logical.split(/\r?\n/u)) {
     const line = stripShellComment(rawLine).trim();
@@ -75,7 +81,7 @@ export function parseLlamaCommandText(text) {
       while (tokens[index]?.includes("=") && !tokens[index]?.startsWith("-") && !isLlamaServerToken(tokens[index])) index += 1;
     }
     const llamaIndex = tokens.findIndex((token, tokenIndex) => tokenIndex >= index && isLlamaServerToken(token));
-    if (llamaIndex !== -1) return tokens.slice(llamaIndex + 1);
+    if (llamaIndex !== -1) return { binary: tokens[llamaIndex], argv: tokens.slice(llamaIndex + 1) };
   }
   throw new Error("Command file must contain a llama-server command.");
 }

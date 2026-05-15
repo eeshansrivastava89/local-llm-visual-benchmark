@@ -13,9 +13,9 @@
   },
   "status": "completed",
   "createdAt": "2026-05-09T04:45:13.227Z",
-  "updatedAt": "2026-05-13T06:52:57.952Z",
+  "updatedAt": "2026-05-13T15:17:59.216Z",
   "preparedAt": "2026-05-09T04:45:13.227Z",
-  "completedAt": "2026-05-13T06:52:57.952Z",
+  "completedAt": "2026-05-13T15:17:59.216Z",
   "runDirectory": "export/runs/sakura/qwen3-6-35b-a3b-d371aa3160/2026-05-09T04-45-13-227Z",
   "assets": {
     "metadata": "metadata.json",
@@ -31,16 +31,16 @@
   "capture": {
     "preview": {
       "status": "ready",
-      "capturedAt": "2026-05-13T06:52:57.952Z"
+      "capturedAt": "2026-05-13T15:17:59.216Z"
     },
     "video": {
       "status": "ready",
-      "capturedAt": "2026-05-13T06:52:57.952Z",
+      "capturedAt": "2026-05-13T15:17:59.216Z",
       "quality": {
-        "measuredFps": 120,
+        "measuredFps": 41.2,
         "minFps": 12,
-        "sampleMs": 1600,
-        "frames": 192,
+        "sampleMs": 1625,
+        "frames": 67,
         "viewport": {
           "width": 1600,
           "height": 900
