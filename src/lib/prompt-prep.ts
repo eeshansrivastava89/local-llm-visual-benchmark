@@ -101,7 +101,7 @@ export function buildToolPrompt(input: {
     "Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat.",
     "",
     "The HTML must include all CSS and JavaScript inline and must not depend on external network assets.",
-    "After building the page, run a visual QA pass with agent-browser: open the saved index.html, inspect the rendered result, and fix any obvious layout, animation, console, or viewport issues before you finish.",
+    "After building the page, run a visual QA pass with agent-browser or Playwright: open the saved index.html, inspect the rendered result, and fix any obvious layout, animation, console, or viewport issues before you finish.",
     "",
     input.benchmark.prompt.trim()
   ].join("\n");

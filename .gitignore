@@ -34,6 +34,7 @@ app/**/*.webm
 *.log
 .tmp-qa/
 .superpowers/
+.local-llm/
 
 # Local agent context
 .claude/

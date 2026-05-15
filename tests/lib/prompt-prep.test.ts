@@ -48,9 +48,9 @@ describe("prepareRun", () => {
     expect(prepared.prompt).toContain("do not print the HTML in chat");
     expect(prepared.prompt).not.toContain("1280x720");
     expect(prepared.prompt).not.toContain("agent-browser path:");
-    expect(prepared.prompt).toContain("run a visual QA pass with agent-browser");
+    expect(prepared.prompt).toContain("run a visual QA pass with agent-browser or Playwright");
     expect(prepared.prompt).toContain("open the saved index.html");
-    expect(prepared.prompt).not.toContain("Playwright");
+    expect(prepared.prompt).toContain("Playwright");
     expect(prepared.prompt).toContain("Animate a cherry blossom tree.");
     expect(prepared.prompt).not.toContain("preview.png");
     await expect(stat(prepared.paths.runDirectory)).resolves.toBeTruthy();
