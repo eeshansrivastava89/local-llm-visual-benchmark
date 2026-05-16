@@ -31,7 +31,7 @@ Shows all downloaded models. Models that already have profiles are marked as set
 Setup asks which llama.cpp build to use:
 
 - **Standard llama.cpp**: uses `llama-server`, provider `llama-cpp`, and port `8080`.
-- **MTP llama.cpp**: uses `/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server`, provider `llama-cpp-mtp`, port `8081`, and adds `--spec-type draft-mtp --spec-draft-n-max 2`.
+- **MTP llama.cpp**: uses the upstream MTP-capable build at `/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server`, provider `llama-cpp-mtp`, port `8081`, and adds `--spec-type draft-mtp --spec-draft-n-max 2`.
 
 Models with `MTP` in the name default to the MTP choice, but you can override it.
 
@@ -39,16 +39,16 @@ Creates a profile folder:
 
 ```text
 .local-llm/profiles/<profile-id>/
-  profile.json       # small metadata only: id, label, provider, server variant
-  llama-server.sh    # source of truth for every launch flag
+  profile.json       # display metadata only: id, label, provider, server variant
+  llama-server.sh    # source of truth for runtime flags, model path, and alias
   notes.md           # scratch notes for this local profile
 ```
 
-For existing profiles, edit `llama-server.sh` directly; `setup <profile> --sync both` only syncs Pi/OpenCode from that command file.
+For existing profiles, edit `profile.json` for the friendly list label and edit `llama-server.sh` for runtime details. `setup <profile> --sync both` only syncs Pi/OpenCode from that command file.
 
 ### MTP models
 
-For MTP GGUFs, choose **MTP llama.cpp** during setup. The CLI writes the separate MTP binary and speculative-decoding flags into `llama-server.sh`, stores `providerId: "llama-cpp-mtp"` in `profile.json`, and syncs Pi/OpenCode under that provider.
+For MTP GGUFs, choose **MTP llama.cpp** during setup. The CLI writes the local upstream MTP-capable binary and speculative-decoding flags into `llama-server.sh`, stores `providerId: "llama-cpp-mtp"` in `profile.json`, and syncs Pi/OpenCode under that provider.
 
 Only one server can use port `8081` at a time. If you want to run multiple MTP profiles concurrently, edit the `--port` in that profile's `llama-server.sh`, then run `local-llm setup <profile-id> --sync both`.
 
@@ -58,7 +58,7 @@ Only one server can use port `8081` at a time. If you want to run multiple MTP p
 local-llm list
 ```
 
-Shows saved profiles and downloaded models that are not set up yet. Pick a number to inspect details.
+Shows saved profiles with the friendly `profile.json` label first, then the profile id, server alias, and endpoint. Downloaded models that are not set up yet show the inferred label plus the alias that setup will suggest. Pick a number to inspect details.
 
 Direct inspect still works if you already know the profile id:
 
@@ -99,7 +99,7 @@ Open the command file and edit the `llama-server` command directly:
 $EDITOR .local-llm/profiles/qwen36-27b-mtp/llama-server.sh
 ```
 
-Add, remove, or reorder flags as plain shell text. `list`, `run`, memory estimates, and Pi/OpenCode sync all read this file as the source of truth. Do not edit `profile.json` for context/cache/model/server changes.
+Add, remove, or reorder flags as plain shell text. `list`, `run`, memory estimates, and Pi/OpenCode sync all read this file as the source of truth for runtime behavior. Edit `profile.json` only for display metadata like `label`; do not use it for context/cache/model/server changes.
 
 ## Sync Pi/OpenCode config
 

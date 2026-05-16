@@ -54,8 +54,8 @@ async function listAll(options = {}) {
         const index = items.push({ type: "profile", profile });
         const running = await isProfileRunning(profile);
         const timestamp = await profileTimestamp(profile.id);
-        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.cyan(profile.id)} ${profile.label} ${colors.dim(relativeTime(timestamp))}`);
-        console.log(`    ${profile.baseUrl} · ${profile.modelAlias}`);
+        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
+        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}`);
       }
     }
     console.log("");
@@ -69,6 +69,7 @@ async function listAll(options = {}) {
     for (const model of visibleModels) {
       const index = items.push({ type: "model", model });
       console.log(`${String(index).padStart(2, " ")}. ${colors.cyan(model.label)} ${colors.dim(model.quant ?? "")}`);
+      console.log(`    alias:  ${colors.cyan(model.aliasSuggestion)}`);
       console.log(`    model:  ${model.path}`);
       console.log(`    mmproj: ${model.mmprojPath ?? colors.dim("none found")}`);
       console.log(`    size:   ${formatBytes(model.sizeBytes)}`);
@@ -81,8 +82,8 @@ async function listAll(options = {}) {
       const selected = await prompt.choice("Inspect", [
         ...items.map((item, index) => ({
           value: String(index),
-          label: item.type === "profile" ? item.profile.id : item.model.label,
-          hint: item.type === "profile" ? item.profile.modelAlias : "needs setup"
+          label: item.type === "profile" ? item.profile.label : item.model.label,
+          hint: item.type === "profile" ? `${item.profile.id} · ${item.profile.modelAlias}` : `alias: ${item.model.aliasSuggestion}`
         })),
         { value: "__done", label: "Done" }
       ], "__done");
@@ -103,6 +104,7 @@ function renderModelDetails(model) {
   const suggestedId = slugFromLabel(model.label);
   const lines = [
     colors.bold(model.label),
+    `Alias:  ${model.aliasSuggestion}`,
     `Model:  ${model.path}`,
     `MMProj: ${model.mmprojPath ?? "none"}`,
     `Size:   ${formatBytes(model.sizeBytes)}`,
@@ -151,8 +153,8 @@ async function setupCommand(argv) {
       const profile = profileByModelPath.get(model.path);
       return {
         value: model.path,
-        label: profile ? `${model.label}  ✓ profiled as ${profile.id}` : model.label,
-        hint: profile ? `${profile.baseUrl} · ${profile.modelAlias}` : `${formatBytes(model.sizeBytes)}${model.mmprojPath ? " · vision" : ""}`
+        label: profile ? `${profile.label}  ✓ profiled` : model.label,
+        hint: profile ? `${profile.id} · ${profile.modelAlias} · ${profile.baseUrl}` : `alias: ${model.aliasSuggestion} · ${formatBytes(model.sizeBytes)}${model.mmprojPath ? " · vision" : ""}`
       };
     });
     const unprofiled = models.find((model) => !profileByModelPath.has(model.path));
@@ -267,8 +269,8 @@ async function interactiveRunSelection(options) {
   try {
     const profileId = await prompt.choice("Profile", await Promise.all(profiles.map(async (profile) => ({
       value: profile.id,
-      label: profile.id,
-      hint: `${await isProfileRunning(profile) ? "running" : profile.label} · ${profile.baseUrl}`
+      label: profile.label,
+      hint: `${await isProfileRunning(profile) ? "running" : profile.id} · ${profile.modelAlias} · ${profile.baseUrl}`
     }))), profiles[0].id);
     const profile = profiles.find((item) => item.id === profileId);
     if (!profile) throw new Error(`Selected profile disappeared: ${profileId}`);

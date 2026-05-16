@@ -9,7 +9,7 @@ export const SERVER_VARIANTS = {
   },
   mtp: {
     label: "MTP llama.cpp",
-    hint: "separate MTP build on port 8081",
+    hint: "local upstream MTP build on port 8081",
     providerId: "llama-cpp-mtp",
     binary: "/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server",
     flags: { port: 8081 },
