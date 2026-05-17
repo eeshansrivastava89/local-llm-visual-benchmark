@@ -9,7 +9,7 @@ import { buildPrettyCommand } from "./command.mjs";
 import { renderEstimate, renderEstimateExplanation } from "./estimate.mjs";
 import { colors, createPrompt, formatBytes, printHelp, relativeTime, renderRows, startInteractive } from "./ui.mjs";
 import { hasOpenCodeModel, hasPiModel, launchHarness, syncOpenCodeConfig, syncPiConfig } from "./harnesses.mjs";
-import { isProfileRunning, serverReady, startServer, stopProfile, waitForReady } from "./process.mjs";
+import { isProfileRunning, profileRuntimeStatus, serverReady, startServer, stopProfile, waitForReady } from "./process.mjs";
 import { tailFriendly } from "./logs.mjs";
 import { inferServerVariantId, SERVER_VARIANTS, serverBinaryFor } from "./server-variants.mjs";
 
@@ -54,8 +54,9 @@ async function listAll(options = {}) {
         const index = items.push({ type: "profile", profile });
         const running = await isProfileRunning(profile);
         const timestamp = await profileTimestamp(profile.id);
+        const missing = missingProfileFiles(profile);
         console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
-        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}`);
+        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${missing ? ` · ${colors.red(missing)}` : ""}`);
       }
     }
     console.log("");
@@ -267,11 +268,14 @@ async function interactiveRunSelection(options) {
 
   const prompt = createPrompt();
   try {
-    const profileId = await prompt.choice("Profile", await Promise.all(profiles.map(async (profile) => ({
-      value: profile.id,
-      label: profile.label,
-      hint: `${await isProfileRunning(profile) ? "running" : profile.id} · ${profile.modelAlias} · ${profile.baseUrl}`
-    }))), profiles[0].id);
+    const profileId = await prompt.choice("Profile", await Promise.all(profiles.map(async (profile) => {
+      const missing = missingProfileFiles(profile);
+      return {
+        value: profile.id,
+        label: profile.label,
+        hint: `${await isProfileRunning(profile) ? "running" : profile.id} · ${profile.modelAlias} · ${profile.baseUrl}${missing ? ` · ${missing}` : ""}`
+      };
+    })), profiles[0].id);
     const profile = profiles.find((item) => item.id === profileId);
     if (!profile) throw new Error(`Selected profile disappeared: ${profileId}`);
     const requestedHarness = options.with;
@@ -292,6 +296,7 @@ async function runProfile(profile, options) {
   if (withHarness && !["pi", "opencode"].includes(withHarness)) throw new Error("--with must be pi or opencode.");
   if (withHarness === "pi" && !(await hasPiModel(profile))) throw new Error(`Pi config is missing ${profile.harnesses.pi.model}. Run setup and choose pi/both config sync.`);
   if (withHarness === "opencode" && !(await hasOpenCodeModel(profile))) throw new Error(`OpenCode config is missing ${profile.harnesses.opencode.model}. Run setup and choose opencode/both config sync.`);
+  assertProfileFiles(profile);
 
   const ready = await serverReady(profile.baseUrl);
   if (ready && !options["reuse-existing"]) throw new Error(`${profile.baseUrl}/models already responds. Rerun with --reuse-existing to use it explicitly.`);
@@ -327,9 +332,93 @@ async function runProfile(profile, options) {
 }
 
 async function stopCommand(argv) {
-  const profile = await readProfileArg(argv);
+  await ensureLocalDirs();
+  const { positional, options } = parseOptions(argv);
+  if (options.all) return stopAllRunningProfiles();
+  if (positional[0]) return stopOneProfile(positional[0]);
+  return stopInteractive();
+}
+
+async function stopOneProfile(id) {
+  const profile = await readProfile(id);
   const result = await stopProfile(profile);
   console.log(result.stopped ? colors.green(result.message) : colors.yellow(result.message));
+}
+
+async function stopAllRunningProfiles() {
+  const running = await runningProfileStatuses();
+  if (running.length === 0) {
+    console.log(colors.dim("No tracked local-llm servers are running."));
+    return;
+  }
+  for (const item of running) {
+    const result = await stopProfile(item.profile);
+    console.log(result.stopped ? colors.green(result.message) : colors.yellow(result.message));
+  }
+}
+
+async function stopInteractive() {
+  const statuses = await allProfileStatuses();
+  const running = statuses.filter((item) => item.status.running);
+  if (running.length === 0) {
+    console.log(colors.dim("No tracked local-llm servers are running."));
+    const responding = statuses.filter((item) => item.status.ready);
+    if (responding.length > 0) {
+      console.log(colors.yellow("Some configured endpoints respond, but local-llm has no tracked pid to stop:"));
+      for (const item of responding) {
+        console.log(`  ${item.profile.label} · ${item.profile.baseUrl}`);
+      }
+    }
+    return;
+  }
+
+  if (process.stdin.isTTY) startInteractive("local-llm stop");
+  console.log(colors.bold("Running local-llm servers"));
+  printRuntimeList(running);
+
+  if (!process.stdin.isTTY) {
+    console.log(colors.dim("Stop one with: local-llm stop <profile-id>"));
+    console.log(colors.dim("Stop all with: local-llm stop --all"));
+    return;
+  }
+
+  const prompt = createPrompt();
+  try {
+    const choices = running.map(({ profile, status }) => ({
+      value: profile.id,
+      label: profile.label,
+      hint: `pid ${status.pid} · ${formatBytes(status.rssBytes)} RSS · ${status.ready ? "ready" : "loading"}`
+    }));
+    if (running.length > 1) choices.unshift({ value: "__all", label: "Stop all running servers", hint: `${running.length} tracked processes` });
+    choices.push({ value: "__cancel", label: "Cancel", hint: "leave servers running" });
+    const selected = await prompt.choice("Stop", choices, choices[0].value);
+    if (selected === "__cancel") return;
+    const targets = selected === "__all" ? running : running.filter((item) => item.profile.id === selected);
+    for (const item of targets) {
+      const result = await stopProfile(item.profile);
+      console.log(result.stopped ? colors.green(result.message) : colors.yellow(result.message));
+    }
+  } finally {
+    prompt.close();
+  }
+}
+
+async function allProfileStatuses() {
+  const profiles = await loadProfiles();
+  return Promise.all(profiles.map(async (profile) => ({ profile, status: await profileRuntimeStatus(profile) })));
+}
+
+async function runningProfileStatuses() {
+  return (await allProfileStatuses()).filter((item) => item.status.running);
+}
+
+function printRuntimeList(items) {
+  for (const { profile, status } of items) {
+    const started = status.startedAt ? relativeTime(status.startedAt) : "unknown start";
+    console.log(`  ${colors.green("●")} ${colors.bold(profile.label)}`);
+    console.log(`    id: ${colors.cyan(profile.id)} · pid: ${status.pid} · RSS: ${colors.cyan(formatBytes(status.rssBytes))} · ${status.ready ? colors.green("ready") : colors.yellow("loading")}`);
+    console.log(`    ${profile.baseUrl} · started ${started}`);
+  }
 }
 
 async function syncHarnessConfigs(profile, sync) {
@@ -348,6 +437,7 @@ async function renderFullProfile(profile) {
   const commandText = await readFile(profile.commandPath, "utf8").catch(() => buildPrettyCommand(profile));
   const piConfigured = await hasPiModel(profile);
   const openCodeConfigured = await hasOpenCodeModel(profile);
+  const missing = missingProfileFiles(profile);
   return [
     colors.bold(colors.cyan(profile.label)),
     "",
@@ -357,13 +447,13 @@ async function renderFullProfile(profile) {
       ["Provider", colors.cyan(profile.providerId)],
       ["Server", colors.dim(serverBinaryFor(profile))],
       ["Alias", colors.cyan(profile.modelAlias)],
-      ["Model", colors.dim(profile.modelPath)],
-      ["MMProj", profile.mmprojPath ? colors.dim(profile.mmprojPath) : colors.yellow("none")]
+      ["Model", renderPathStatus(profile.modelPath, "missing --model")],
+      ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")]
     ])),
     "",
-    renderSection("Memory", withoutFirstLine(renderEstimate(profile))),
+    renderSection("Memory", missing ? colors.red(`Unavailable: ${missing}`) : withoutFirstLine(renderEstimate(profile))),
     "",
-    renderSection("How estimate works", withoutFirstLine(renderEstimateExplanation(profile))),
+    renderSection("How estimate works", missing ? colors.red("Restore missing files to calculate memory estimates.") : withoutFirstLine(renderEstimateExplanation(profile))),
     "",
     renderSection("Harness", renderRows([
       ["Pi", `${configBadge(piConfigured)} ${colors.cyan(profile.harnesses.pi.model)}`],
@@ -390,9 +480,26 @@ function renderProfileSummary(profile) {
     ["Provider", colors.cyan(profile.providerId)],
     ["Server", colors.dim(serverBinaryFor(profile))],
     ["Alias", colors.cyan(profile.modelAlias)],
-    ["Model", colors.dim(profile.modelPath)],
-    ["MMProj", profile.mmprojPath ? colors.dim(profile.mmprojPath) : colors.yellow("none")]
+    ["Model", renderPathStatus(profile.modelPath, "missing --model")],
+    ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")]
   ]));
+}
+
+function assertProfileFiles(profile) {
+  const missing = missingProfileFiles(profile);
+  if (missing) throw new Error(`Cannot run ${profile.label}: ${missing}. Re-download it in LM Studio or edit ${profile.commandPath}.`);
+}
+
+function missingProfileFiles(profile) {
+  const missing = [];
+  if (!profile.modelPath || !existsSync(profile.modelPath)) missing.push("model not in LM Studio");
+  if (profile.mmprojPath && !existsSync(profile.mmprojPath)) missing.push("mmproj missing");
+  return missing.join(", ");
+}
+
+function renderPathStatus(path, missingLabel) {
+  if (!path) return colors.red(missingLabel);
+  return existsSync(path) ? colors.dim(path) : `${colors.red(missingLabel)} ${colors.dim(path)}`;
 }
 
 function renderSection(title, body) {

@@ -58,7 +58,7 @@ Only one server can use port `8081` at a time. If you want to run multiple MTP p
 local-llm list
 ```
 
-Shows saved profiles with the friendly `profile.json` label first, then the profile id, server alias, and endpoint. Downloaded models that are not set up yet show the inferred label plus the alias that setup will suggest. Pick a number to inspect details.
+Shows saved profiles with the friendly `profile.json` label first, then the profile id, server alias, and endpoint. If the model or mmproj file was deleted from LM Studio, the profile is still listed but marked in red so you can fix or remove it. Downloaded models that are not set up yet show the inferred label plus the alias that setup will suggest. Pick a number to inspect details.
 
 Direct inspect still works if you already know the profile id:
 
@@ -86,10 +86,12 @@ When the CLI starts the server for Pi/OpenCode, it stops that server again after
 ### Stop
 
 ```bash
+local-llm stop
 local-llm stop qwen36-27b-mtp
+local-llm stop --all
 ```
 
-This is the safety command for server-only runs or kept-alive servers.
+With no profile id, `stop` shows tracked running servers first, including pid, readiness, and RSS memory, then lets you pick one to stop. Use `--all` when you want to stop every tracked local-llm server immediately. If nothing is loaded, it exits with a short "No tracked local-llm servers are running" message.
 
 ## Edit llama.cpp flags
 

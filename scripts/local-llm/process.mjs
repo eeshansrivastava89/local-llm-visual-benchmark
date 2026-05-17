@@ -1,4 +1,5 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
 import { existsSync, openSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -6,6 +7,8 @@ import { buildShellCommand } from "./command.mjs";
 import { LOG_DIR } from "./paths.mjs";
 import { ensureProfileCommand, readState, writeState } from "./profiles.mjs";
 import { colors } from "./ui.mjs";
+
+const execFileAsync = promisify(execFile);
 
 export async function startServer(profile) {
   profile = await ensureProfileCommand(profile);
@@ -54,12 +57,17 @@ export async function waitForReady(profile, pid, rawLogPath) {
 export async function stopProfile(profile) {
   const state = await readState(profile.id);
   if (!state?.pid) return { stopped: false, message: `No state pid for ${profile.id}.` };
+  if (!pidAlive(state.pid)) {
+    await writeState(profile.id, { ...state, pid: null, stoppedAt: new Date().toISOString(), stopReason: "pid-not-running" });
+    return { stopped: false, message: `${profile.id} pid ${state.pid} is no longer running.` };
+  }
   try {
     try {
       process.kill(-state.pid, "SIGTERM");
     } catch {
       process.kill(state.pid, "SIGTERM");
     }
+    await writeState(profile.id, { ...state, pid: null, stoppedAt: new Date().toISOString(), stopSignal: "SIGTERM" });
     return { stopped: true, message: `Stopped ${profile.id} pid ${state.pid}` };
   } catch (error) {
     return { stopped: false, message: `Could not stop pid ${state.pid}: ${error.message}` };
@@ -69,6 +77,23 @@ export async function stopProfile(profile) {
 export async function isProfileRunning(profile) {
   const state = await readState(profile.id);
   return Boolean(state?.pid && pidAlive(state.pid));
+}
+
+export async function profileRuntimeStatus(profile) {
+  const state = await readState(profile.id);
+  const running = Boolean(state?.pid && pidAlive(state.pid));
+  const [ready, rssBytes] = await Promise.all([
+    serverReady(profile.baseUrl),
+    running ? pidRssBytes(state.pid) : Promise.resolve(null)
+  ]);
+  return {
+    state,
+    pid: state?.pid ?? null,
+    running,
+    ready,
+    rssBytes,
+    startedAt: state?.startedAt ? new Date(state.startedAt) : null
+  };
 }
 
 export async function serverReady(baseUrl) {
@@ -86,6 +111,16 @@ function pidAlive(pid) {
     return true;
   } catch {
     return false;
+  }
+}
+
+async function pidRssBytes(pid) {
+  try {
+    const { stdout } = await execFileAsync("ps", ["-o", "rss=", "-p", String(pid)]);
+    const rssKb = Number(stdout.trim().split(/\s+/u)[0]);
+    return Number.isFinite(rssKb) ? rssKb * 1024 : null;
+  } catch {
+    return null;
   }
 }
 

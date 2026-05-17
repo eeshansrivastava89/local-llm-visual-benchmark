@@ -17,7 +17,7 @@ export function printHelp() {
   console.log("  scripts/local-llm.mjs list [profile-id]");
   console.log("  scripts/local-llm.mjs setup [profile]");
   console.log("  scripts/local-llm.mjs run [profile] [--with pi|opencode] [--reuse-existing] [--keep-server]");
-  console.log("  scripts/local-llm.mjs stop <profile>");
+  console.log("  scripts/local-llm.mjs stop [profile|--all]");
 }
 
 export function formatBytes(bytes) {
