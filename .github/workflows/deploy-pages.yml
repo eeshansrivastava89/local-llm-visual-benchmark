@@ -47,6 +47,10 @@ jobs:
         env:
           STATIC_USE_EXISTING_EXPORT: "true"
           ASTRO_BASE: "/"
+          PUBLIC_ENABLE_ANALYTICS: "true"
+          PUBLIC_POSTHOG_KEY: "phc_zfue5Ca8VaxypRHPCi9j2h2R3Qy1eytEHt3TMPWlOOS"
+          PUBLIC_POSTHOG_HOST: "https://api-v2.eeshans.com"
+          PUBLIC_POSTHOG_UI_HOST: "https://us.posthog.com"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

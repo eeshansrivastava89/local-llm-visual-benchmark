@@ -151,6 +151,7 @@ select.input:hover { border-color: color-mix(in srgb, var(--primary), var(--app-
 .btn-sm-danger { background: oklch(0.97 0.018 28); color: oklch(0.45 0.12 28); border-color: oklch(0.78 0.06 28); }
 .btn-sm-danger:hover { background: oklch(0.93 0.035 28); }
 .icon-only-btn { width: 2.1rem; padding: 0; }
+.source-pill { white-space: nowrap; font-weight: 650; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 button:disabled, [aria-disabled="true"] { cursor: not-allowed; opacity: 0.55; }
 .input::placeholder { color: color-mix(in srgb, var(--muted-foreground), transparent 20%); }

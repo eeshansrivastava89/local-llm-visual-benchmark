@@ -93,13 +93,13 @@ You can use any harness that can create the requested `index.html` file. OpenCod
 After you capture some runs locally:
 
 ```bash
-npm run build:static
+npm run publish
 git add public/export
 git commit -m "data: publish gallery update"
 git push
 ```
 
-That refreshes the publish-safe gallery snapshot in `public/export/` and creates a smoke-testable static site in:
+That single publish command refreshes the publish-safe gallery snapshot in `public/export/`, runs checks/tests, and creates a smoke-testable static site in:
 
 ```text
 dist-static/
@@ -109,7 +109,7 @@ The GitHub Pages workflow deploys the static build at the custom domain root `ht
 
 For this repository, GitHub Pages is deployed by `.github/workflows/deploy-pages.yml` on every push to `main`. The live site should be configured to use **GitHub Actions** as its Pages source. There is no separate gallery branch: `main` contains the app code plus the publish-safe `public/export/` snapshot that the workflow deploys.
 
-New captured results still start locally in ignored `runs/`. Running `npm run build:static` copies only the public-safe parts into `public/export/`; CI then reuses that committed snapshot rather than reading local `runs/`.
+New captured results still start locally in ignored `runs/`. Running `npm run publish` copies only the public-safe parts into `public/export/`; CI then reuses that committed snapshot rather than reading local `runs/`.
 
 The static export includes benchmark metadata, summary run metadata, preview images, MP4 preview videos, and a build-time machine profile for the header pill. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, local WebM captures, or operational controls.
 
@@ -137,7 +137,8 @@ Captured videos default to 20 seconds at 1600×900. The defaults are defined in 
 ```bash
 npm run dev           # local app with operational controls
 npm run build         # server/API build
-npm run build:static  # static gallery export
+npm run build:static  # static gallery build from existing export
+npm run publish       # refresh export, validate, and build static site
 npm test              # unit tests
 npm run test:e2e      # Playwright tests
 npm run check         # Astro + TypeScript checks
@@ -147,6 +148,7 @@ npm run check         # Astro + TypeScript checks
 
 - Runs are local by default.
 - oMLX and LM Studio stay on your machine.
+- The production site may use PostHog pageview analytics; local builds keep analytics disabled unless explicitly enabled with public env vars.
 - The app only publishes captured media, the benchmark prompt text, publish-safe summary metadata, and a build-time machine profile when you build the static export.
 - Raw generated HTML, prepared run prompts, raw responses, stream logs, launch commands, local service URLs, and local filesystem paths are kept local and are not included in the published workbench.
 

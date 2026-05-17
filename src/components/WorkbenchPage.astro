@@ -1,4 +1,5 @@
 ---
+import PostHog from "./PostHog.astro";
 import "../styles/global.css";
 
 const title = "Local LLM Visual Benchmark";
@@ -15,6 +16,7 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href={`${basePath}favicon.svg`} />
+    <PostHog />
     <script is:inline>
       try {
         const savedTheme = localStorage.getItem("theme");
@@ -42,6 +44,10 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
           </a>
 
           <div class="header-actions flex shrink-0 items-center gap-2">
+            <a class="btn-sm-outline source-pill" href="https://github.com/eeshansrivastava89/local-llm-visual-benchmark" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub">
+              <span class="ui-icon" aria-hidden="true" style={iconStyle("github")}></span>
+              <span>Source</span>
+            </a>
             <span class="badge-outline machine-pill gap-1.5 text-xs" id="statsPill" data-tooltip="Machine profile loading." tabindex="0" role="status" aria-label="Machine profile">
               <span class="ui-icon" aria-hidden="true" style={iconStyle("sparkles")}></span>
               <span id="statsDot" class="status-dot" data-state="checking"></span>

@@ -14,7 +14,7 @@
   },
   "status": "completed",
   "createdAt": "2026-05-15T06:02:06.424Z",
-  "updatedAt": "2026-05-15T06:38:18.325Z",
+  "updatedAt": "2026-05-17T02:21:43.397Z",
   "preparedAt": "2026-05-15T06:02:06.424Z",
   "completedAt": "2026-05-15T06:38:18.325Z",
   "runDirectory": "export/runs/snow-globe-village/qwen3-6-27b-mtp-1157debd8e/2026-05-15T06-02-06-424Z",
@@ -25,9 +25,8 @@
   },
   "runner": {
     "mode": "external",
-    "modelSource": "lmstudio",
     "intendedRunner": "Pi",
-    "backendLabel": "LM Studio",
+    "backendLabel": "llama.cpp",
     "model": "qwen3.6-27b-mtp",
     "retries": 0
   },

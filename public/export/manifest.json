@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-17T02:03:03.877Z",
+  "generatedAt": "2026-05-17T03:15:58.224Z",
   "benchmarks": [
     {
       "id": "macro-wildflower-meadow",
@@ -37,6 +37,59 @@
     {
       "schemaVersion": 1,
       "kind": "visual",
+      "runId": "2026-05-15T06-02-06-424Z",
+      "benchmark": {
+        "id": "snow-globe-village",
+        "title": "Snow Globe Village",
+        "description": "Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.",
+        "prompt": "Create a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport at all common screen sizes, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.\n\nAnimate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.\n\nMake the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.\n\nThe animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "qwen3.6-27b-mtp",
+        "slug": "qwen3-6-27b-mtp-1157debd8e"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-15T06:02:06.424Z",
+      "updatedAt": "2026-05-17T02:21:43.397Z",
+      "preparedAt": "2026-05-15T06:02:06.424Z",
+      "completedAt": "2026-05-15T06:38:18.325Z",
+      "runDirectory": "export/runs/snow-globe-village/qwen3-6-27b-mtp-1157debd8e/2026-05-15T06-02-06-424Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "intendedRunner": "Pi",
+        "backendLabel": "llama.cpp",
+        "model": "qwen3.6-27b-mtp",
+        "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-15T06:38:18.325Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-15T06:38:18.325Z",
+          "quality": {
+            "measuredFps": 120.1,
+            "minFps": 12,
+            "sampleMs": 1607,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
       "runId": "2026-05-16T18-53-07-261Z",
       "benchmark": {
         "id": "snow-globe-village",
@@ -50,7 +103,7 @@
       },
       "status": "completed",
       "createdAt": "2026-05-16T18:53:07.261Z",
-      "updatedAt": "2026-05-16T19:13:52.275Z",
+      "updatedAt": "2026-05-17T02:21:36.593Z",
       "preparedAt": "2026-05-16T18:53:07.261Z",
       "completedAt": "2026-05-16T19:13:52.275Z",
       "runDirectory": "export/runs/snow-globe-village/qwen3-6-35b-a3b-mtp-8a33bb4733/2026-05-16T18-53-07-261Z",
@@ -61,9 +114,8 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
         "intendedRunner": "Pi",
-        "backendLabel": "LM Studio",
+        "backendLabel": "llama.cpp",
         "model": "qwen3.6-35b-a3b-mtp",
         "retries": 0
       },
@@ -187,60 +239,6 @@
             "minFps": 12,
             "sampleMs": 1600,
             "frames": 192,
-            "viewport": {
-              "width": 1600,
-              "height": 900
-            }
-          }
-        }
-      }
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "visual",
-      "runId": "2026-05-15T06-02-06-424Z",
-      "benchmark": {
-        "id": "snow-globe-village",
-        "title": "Snow Globe Village",
-        "description": "Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.",
-        "prompt": "Create a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport at all common screen sizes, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.\n\nAnimate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.\n\nMake the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.\n\nThe animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
-      },
-      "model": {
-        "id": "qwen3.6-27b-mtp",
-        "slug": "qwen3-6-27b-mtp-1157debd8e"
-      },
-      "status": "completed",
-      "createdAt": "2026-05-15T06:02:06.424Z",
-      "updatedAt": "2026-05-15T06:38:18.325Z",
-      "preparedAt": "2026-05-15T06:02:06.424Z",
-      "completedAt": "2026-05-15T06:38:18.325Z",
-      "runDirectory": "export/runs/snow-globe-village/qwen3-6-27b-mtp-1157debd8e/2026-05-15T06-02-06-424Z",
-      "assets": {
-        "metadata": "metadata.json",
-        "preview": "preview.png",
-        "videoMp4": "preview.mp4"
-      },
-      "runner": {
-        "mode": "external",
-        "modelSource": "lmstudio",
-        "intendedRunner": "Pi",
-        "backendLabel": "LM Studio",
-        "model": "qwen3.6-27b-mtp",
-        "retries": 0
-      },
-      "capture": {
-        "preview": {
-          "status": "ready",
-          "capturedAt": "2026-05-15T06:38:18.325Z"
-        },
-        "video": {
-          "status": "ready",
-          "capturedAt": "2026-05-15T06:38:18.325Z",
-          "quality": {
-            "measuredFps": 120.1,
-            "minFps": 12,
-            "sampleMs": 1607,
-            "frames": 193,
             "viewport": {
               "width": 1600,
               "height": 900
@@ -1463,7 +1461,7 @@
     }
   ],
   "machineProfile": {
-    "collectedAt": "2026-05-17T02:03:03.878Z",
+    "collectedAt": "2026-05-17T03:15:58.224Z",
     "platform": {
       "node": "v26.0.0",
       "platform": "darwin",
@@ -1473,7 +1471,7 @@
       "type": "Darwin",
       "release": "25.4.0",
       "hostname": "Eeshans-MacBook-Pro-16.local",
-      "uptimeSeconds": 261556
+      "uptimeSeconds": 265931
     },
     "cpu": {
       "model": "Apple M4 Pro",
@@ -1482,10 +1480,10 @@
     },
     "memory": {
       "totalBytes": 51539607552,
-      "availableBytes": 26787938304,
-      "freeBytes": 5374083072,
-      "usedBytes": 24751669248,
-      "pressurePercent": 48,
+      "availableBytes": 27741732864,
+      "freeBytes": 9762865152,
+      "usedBytes": 23797874688,
+      "pressurePercent": 46.2,
       "pressureLabel": "low",
       "source": "macOS VM stats, cached and purgeable memory excluded"
     },

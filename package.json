@@ -11,6 +11,7 @@
     "build": "astro build",
     "export:static": "node src/lib/export.ts",
     "build:static": "node scripts/build-static.mjs",
+    "publish": "node scripts/publish.mjs",
     "preview": "astro preview",
     "check": "astro check && tsc --noEmit",
     "test": "vitest run",
