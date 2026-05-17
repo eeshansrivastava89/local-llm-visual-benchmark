@@ -12,12 +12,17 @@
 
 [Live workbench](https://localai.eeshans.com/) • [Source](https://github.com/eeshansrivastava89/local-llm-visual-benchmark) • [eeshans.com](https://eeshans.com)
 
+<img width="1467" height="897" alt="image" src="https://github.com/user-attachments/assets/6499b82d-1cba-402e-b2c6-eca3f3b6076e" />
+
+
+> **Requirements:** [Node.js 24+](https://nodejs.org/) and an Apple Silicon local model source such as [oMLX](https://omlx.ai/) or [LM Studio](https://lmstudio.ai/). OpenCode, Pi, Hermes, LM Studio chat, or another local coding harness can run the generated prompts.
+
+
 ```bash
 npm install
 npm run dev
 ```
 
-> **Requirements:** [Node.js 24+](https://nodejs.org/) and an Apple Silicon local model source such as [oMLX](https://omlx.ai/) or [LM Studio](https://lmstudio.ai/). OpenCode, Pi, Hermes, LM Studio chat, or another local coding harness can run the generated prompts.
 
 </div>
 
