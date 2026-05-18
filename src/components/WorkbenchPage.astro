@@ -88,28 +88,35 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
               <button type="button" class="view-tab" data-mode="table" aria-pressed="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("table-2")}></span>Table</button>
             </div>
             <div class="toolbar-filters">
-              <div class="dropdown-wrap">
-                <select id="modelFilter" class="input text-sm" aria-label="Filter by model">
-                  <option value="all">All models</option>
-                </select>
+              <button type="button" class="btn-sm-outline filters-toggle" id="filtersToggle" aria-expanded="false" aria-controls="toolbarFilterGroup">
+                <span class="ui-icon" aria-hidden="true" style={iconStyle("settings")}></span>
+                <span>Filters</span>
+                <span class="filters-toggle-count" id="filtersToggleCount" hidden>0</span>
+              </button>
+              <div class="toolbar-filter-group" id="toolbarFilterGroup">
+                <div class="dropdown-wrap">
+                  <select id="modelFilter" class="input text-sm" aria-label="Filter by model" disabled data-loading="true">
+                    <option value="all">All models</option>
+                  </select>
+                </div>
+                <div class="dropdown-wrap">
+                  <select id="benchmarkFilter" class="input text-sm" aria-label="Filter by prompt" disabled data-loading="true">
+                    <option value="all">All prompts</option>
+                  </select>
+                </div>
+                <div class="dropdown-wrap">
+                  <select id="harnessFilter" class="input text-sm" aria-label="Filter by harness" disabled data-loading="true">
+                    <option value="all">All harnesses</option>
+                  </select>
+                </div>
+                <input
+                  id="runsSearch"
+                  class="input text-sm"
+                  type="search"
+                  aria-label="Search runs"
+                  placeholder="Search runs, models, prompts, harnesses"
+                />
               </div>
-              <div class="dropdown-wrap">
-                <select id="benchmarkFilter" class="input text-sm" aria-label="Filter by prompt">
-                  <option value="all">All prompts</option>
-                </select>
-              </div>
-              <div class="dropdown-wrap">
-                <select id="harnessFilter" class="input text-sm" aria-label="Filter by harness">
-                  <option value="all">All harnesses</option>
-                </select>
-              </div>
-              <input
-                id="runsSearch"
-                class="input text-sm"
-                type="search"
-                aria-label="Search runs"
-                placeholder="Search runs, models, prompts, harnesses"
-              />
               <button type="button" class="btn-sm-outline operational-control" id="refreshRuns" data-icon="refresh-cw"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Refresh</button>
             </div>
           </div>

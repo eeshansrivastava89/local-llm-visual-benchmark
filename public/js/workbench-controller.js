@@ -44,6 +44,8 @@ export function renderBenchmarks() {
     )
   ].join("");
   els.benchmarkFilter.value = state.selectedBenchmark;
+  els.benchmarkFilter.disabled = false;
+  els.benchmarkFilter.removeAttribute("data-loading");
 }
 
 export function renderModels() {
@@ -59,6 +61,8 @@ export function renderModels() {
     )
   ].join("");
   els.modelFilter.value = state.selectedModel;
+  els.modelFilter.disabled = false;
+  els.modelFilter.removeAttribute("data-loading");
 }
 
 export function renderHarnesses() {
@@ -74,6 +78,8 @@ export function renderHarnesses() {
     )
   ].join("");
   els.harnessFilter.value = state.selectedHarness;
+  els.harnessFilter.disabled = false;
+  els.harnessFilter.removeAttribute("data-loading");
 }
 
 export function renderModelSources() {
@@ -103,6 +109,7 @@ export function renderRuns() {
       ? "Compare one prompt across models."
       : "Compare one prompt across models.";
   updateClearWorkbenchStateButton();
+  updateFiltersToggleCount();
 
   if (runs.length === 0) {
     const emptyBase = '<div class="empty">No runs match the current filters.</div>';
@@ -174,6 +181,21 @@ function renderRunsTable(runs) {
 function renderGroupedRuns(groups, mode) {
   els.runsSurface.innerHTML = renderGroupedRunsMarkup(groups, mode, workbenchRenderContext());
   wireRunCards();
+}
+
+function updateFiltersToggleCount() {
+  if (!els.filtersToggleCount) return;
+  let count = 0;
+  if (state.selectedModel !== "all") count += 1;
+  if (state.selectedBenchmark !== "all") count += 1;
+  if (state.selectedHarness !== "all") count += 1;
+  if (state.runsSearch.trim().length > 0) count += 1;
+  if (count > 0) {
+    els.filtersToggleCount.textContent = String(count);
+    els.filtersToggleCount.hidden = false;
+  } else {
+    els.filtersToggleCount.hidden = true;
+  }
 }
 
 function updateClearWorkbenchStateButton() {

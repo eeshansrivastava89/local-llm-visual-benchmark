@@ -60,6 +60,9 @@ export const els = {
   benchmarkFilter: document.querySelector("#benchmarkFilter"),
   harnessFilter: document.querySelector("#harnessFilter"),
   runsSearch: document.querySelector("#runsSearch"),
+  filtersToggle: document.querySelector("#filtersToggle"),
+  filtersToggleCount: document.querySelector("#filtersToggleCount"),
+  toolbarFilterGroup: document.querySelector("#toolbarFilterGroup"),
   // View tabs
   viewTabs: document.querySelectorAll("[data-mode]"),
   // Onboarding

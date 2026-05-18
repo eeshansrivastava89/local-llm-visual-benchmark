@@ -157,6 +157,10 @@ function wireEvents() {
     resetRunPage();
     renderRuns();
   });
+  els.filtersToggle?.addEventListener("click", () => {
+    const isOpen = els.toolbarFilterGroup.classList.toggle("is-open");
+    els.filtersToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  });
   els.clearWorkbenchState.addEventListener("click", () => {
     state.selectedModel = "all";
     state.selectedBenchmark = "all";
