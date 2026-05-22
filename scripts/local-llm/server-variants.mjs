@@ -1,17 +1,19 @@
+export const LLAMA_SERVER_BINARY = "/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server";
+
 export const SERVER_VARIANTS = {
   standard: {
     label: "Standard llama.cpp",
-    hint: "global llama-server on port 8080",
+    hint: "shared upstream llama-server on port 8080",
     providerId: "llama-cpp",
-    binary: "llama-server",
+    binary: LLAMA_SERVER_BINARY,
     flags: { port: 8080 },
     extraArgs: []
   },
   mtp: {
     label: "MTP llama.cpp",
-    hint: "local upstream MTP build on port 8081",
+    hint: "shared upstream llama-server with draft-mtp on port 8081",
     providerId: "llama-cpp-mtp",
-    binary: "/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server",
+    binary: LLAMA_SERVER_BINARY,
     flags: { port: 8081 },
     extraArgs: ["--spec-type", "draft-mtp", "--spec-draft-n-max", "2"]
   }

@@ -40,23 +40,25 @@ local-llm setup <profile-id> --sync both
 
 - `local-llm stop` with no profile should show running tracked servers; use `local-llm stop --all` for emergencies.
 
-## MTP llama.cpp setup
+## llama.cpp setup
 
-- MTP server binary:
+- Canonical local server binary for both standard and MTP profiles:
 
 ```text
 /Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server
 ```
 
-- This is the local upstream MTP-capable build, not the old PR branch.
-- Current MTP profile flags:
+- This checkout tracks upstream `ggml-org/llama.cpp` and is used until Homebrew stable `llama-server` is new enough for MTP.
+- Standard profiles use provider `llama-cpp`, port `8080`, and no MTP speculative flags.
+- MTP profiles use provider `llama-cpp-mtp`, port `8081`, and these flags:
 
 ```bash
 --spec-type draft-mtp
 --spec-draft-n-max 2
 ```
 
-- `--spec-draft-p-min 0.75` is the current llama.cpp default, so it is usually redundant.
+- Current upstream default for `--spec-draft-p-min` is `0.00`; leave it implicit unless intentionally testing that parameter.
+- MTP decoding can affect output, not just speed, so keep `llama-cpp-mtp` labeled separately in benchmark metadata.
 - MTP profiles use port `8081`; only run one at a time unless you edit the port and sync configs.
 
 ## Validation
