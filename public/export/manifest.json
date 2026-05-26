@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-24T06:07:08.951Z",
+  "generatedAt": "2026-05-26T15:24:47.009Z",
   "benchmarks": [
     {
       "id": "macro-wildflower-meadow",
@@ -2595,7 +2595,7 @@
     }
   ],
   "machineProfile": {
-    "collectedAt": "2026-05-24T06:07:08.951Z",
+    "collectedAt": "2026-05-26T15:24:47.010Z",
     "platform": {
       "node": "v26.0.0",
       "platform": "darwin",
@@ -2605,7 +2605,7 @@
       "type": "Darwin",
       "release": "25.5.0",
       "hostname": "Eeshans-MacBook-Pro-16.local",
-      "uptimeSeconds": 344042
+      "uptimeSeconds": 550300
     },
     "cpu": {
       "model": "Apple M4 Pro",
@@ -2614,10 +2614,10 @@
     },
     "memory": {
       "totalBytes": 51539607552,
-      "availableBytes": 24145117184,
-      "freeBytes": 2862432256,
-      "usedBytes": 27394490368,
-      "pressurePercent": 53.2,
+      "availableBytes": 22452649984,
+      "freeBytes": 1096400896,
+      "usedBytes": 29086957568,
+      "pressurePercent": 56.4,
       "pressureLabel": "low",
       "source": "macOS VM stats, cached and purgeable memory excluded"
     },
