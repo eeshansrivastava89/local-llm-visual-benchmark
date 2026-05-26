@@ -1,5 +1,12 @@
 import { escapeAttribute, escapeHtml } from "./utils.js";
 
+/**
+ * Stack-pill tone mapping.
+ *
+ * This mirrors src/lib/stack-tones.ts for the browser bundle.
+ * Keep the two in sync when adding or changing tone mappings.
+ */
+
 export function renderStackSummary(stack) {
   return '<span class="stack-summary" aria-label="' + escapeAttribute(stack.label) + '">' +
     renderStackPill(stack.backend, "backend") +

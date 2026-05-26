@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { isPathInside } from "./asset-paths";
 import { listRunMetadata } from "./runs";
+import { stackTone } from "./stack-tones";
 import type { RunMetadata } from "./types";
 
 const execFileAsync = promisify(execFile);
@@ -291,23 +292,7 @@ function inferredBackendLabel(run: RunMetadata): string {
   return "source unrecorded";
 }
 
-function stackTone(label: string, role: "backend" | "harness"): string {
-  const value = label.toLowerCase();
-  if (role === "harness") {
-    if (/\bpi\b/u.test(value)) return "pi";
-    if (/opencode|open code/u.test(value)) return "opencode";
-    if (/hermes/u.test(value)) return "hermes";
-    if (/manual/u.test(value)) return "manual";
-    return "harness";
-  }
-  if (/omlx|base mlx/u.test(value)) return "omlx";
-  if (/llama\.cpp|llamacpp/u.test(value)) return "llamacpp";
-  if (/lm studio|lmstudio/u.test(value)) return "lmstudio";
-  if (/cloud|gpt|chatgpt|openai|anthropic|claude/u.test(value)) return "cloud";
-  if (/ollama/u.test(value)) return "ollama";
-  if (/source unrecorded|unrecorded/u.test(value)) return "unknown";
-  return "backend";
-}
+
 
 function sharedBenchmarkId(items: ComparisonItem[]): string | undefined {
   const ids = new Set(items.map((item) => item.run.benchmark?.id).filter(Boolean));

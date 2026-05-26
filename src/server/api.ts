@@ -33,8 +33,25 @@ import {
   listRunMetadata as defaultListRunMetadata
 } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
-import type { BenchmarkRecord, LMStudioModel, ModelSourceId, OmlxModel, PreparedRun, RunKind, RunMetadata, RunRunnerMetadata } from "../lib/types";
-import type { PrepareRunRunner } from "../lib/prompt-prep";
+import type { BenchmarkRecord, LMStudioModel, OmlxModel, PreparedRun, RunMetadata, RunRunnerMetadata } from "../lib/types";
+import {
+  ApiRequestError,
+  assertWritesEnabled,
+  harnessLabel,
+  readModelSource,
+  readModelSyncTargets,
+  readOptionalBoolean,
+  readOptionalString,
+  readPrepareRunner,
+  readRequiredString,
+  readRunBackend,
+  readRunHarness,
+  readRunKind,
+  readStringArray,
+  selectBenchmark,
+  type EditableRunBackend,
+  type EditableRunHarness
+} from "./api-helpers";
 
 const STATUS_TIMEOUT_MS = 2000;
 const MODEL_LIST_TIMEOUT_MS = 10000;
@@ -207,16 +224,6 @@ export interface ExportComparisonVideoResponse {
   layout: string;
 }
 
-export class ApiRequestError extends Error {
-  readonly status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.name = "ApiRequestError";
-    this.status = status;
-  }
-}
-
 const defaultApi = createLocalApi();
 
 export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalApi {
@@ -331,9 +338,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
     async prepareRun(request) {
       assertWritesEnabled(enableWrites);
       readRunKind(request.kind);
-      const modelId = readRequiredString(request.modelId, "modelId");
-      const runner = readPrepareRunner(request.runner);
-      const modelSource = readModelSource(request.modelSource);
       const benchmark = selectBenchmark(
         await loadBenchmarks(benchmarkDirectory),
         readRequiredString(request.benchmarkId, "benchmarkId")
@@ -342,9 +346,9 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       return {
         preparedRun: await prepareRun({
           benchmark,
-          modelId,
-          modelSource,
-          runner,
+          modelId: readRequiredString(request.modelId, "modelId"),
+          modelSource: readModelSource(request.modelSource),
+          runner: readPrepareRunner(request.runner),
           baseUrl: readOptionalString(request.baseUrl, "baseUrl"),
           backendLabel: readOptionalString(request.backendLabel, "backendLabel"),
           runsRoot
@@ -440,44 +444,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   };
 }
 
-function readRunKind(value: unknown): RunKind {
-  if (value === undefined || value === null || value === "") {
-    return "visual";
-  }
-  if (value === "visual") {
-    return value;
-  }
-  throw new ApiRequestError(400, "kind must be visual.");
-}
-
-function readPrepareRunner(value: unknown): PrepareRunRunner {
-  if (value === undefined || value === null || value === "") {
-    return "manual";
-  }
-  if (
-    value === "manual" ||
-    value === "pi" ||
-    value === "opencode" ||
-    value === "hermes"
-  ) {
-    return value;
-  }
-  throw new ApiRequestError(400, "runner must be manual, pi, opencode, or hermes.");
-}
-
-function readModelSource(value: unknown): ModelSourceId | undefined {
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
-  if (value === "omlx" || value === "lmstudio") {
-    return value;
-  }
-  if (value === "custom") {
-    return value;
-  }
-  throw new ApiRequestError(400, "modelSource must be omlx, lmstudio, or custom.");
-}
-
 interface RunMetadataPatchInput {
   runsRoot: string;
   runDirectory: string;
@@ -486,9 +452,6 @@ interface RunMetadataPatchInput {
   harness: EditableRunHarness;
   modelId?: string;
 }
-
-type EditableRunBackend = "unrecorded" | "omlx" | "lmstudio" | "llama.cpp" | "ollama" | "mlx" | "custom";
-type EditableRunHarness = "manual" | "pi" | "opencode" | "hermes";
 
 async function updateRunMetadataFile(input: RunMetadataPatchInput): Promise<RunMetadata> {
   const runDirectory = await resolveRunDirectoryPath({
@@ -558,41 +521,6 @@ function runnerBackendPatch(backend: EditableRunBackend, customBackend?: string)
     modelSource: undefined,
     backendLabel: backend === "mlx" ? "Base MLX" : backend
   };
-}
-
-function harnessLabel(harness: EditableRunHarness): string {
-  if (harness === "pi") return "Pi";
-  if (harness === "opencode") return "OpenCode";
-  if (harness === "hermes") return "Hermes";
-  return "manual";
-}
-
-function readRunBackend(value: unknown): EditableRunBackend {
-  if (value === undefined || value === null || value === "") {
-    return "unrecorded";
-  }
-  if (
-    value === "unrecorded" ||
-    value === "omlx" ||
-    value === "lmstudio" ||
-    value === "llama.cpp" ||
-    value === "ollama" ||
-    value === "mlx" ||
-    value === "custom"
-  ) {
-    return value;
-  }
-  throw new ApiRequestError(400, "backend must be unrecorded, omlx, lmstudio, llama.cpp, ollama, mlx, or custom.");
-}
-
-function readRunHarness(value: unknown): EditableRunHarness {
-  if (value === undefined || value === null || value === "") {
-    return "manual";
-  }
-  if (value === "manual" || value === "pi" || value === "opencode" || value === "hermes") {
-    return value;
-  }
-  throw new ApiRequestError(400, "harness must be manual, pi, opencode, or hermes.");
 }
 
 async function defaultOpenFile(path: string): Promise<void> {
@@ -727,90 +655,4 @@ export async function readJsonRequest(request: Request): Promise<unknown> {
 
 export function getDefaultLocalApi(): LocalApi {
   return defaultApi;
-}
-
-function assertWritesEnabled(enableWrites: boolean): void {
-  if (!enableWrites) {
-    throw new ApiRequestError(403, "Write actions are only available in dev server mode.");
-  }
-}
-
-function selectBenchmark(
-  benchmarks: BenchmarkRecord[],
-  requestedId: string
-): BenchmarkRecord {
-  const byId = new Map(benchmarks.map((benchmark) => [benchmark.id, benchmark]));
-  const selected = byId.get(requestedId);
-
-  if (!selected) {
-    throw new ApiRequestError(400, `Unknown benchmark ID: ${requestedId}.`);
-  }
-
-  return selected;
-}
-
-function readRequiredString(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new ApiRequestError(400, `${field} must be a non-empty string.`);
-  }
-
-  return value.trim();
-}
-
-function readOptionalString(value: unknown, field: string): string | undefined {
-  if (typeof value === "undefined" || value === null) {
-    return undefined;
-  }
-  if (typeof value !== "string") {
-    throw new ApiRequestError(400, `${field} must be a string.`);
-  }
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
-}
-
-function readOptionalBoolean(value: unknown, field: string): boolean | undefined {
-  if (typeof value === "undefined") {
-    return undefined;
-  }
-  if (typeof value !== "boolean") {
-    throw new ApiRequestError(400, `${field} must be a boolean.`);
-  }
-  return value;
-}
-
-function readStringArray(value: unknown, field: string): string[] {
-  if (!Array.isArray(value)) {
-    throw new ApiRequestError(400, `${field} must be a string array.`);
-  }
-
-  const result = value
-    .map((item) => (typeof item === "string" ? item.trim() : ""))
-    .filter((item) => item.length > 0);
-
-  if (result.length === 0) {
-    throw new ApiRequestError(400, `${field} must contain at least one item.`);
-  }
-
-  return result;
-}
-
-function readModelSyncTargets(value: unknown): ModelSyncTarget[] {
-  const targets = value ?? ["opencode", "pi"];
-  if (!Array.isArray(targets)) {
-    throw new ApiRequestError(400, "targets must be an array.");
-  }
-
-  const normalized = Array.from(
-    new Set(
-      targets
-        .map((item) => (typeof item === "string" ? item.trim() : ""))
-        .filter((item): item is ModelSyncTarget => item === "opencode" || item === "pi")
-    )
-  );
-
-  if (normalized.length === 0) {
-    throw new ApiRequestError(400, "targets must include pi, opencode, or both.");
-  }
-
-  return normalized;
 }
