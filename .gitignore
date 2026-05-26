@@ -37,6 +37,7 @@ logs/
 .tmp-qa/
 .superpowers/
 .local-llm/
+tmp/
 
 # Local agent context
 .claude/
