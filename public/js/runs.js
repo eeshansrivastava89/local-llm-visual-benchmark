@@ -1,15 +1,24 @@
 import { state } from "./state.js";
 import { uniqueBy } from "./utils.js";
 
+const DS_BENCHMARK_IDS = new Set(["ab-test-analysis"]);
+
+export function benchmarkMatchesKind(benchmarkId, kind) {
+  if (kind === "data-science") {
+    return DS_BENCHMARK_IDS.has(benchmarkId);
+  }
+  return !DS_BENCHMARK_IDS.has(benchmarkId);
+}
+
 export function filteredRuns() {
   return state.runs.filter((run) => {
     const kind = runKind(run);
-    const workspaceMatch = kind === "visual" || kind === "data-science";
+    const kindMatch = kind === state.selectedKind;
     const modelMatch = state.selectedModel === "all" || run.model?.id === state.selectedModel;
     const benchmarkMatch = state.selectedBenchmark === "all" || run.benchmark?.id === state.selectedBenchmark;
     const harnessMatch = state.selectedHarness === "all" || stackAttemptIdentity(run).harness === state.selectedHarness;
     const searchMatch = !state.runsSearch.trim() || searchableRunText(run).includes(state.runsSearch.trim().toLowerCase());
-    return workspaceMatch && modelMatch && benchmarkMatch && harnessMatch && searchMatch;
+    return kindMatch && modelMatch && benchmarkMatch && harnessMatch && searchMatch;
   });
 }
 
@@ -50,13 +59,17 @@ export function harnessesFromRuns(runs) {
 }
 
 export function runSummaryText(runs) {
+  const isDs = state.selectedKind === "data-science";
   const prepared = runs.filter((r) => r.status === "prepared" && !hasCapturedVideo(r)).length;
   const videoReady = runs.filter((r) => hasCapturedVideo(r)).length;
   const needsCapture = runs.filter((r) => needsMediaCapture(r)).length;
   const failed = runs.filter((r) => r.status === "failed").length;
+  const dsReady = runs.filter((r) => runKind(r) === "data-science" && r.assets?.ds?.summary).length;
   if (state.mode === "table") {
+    if (isDs) return String(runs.length) + " data-science, " + dsReady + " with summary, " + failed + " failed";
     return String(runs.length) + " visual, " + videoReady + " with video, " + needsCapture + " need capture, " + failed + " failed";
   }
+  if (isDs) return dsReady + " with summary, " + prepared + " prepared, " + failed + " failed";
   return videoReady + " with video, " + needsCapture + " need capture, " + prepared + " prepared, " + failed + " failed";
 }
 

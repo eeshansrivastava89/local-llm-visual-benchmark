@@ -2,6 +2,7 @@ import { els } from "./dom.js";
 import { state } from "./state.js";
 import { escapeAttribute, escapeHtml } from "./utils.js";
 import { postJson } from "./api.js";
+import { benchmarkMatchesKind } from "./runs.js";
 import { modelSourceLabel, prepareModelPlaceholder, selectedSourceHealth, updatePrepareModelWarning } from "./setup-ui.js";
 import { canUseOperationalControls } from "./operational-controls.js";
 import { copyTextToClipboard } from "./clipboard.js";
@@ -16,8 +17,9 @@ export function resetPrepareRunModal() {
   els.copyPrompt.disabled = true;
   els.copyPreparedPath.disabled = true;
 
-  if (state.benchmarks[0]) {
-    els.prepBenchmark.value = state.benchmarks[0].id;
+  const prepKindBenchmarks = state.benchmarks.filter((b) => benchmarkMatchesKind(b.id, state.selectedPrepKind));
+  if (prepKindBenchmarks[0]) {
+    els.prepBenchmark.value = prepKindBenchmarks[0].id;
   }
   if (state.selectedModelSource !== "custom" && state.omlxModels.length === 0 && state.lmStudioModels.length > 0) {
     state.selectedModelSource = "lmstudio";
@@ -37,8 +39,8 @@ export function resetPrepareRunModal() {
 
 export function updatePrepareMode() {
   const selectedBenchmark = state.benchmarks.find((b) => b.id === els.prepBenchmark.value);
-  const isDs = selectedBenchmark?.id === "ab-test-analysis";
-  const workflow = isDs ? "data-science" : "visual";
+  const workflow = state.selectedPrepKind;
+  const isDs = workflow === "data-science";
   els.prepBackendHelperGroup.hidden = false;
   els.prepModelSourceGroup.hidden = false;
   els.prepVisualPromptGroup.hidden = false;
@@ -61,8 +63,10 @@ export function updatePrepareMode() {
     ? "Choose a prompt and enter the backend/model labels to generate a manual run folder."
     : "Choose a prompt, model source, model, and harness to generate a run folder.";
   els.prepResultHint.textContent = "Copy this into your selected harness after preparing the slot.";
-  els.preparedPrompt.placeholder = "Prepare a run slot to generate the prompt for index.html.";
-  els.prepOutputLabel.textContent = "Visual prompt";
+  els.preparedPrompt.placeholder = isDs
+    ? "Prepare a run slot to generate the data-science analysis prompt."
+    : "Prepare a run slot to generate the prompt for index.html.";
+  els.prepOutputLabel.textContent = isDs ? "Data science prompt" : "Visual prompt";
   setButtonLabel(els.copyPrompt, "Copy prompt", "copy");
   setButtonLabel(els.prepareRun, "Prepare slot", "play");
   updatePrepareModelWarning();
@@ -77,7 +81,7 @@ export async function prepareRunSlot() {
   const modelSource = els.prepModelSource.value;
   const isCustom = modelSource === "custom";
   const selectedBenchmark = state.benchmarks.find((b) => b.id === benchmarkId);
-  const isDs = selectedBenchmark?.id === "ab-test-analysis";
+  const isDs = state.selectedPrepKind === "data-science";
   const modelId = isCustom ? els.prepCustomModel.value.trim() : els.prepModelSelect.value.trim();
   if (!benchmarkId || !modelId) {
     updatePrepareModelWarning();
@@ -165,10 +169,11 @@ function updatePreparedCopyState() {
 
 export function renderPrepOptions() {
   const selectedBenchmark = els.prepBenchmark.value;
-  els.prepBenchmark.innerHTML = state.benchmarks
+  const prepKindBenchmarks = state.benchmarks.filter((b) => benchmarkMatchesKind(b.id, state.selectedPrepKind));
+  els.prepBenchmark.innerHTML = prepKindBenchmarks
     .map((b) => '<option value="' + escapeAttribute(b.id) + '">' + escapeHtml(b.title) + "</option>")
     .join("");
-  if (state.benchmarks.some((benchmark) => benchmark.id === selectedBenchmark)) {
+  if (prepKindBenchmarks.some((benchmark) => benchmark.id === selectedBenchmark)) {
     els.prepBenchmark.value = selectedBenchmark;
   }
   if (!["omlx", "lmstudio", "custom"].includes(state.selectedModelSource)) {
@@ -207,4 +212,10 @@ function availablePreparedRun(run) {
       ...(run.assets?.prompt ? { prompt: run.assets.prompt } : {})
     }
   };
+}
+
+export function renderPrepKindTabs() {
+  els.prepKindTabs.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.prepKind === state.selectedPrepKind));
+  });
 }

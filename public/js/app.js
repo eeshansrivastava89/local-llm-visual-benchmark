@@ -7,6 +7,7 @@ import {
   configureWorkbenchController,
   renderBenchmarks,
   renderHarnesses,
+  renderKindTabs,
   renderModels,
   renderRuns,
   resetRunPage
@@ -15,6 +16,7 @@ import {
   copyPreparedPrompt,
   copyPreparedRunPath,
   prepareRunSlot,
+  renderPrepKindTabs,
   renderPrepOptions,
   resetPrepareRunModal,
   updatePrepareMode
@@ -104,6 +106,7 @@ function wireEvents() {
   });
   els.runToggle.addEventListener("click", () => {
     openModal("prep");
+    renderPrepKindTabs();
     resetPrepareRunModal();
     refreshModelSources();
   });
@@ -165,10 +168,12 @@ function wireEvents() {
     state.selectedModel = "all";
     state.selectedBenchmark = "all";
     state.selectedHarness = "all";
+    state.selectedKind = "visual";
     state.runsSearch = "";
     state.compareSelection = [];
     els.runsSearch.value = "";
     resetRunPage();
+    renderKindTabs();
     renderBenchmarks();
     renderModels();
     renderHarnesses();
@@ -195,6 +200,31 @@ function wireEvents() {
       resetRunPage();
       renderViewTabs();
       renderRuns();
+    });
+  });
+
+  els.kindTabs.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedKind = button.dataset.kind;
+      state.selectedBenchmark = "all";
+      state.selectedModel = "all";
+      state.selectedHarness = "all";
+      document.body.dataset.workspace = state.selectedKind;
+      resetRunPage();
+      renderKindTabs();
+      renderBenchmarks();
+      renderModels();
+      renderHarnesses();
+      renderRuns();
+    });
+  });
+
+  els.prepKindTabs.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedPrepKind = button.dataset.prepKind;
+      renderPrepKindTabs();
+      renderPrepOptions();
+      updatePrepareMode();
     });
   });
 

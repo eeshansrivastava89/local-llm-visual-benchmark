@@ -3,6 +3,7 @@ import { state } from "./state.js";
 import { escapeAttribute, escapeHtml } from "./utils.js";
 import { deleteJson, patchJson, postJson } from "./api.js";
 import { detailActionAvailability, detailViewModel } from "./detail-ui.js";
+import { runKind } from "./runs.js";
 import { closeModal, openModal } from "./modals.js";
 import { canUseOperationalControls, setOperationalAvailability, syncOperationalControls } from "./operational-controls.js";
 import { copyTextToClipboard } from "./clipboard.js";
@@ -113,6 +114,11 @@ export function renderDetail(run) {
   els.detailTitle.textContent = detail.title;
   els.detailSubtitle.textContent = detail.subtitle;
   els.detailPreview.innerHTML = detail.previewHtml;
+  if (runKind(run) === "data-science") {
+    els.detailPreview.dataset.ds = "";
+  } else {
+    delete els.detailPreview.dataset.ds;
+  }
   updateDetailActions(run);
   els.detailTextTitle.textContent = detail.textRecord.title;
   els.detailPrompt.textContent = detail.promptText;

@@ -8,6 +8,8 @@ description: Run a full production A/B test analysis against live Supabase data,
 
 The A/B Simulator is a Pineapple Finder memory game. Variant A has 4 pineapples, Variant B has 5. Data lives in a Supabase `posthog_events` table that records player interactions from live randomized traffic.
 
+Each row is one event. The important event types are `puzzle_started` and `puzzle_completed`. The `variant` column (A or B) is assigned per session. The `completion_time_seconds` column is only populated on `puzzle_completed` events. A single session can have multiple puzzle completions — treat each `puzzle_completed` event as a separate observation for the primary analysis, not one per session.
+
 ## Data Access
 
 Use these environment variables for Supabase access:

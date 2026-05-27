@@ -1377,6 +1377,9 @@ test.describe("data-science runs", () => {
     );
     await page.goto("/");
 
+    // Switch to Data Science tab so the DS run is visible
+    await page.getByRole("button", { name: "Data Science" }).click();
+
     // Click the run card to open detail
     const card = page.locator("[data-open-run]").first();
     await card.click();
@@ -1402,6 +1405,9 @@ test.describe("data-science runs", () => {
       route.fulfill({ json: { benchmarks: [dsBenchmark] } })
     );
     await page.goto("/");
+
+    // Switch to Data Science tab so the DS run is visible
+    await page.getByRole("button", { name: "Data Science" }).click();
 
     // Card should show data-science messaging
     await expect(page.locator(".run-card").first()).toBeVisible();

@@ -8,7 +8,7 @@ import { findRunByDirectoryOrId } from "./runs.js";
 import { setSourceStatus, updateConfigPresence, updateLmStepStates, updateSyncButtons } from "./setup-ui.js";
 import { updateOnboarding, showHtmlDetectToast } from "./ui.js";
 import { renderMachineProfile } from "./machine-profile.js";
-import { renderBenchmarks, renderHarnesses, renderModelSources, renderModels, renderRuns } from "./workbench-controller.js";
+import { renderBenchmarks, renderHarnesses, renderKindTabs, renderModelSources, renderModels, renderRuns } from "./workbench-controller.js";
 import { renderPrepOptions } from "./prepare-controller.js";
 import { loadConnection, loadModelSyncState, loadOmlxModels, setConnectionMessage } from "./model-source-controller.js";
 import { captureMissingMedia } from "./capture-controller.js";
@@ -29,6 +29,7 @@ export async function loadLocalData() {
     state.staticMode = false;
     state.benchmarks = benchmarks.benchmarks ?? [];
     state.runs = runs.runs ?? [];
+    renderKindTabs();
     renderBenchmarks();
     renderModels();
     renderHarnesses();
@@ -62,6 +63,7 @@ export async function enterStaticMode(reason) {
     setSourceStatus("lmstudio", "static", 0, "LM Studio status requires the local dev server.");
     setConnectionMessage("Browsing exported runs. Sync requires the local dev server.");
     renderMachineProfile(state.machineProfile);
+    renderKindTabs();
     renderBenchmarks();
     renderModels();
     renderHarnesses();
@@ -105,6 +107,7 @@ export async function refreshRuns() {
     state.benchmarks = benchmarks.benchmarks ?? [];
     state.runs = runs.runs ?? [];
     syncSelectedRunFromState({ rerenderDetail: true });
+    renderKindTabs();
     renderBenchmarks();
     renderModels();
     renderHarnesses();

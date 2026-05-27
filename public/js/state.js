@@ -44,6 +44,8 @@ export const state = {
   selectedModel: "all",
   selectedBenchmark: "all",
   selectedHarness: "all",
+  selectedKind: "visual",
+  selectedPrepKind: "visual",
   runsSearch: "",
   runPage: 1,
   runsPerPage: 10,

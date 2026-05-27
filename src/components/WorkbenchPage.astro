@@ -80,6 +80,14 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
             </ol>
           </div>
 
+          <!-- Kind tabs -->
+          <div class="kind-bar">
+            <div class="kind-tabs">
+              <button type="button" class="kind-tab" data-kind="visual" aria-pressed="true">Visual</button>
+              <button type="button" class="kind-tab" data-kind="data-science" aria-pressed="false">Data Science</button>
+            </div>
+          </div>
+
           <!-- Toolbar -->
           <div class="toolbar">
             <div class="view-tabs">
@@ -259,6 +267,16 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
         <div class="prep-body p-5">
           <div class="prep-layout" id="prepLayout">
             <section class="prep-form-panel" aria-label="Run slot inputs">
+              <div class="grid gap-2" id="prepKindGroup">
+                <div class="field-label-row">
+                  <label>Benchmark category</label>
+                  <button type="button" class="help-pill" data-tooltip="Choose whether this is a visual HTML benchmark or a data-science analysis benchmark. This decides which prompts appear below.">?</button>
+                </div>
+                <div class="kind-tabs kind-tabs-sm">
+                  <button type="button" class="kind-tab" data-prep-kind="visual" aria-pressed="true">Visual</button>
+                  <button type="button" class="kind-tab" data-prep-kind="data-science" aria-pressed="false">Data Science</button>
+                </div>
+              </div>
               <div class="grid gap-2" id="prepBackendHelperGroup">
                 <div class="field-label-row">
                   <label for="prepRunner">Coding harness</label>

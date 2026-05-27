@@ -55,6 +55,10 @@ export const els = {
   syncPiBtn: document.querySelector("#syncPiBtn"),
   syncOpenCodeBtn: document.querySelector("#syncOpenCodeBtn"),
   syncMessage: document.querySelector("#syncMessage"),
+  // Kind tabs
+  kindTabs: document.querySelectorAll("[data-kind]"),
+  prepKindTabs: document.querySelectorAll("[data-prep-kind]"),
+  prepKindGroup: document.querySelector("#prepKindGroup"),
   // Filters
   modelFilter: document.querySelector("#modelFilter"),
   benchmarkFilter: document.querySelector("#benchmarkFilter"),

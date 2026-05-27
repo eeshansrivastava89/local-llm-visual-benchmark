@@ -4,7 +4,7 @@ import { escapeAttribute, escapeHtml, uniqueBy } from "./utils.js";
 import { compareRunKey, toggleCompareSelection } from "./compare.js";
 import { exportSelectedComparisonVideo } from "./comparison-export-controller.js";
 import { syncManagedCompareVideos } from "./compare-ui.js";
-import { filteredRuns, groupRuns, harnessesFromRuns, modelsFromRuns, runKind, runSummaryText } from "./runs.js";
+import { filteredRuns, groupRuns, harnessesFromRuns, modelsFromRuns, benchmarkMatchesKind, runKind, runSummaryText } from "./runs.js";
 import { renderGroupedRuns as renderGroupedRunsMarkup, renderRunsTable as renderRunsTableMarkup } from "./workbench-ui.js";
 import { renderModelInventory } from "./setup-ui.js";
 import { openModal } from "./modals.js";
@@ -22,7 +22,7 @@ export function configureWorkbenchController(options = {}) {
 export function runsForCurrentWorkspace() {
   return state.runs.filter((run) => {
     const kind = runKind(run);
-    return kind === "visual" || kind === "data-science";
+    return kind === state.selectedKind;
   });
 }
 
@@ -35,7 +35,8 @@ export function renderBenchmarks() {
       label: run.benchmark?.title ?? run.benchmark?.id
     }))
     .filter((item) => item.id && item.label);
-  const benchmarkOptions = state.benchmarks.map((benchmark) => ({ id: benchmark.id, label: benchmark.title }));
+  const kindBenchmarks = state.benchmarks.filter((b) => benchmarkMatchesKind(b.id, state.selectedKind));
+  const benchmarkOptions = kindBenchmarks.map((benchmark) => ({ id: benchmark.id, label: benchmark.title }));
   const options = uniqueBy([...benchmarkOptions, ...runOptions], (item) => item.id);
   if (state.selectedBenchmark !== "all" && !options.some((option) => option.id === state.selectedBenchmark)) {
     state.selectedBenchmark = "all";
@@ -49,6 +50,12 @@ export function renderBenchmarks() {
   els.benchmarkFilter.value = state.selectedBenchmark;
   els.benchmarkFilter.disabled = false;
   els.benchmarkFilter.removeAttribute("data-loading");
+}
+
+export function renderKindTabs() {
+  els.kindTabs.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.kind === state.selectedKind));
+  });
 }
 
 export function renderModels() {
