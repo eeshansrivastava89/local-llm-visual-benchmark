@@ -2,7 +2,7 @@ import { assetHref } from "./assets.js";
 import { compareRunKey, selectedCompareRuns } from "./compare.js";
 import { renderComparePreviewGrid } from "./compare-ui.js";
 import { icon } from "./icons.js";
-import { displayRunError, needsMediaCapture, runCardIdentity, runCardMediaMessage, runCardState, runKind, stackAttemptIdentity } from "./runs.js";
+import { displayRunError, needsDsScoring, needsMediaCapture, runCardIdentity, runCardMediaMessage, runCardState, runKind, stackAttemptIdentity } from "./runs.js";
 import { renderStackSummary } from "./stack-pills.js";
 import { escapeAttribute, escapeHtml, formatDateShort } from "./utils.js";
 
@@ -61,9 +61,12 @@ export function renderGroupedRuns(groups, mode, context) {
 
 function renderRunsTableRow(run, context) {
   const isCapturing = context.captureRunDirectory && run.runDirectory === context.captureRunDirectory;
+  const isScoring = context.scoreRunDirectory && run.runDirectory === context.scoreRunDirectory;
   const stateLabel = isCapturing
     ? { status: "prepared", label: "Capturing" }
-    : runCardState(run);
+    : isScoring
+      ? { status: "prepared", label: "Scoring" }
+      : runCardState(run);
   const title = run.benchmark?.title ?? run.benchmark?.id ?? run.runner?.metricSource ?? "Untitled run";
   const model = run.model?.id ?? run.runner?.model ?? "Unknown model";
   const stack = stackAttemptIdentity(run);
@@ -80,7 +83,7 @@ function renderRunsTableRow(run, context) {
       '<td class="truncate-cell">' + escapeHtml(model) + "</td>" +
       '<td class="truncate-cell">' + renderStackSummary(stack) + "</td>" +
       '<td><span class="run-state-pill"><span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' + escapeHtml(stateLabel.label) + "</span></td>" +
-      '<td class="truncate-cell">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</td>" +
+      '<td class="truncate-cell">' + escapeHtml(runCardMediaMessage(run, isCapturing, isScoring)) + "</td>" +
       '<td class="truncate-cell">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</td>" +
     "</tr>"
   );
@@ -88,7 +91,12 @@ function renderRunsTableRow(run, context) {
 
 function renderRunCard(run, mode, context) {
   const isCapturing = context.captureRunDirectory && run.runDirectory === context.captureRunDirectory;
-  const stateLabel = runCardState(run);
+  const isScoring = context.scoreRunDirectory && run.runDirectory === context.scoreRunDirectory;
+  const stateLabel = isCapturing
+    ? { status: "prepared", label: "Capturing" }
+    : isScoring
+      ? { status: "prepared", label: "Scoring" }
+      : runCardState(run);
   const identity = runCardIdentity(run, mode);
   return (
     '<article class="run-card" data-open-run data-run-id="' + escapeAttribute(run.runId) + '" tabindex="0" role="button" aria-label="' +
@@ -106,7 +114,7 @@ function renderRunCard(run, mode, context) {
             escapeHtml(stateLabel.label) +
           "</span>" +
         "</span>" +
-        '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing)) + "</span>" +
+        '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing, isScoring)) + "</span>" +
         renderRunCaptureAction(run, isCapturing, context) +
       "</span>" +
     "</article>"
@@ -114,8 +122,34 @@ function renderRunCard(run, mode, context) {
 }
 
 function renderRunCaptureAction(run, isCapturing, context) {
+  const kind = runKind(run);
+
+  // Data-science: score button
+  if (kind === "data-science") {
+    const canScore = context.canOperate &&
+      needsDsScoring(run);
+    const hasScorecard = run.assets?.ds?.scorecard;
+    const canRescore = context.canOperate &&
+      run.runDirectory && hasScorecard;
+    if (!canScore && !canRescore) return "";
+
+    const isScoring = context.scoreRunDirectory && run.runDirectory === context.scoreRunDirectory;
+    const label = hasScorecard ? "Rescore" : "Score";
+    const title = run.benchmark?.title ?? run.benchmark?.id ?? "run";
+    const model = run.model?.id ?? "unknown model";
+    return (
+      '<span class="run-card-actions" data-placement="card">' +
+        '<button type="button" class="btn-sm-outline run-card-score operational-control" data-score-run-id="' + escapeAttribute(run.runId) + '" ' +
+          'aria-label="' + escapeAttribute(label + " " + title + " on " + model) + '"' +
+          (isScoring || context.scoreBusy ? " disabled" : "") + '>' +
+          icon("check") + escapeHtml(isScoring ? "Scoring..." : label) +
+        '</button>' +
+      '</span>'
+    );
+  }
+
+  // Visual: capture button
   const canCapture = context.canOperate &&
-    runKind(run) === "visual" &&
     needsMediaCapture(run);
   if (!canCapture) {
     return "";
@@ -128,10 +162,10 @@ function renderRunCaptureAction(run, isCapturing, context) {
     '<span class="run-card-actions" data-placement="card">' +
       '<button type="button" class="btn-sm-outline run-card-capture operational-control" data-capture-run-id="' + escapeAttribute(run.runId) + '" ' +
         'aria-label="' + escapeAttribute(label + " for " + title + " on " + model) + '"' +
-        (isCapturing || context.captureBusy ? " disabled" : "") + ">" +
+        (isCapturing || context.captureBusy ? " disabled" : "") + '>' +
         icon("camera") + escapeHtml(isCapturing ? "Capturing..." : label) +
-      "</button>" +
-    "</span>"
+      '</button>' +
+    '</span>'
   );
 }
 

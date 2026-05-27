@@ -3,6 +3,7 @@ import { state } from "./state.js";
 import { loadLocalData, refreshAndCaptureMissing, refreshRunsForPolling } from "./data-controller.js";
 import { loadConnection, loadModelSyncState, loadModels, loadOmlxModels, syncModels } from "./model-source-controller.js";
 import { captureMissingMedia, captureRunMedia, captureSelectedRunMedia } from "./capture-controller.js";
+import { scoreDsRun } from "./score-controller.js";
 import {
   configureWorkbenchController,
   renderBenchmarks,
@@ -37,6 +38,7 @@ import { initSourceStatuses } from "./setup-ui.js";
 import { wireHelpTooltips } from "./tooltips.js";
 import { renderViewTabs, updateOnboarding } from "./ui.js";
 import { canUseOperationalControls, configureOperationalControls } from "./operational-controls.js";
+import { runKind } from "./runs.js";
 import { loadMachineProfile } from "./machine-profile.js";
 
 init();
@@ -78,6 +80,7 @@ function configureControllers() {
   configureWorkbenchController({
     canUseOperationalControls,
     onCaptureRunMedia: captureRunMedia,
+    onScoreDsRun: scoreDsRun,
     onOpenDetail: openDetail
   });
 }
@@ -137,7 +140,14 @@ function wireEvents() {
   els.openHtml.addEventListener("click", () => openSelectedRunHtml());
   els.copyDetailPath.addEventListener("click", () => copySelectedRunPath());
   els.openRunFolder.addEventListener("click", () => openSelectedRunFolder(els.openRunFolder, els.detailMeta));
-  els.recaptureRun.addEventListener("click", () => captureSelectedRunMedia({ force: true }));
+  els.recaptureRun.addEventListener("click", () => {
+    const run = state.selectedRun;
+    if (run && runKind(run) === "data-science") {
+      void scoreDsRun(run);
+    } else {
+      captureSelectedRunMedia({ force: true });
+    }
+  });
   els.copyDetailPrompt.addEventListener("click", () => copyDetailPrompt());
 
   els.modelFilter.addEventListener("change", () => {

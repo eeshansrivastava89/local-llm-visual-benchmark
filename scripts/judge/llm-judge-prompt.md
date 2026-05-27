@@ -1,13 +1,14 @@
 # LLM-as-Judge: Data-Science Benchmark Layer 2 Scoring
 
-You are evaluating a model's data-science analysis output. Score each dimension 0–10 based on the rubric below. Return your scores as a JSON object with no other text.
+You are evaluating a model's data-science analysis output. Score each dimension 0–10 based on the rubric below.
 
 ## Input
 
-You will receive:
-1. The analysis notebook (`analysis.ipynb` as text)
-2. The `summary.json` output
-3. The benchmark prompt the model received
+Read these files from the current working directory:
+
+1. `analysis.ipynb` — the analysis notebook
+2. `summary.json` — the model's structured output
+3. `prompt.md` — the benchmark prompt the model received
 
 ## Dimensions
 
@@ -41,9 +42,9 @@ You will receive:
 - **3–5**: Recommendation given but weakly justified, or contradicted by one of the metrics.
 - **0–2**: No clear recommendation, or recommendation contradicts the analysis results.
 
-## Output Format
+## Output
 
-Return only a JSON object:
+Write a file called `scorecard-judge.json` to the current working directory containing a JSON object:
 
 ```json
 {

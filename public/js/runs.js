@@ -114,6 +114,10 @@ export function needsMediaCapture(run) {
   return Boolean(run.runDirectory && run.assets?.html && (!run.assets?.preview || !hasCapturedVideo(run)));
 }
 
+export function needsDsScoring(run) {
+  return Boolean(runKind(run) === "data-science" && run.runDirectory && run.assets?.ds?.summary && !run.assets?.ds?.scorecard);
+}
+
 export function runCardState(run) {
   const kind = runKind(run);
   if (kind === "data-science") {
@@ -146,11 +150,13 @@ export function displayRunError(run) {
   return message;
 }
 
-export function runCardMediaMessage(run, isCapturing) {
+export function runCardMediaMessage(run, isCapturing, isScoring) {
   if (isCapturing) return "Capturing preview media";
+  if (isScoring) return "Scoring analysis";
   if (runKind(run) === "data-science") {
     const ds = run.assets?.ds ?? {};
     const chartCount = [ds.chartDistribution, ds.chartTreatmentEffect, ds.chartCompletionRates].filter(Boolean).length;
+    if (ds.scorecard) return "Scored " + String(run.dsScorecard?.earned ?? "?") + "/" + String(run.dsScorecard?.total ?? "?");
     if (chartCount === 3 && ds.summary) return "3 charts · summary ready";
     if (chartCount > 0) return chartCount + " chart" + (chartCount > 1 ? "s" : "") + " ready";
     if (run.status === "failed") return displayRunError(run) ?? "Analysis failed";

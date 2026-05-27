@@ -14,7 +14,7 @@ export function canUseOperationalControls() {
 export function updateWriteControls() {
   const canWrite = canUseOperationalControls();
   syncOperationalControls();
-  els.refreshRuns.disabled = !canWrite || state.refreshBusy || state.captureBusy;
+  els.refreshRuns.disabled = !canWrite || state.refreshBusy || state.captureBusy || state.scoreBusy;
   els.refreshRuns.title = "Reload saved runs from disk, then capture preview/video for runs missing media.";
   if (state.selectedRun) {
     updateSelectedRunActions(state.selectedRun);

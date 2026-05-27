@@ -26,6 +26,7 @@ import {
   type ModelSyncTarget
 } from "../lib/model-sync";
 import { prepareRun as defaultPrepareRun } from "../lib/prompt-prep";
+import { scoreDsRun as defaultScoreDsRun } from "../lib/score-ds-run";
 import { slugModelId } from "../lib/paths";
 import { exportComparisonVideo as defaultExportComparisonVideo } from "../lib/comparison-video";
 import {
@@ -126,6 +127,7 @@ export interface LocalApiDependencies {
   deleteRunDirectory?: typeof defaultDeleteRunDirectory;
   getSystemStats?: typeof defaultGetSystemStats;
   prepareRun?: typeof defaultPrepareRun;
+  scoreDsRun?: typeof defaultScoreDsRun;
   getModelSyncState?: typeof defaultGetModelSyncState;
   mirrorModelsToConfigs?: typeof defaultMirrorModelsToConfigs;
   captureMissingRunMedia?: typeof defaultCaptureMissingRunMedia;
@@ -146,6 +148,7 @@ export interface LocalApi {
   prepareRun(request: PrepareRunRequest): Promise<PrepareRunResponse>;
   getModelSyncState(): Promise<ModelSyncStateResponse>;
   mirrorModels(request: MirrorModelsRequest): Promise<MirrorModelsResponse>;
+  scoreDsRun(request: ScoreDsRunRequest): Promise<ScoreDsRunResponse>;
   captureMissingMedia(request?: CaptureMediaRequest): Promise<CaptureMissingRunMediaResult>;
   openRunHtml(request: OpenRunHtmlRequest): Promise<OpenRunHtmlResponse>;
   openRunFolder(request: OpenRunFolderRequest): Promise<OpenRunFolderResponse>;
@@ -198,6 +201,17 @@ export interface UpdateRunMetadataResponse {
   run: RunMetadata;
 }
 
+export interface ScoreDsRunRequest {
+  runDirectory?: string;
+  judgeModel?: string;
+}
+
+export interface ScoreDsRunResponse {
+  scored: true;
+  run: RunMetadata;
+  runs: RunMetadata[];
+}
+
 export interface ModelSyncStateResponse {
   sync: ModelSyncState;
 }
@@ -246,6 +260,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   const deleteRunDirectory = dependencies.deleteRunDirectory ?? defaultDeleteRunDirectory;
   const getSystemStats = dependencies.getSystemStats ?? defaultGetSystemStats;
   const prepareRun = dependencies.prepareRun ?? defaultPrepareRun;
+  const scoreDsRunFn = dependencies.scoreDsRun ?? defaultScoreDsRun;
   const getModelSyncState = dependencies.getModelSyncState ?? defaultGetModelSyncState;
   const mirrorModelsToConfigs =
     dependencies.mirrorModelsToConfigs ?? defaultMirrorModelsToConfigs;
@@ -354,6 +369,21 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
           backendLabel: readOptionalString(request.backendLabel, "backendLabel"),
           runsRoot
         })
+      };
+    },
+
+    async scoreDsRun(request: ScoreDsRunRequest) {
+      assertWritesEnabled(enableWrites);
+      const result = await scoreDsRunFn({
+        runsRoot,
+        runDirectory: readRequiredString(request.runDirectory, "runDirectory"),
+        judgeModel: readOptionalString(request.judgeModel, "judgeModel")
+      });
+      const runs = await listRunMetadata(runsRoot);
+      return {
+        scored: true as const,
+        run: result.run,
+        runs
       };
     },
 

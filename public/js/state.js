@@ -59,6 +59,8 @@ export const state = {
   compareSelection: [],
   comparisonExportBusy: false,
   captureRunDirectory: "",
+  scoreBusy: false,
+  scoreRunDirectory: "",
   onboardingDismissed: false,
   htmlPollInterval: null
 };

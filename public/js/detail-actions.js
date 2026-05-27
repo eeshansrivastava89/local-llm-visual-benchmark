@@ -8,6 +8,7 @@ import { closeModal, openModal } from "./modals.js";
 import { canUseOperationalControls, setOperationalAvailability, syncOperationalControls } from "./operational-controls.js";
 import { copyTextToClipboard } from "./clipboard.js";
 import { setButtonLabel } from "./icons.js";
+import { scoreDsRun } from "./score-controller.js";
 import { renderHarnesses, renderModelSources, renderModels, renderRuns } from "./workbench-controller.js";
 import { renderPrepOptions } from "./prepare-controller.js";
 
@@ -268,7 +269,7 @@ export function updateDetailActions(run) {
   setOperationalAvailability(els.openHtml, availability.openHtml);
   setOperationalAvailability(els.copyDetailPath, availability.copyPath);
   setOperationalAvailability(els.openRunFolder, availability.openRunFolder);
-  setOperationalAvailability(els.recaptureRun, availability.showCapture);
+  setOperationalAvailability(els.recaptureRun, availability.showCapture || availability.showScore);
   setOperationalAvailability(els.deleteRun, availability.deleteRun);
   syncOperationalControls();
 
@@ -276,8 +277,17 @@ export function updateDetailActions(run) {
   els.openHtml.disabled = !canOperate || !availability.openHtml;
   els.copyDetailPath.disabled = !canOperate || !availability.copyPath;
   els.openRunFolder.disabled = !canOperate || !availability.openRunFolder;
-  els.recaptureRun.disabled = !canOperate || !availability.capture || state.captureBusy;
   els.deleteRun.disabled = !canOperate || !availability.deleteRun;
+
+  if (availability.showScore) {
+    const isScoring = state.scoreBusy && state.scoreRunDirectory === run.runDirectory;
+    els.recaptureRun.disabled = !canOperate || isScoring;
+    els.recaptureRun.title = availability.showScore ? "" : "Score needs summary.json in the run folder.";
+    setButtonLabel(els.recaptureRun, isScoring ? "Scoring…" : availability.recaptureLabel, "check");
+    return;
+  }
+
+  els.recaptureRun.disabled = !canOperate || !availability.capture || state.captureBusy;
   els.recaptureRun.title = availability.capture
     ? ""
     : "Recapture needs index.html in this run folder. Click Refresh after adding the file.";

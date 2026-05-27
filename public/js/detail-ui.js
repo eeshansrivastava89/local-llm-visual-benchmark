@@ -27,8 +27,11 @@ export function detailActionAvailability(run) {
     copyPath: Boolean(run.runDirectory),
     showCapture: Boolean(isVisualRun),
     capture: Boolean(isVisualRun && run.runDirectory && run.assets?.html),
+    showScore: Boolean(isDsRun && run.runDirectory && run.assets?.ds?.summary),
     deleteRun: Boolean(run.runDirectory),
-    recaptureLabel: run.assets?.preview || hasCapturedVideo(run) ? "Recapture media" : "Capture preview",
+    recaptureLabel: isVisualRun
+      ? (run.assets?.preview || hasCapturedVideo(run) ? "Recapture media" : "Capture preview")
+      : (run.assets?.ds?.scorecard ? "Rescore" : "Score"),
     openNotebook: Boolean(isDsRun && run.assets?.ds?.notebook && run.runDirectory)
   };
 }
@@ -86,7 +89,8 @@ function renderMetricsRibbon(run) {
   const verdict = verdictPill(summary);
   const chips = (summary.metrics ?? []).map(renderMetricChip).join('');
   const scoreBar = renderScoreBar(run.dsScorecard);
-  return '<div class="ds-ribbon">' + verdict + chips + '</div>' + scoreBar;
+  const judgeBar = renderJudgeBar(run.dsJudgeScorecard);
+  return '<div class="ds-ribbon">' + verdict + chips + '</div>' + scoreBar + judgeBar;
 }
 
 function verdictPill(summary) {
@@ -121,9 +125,32 @@ function renderScoreBar(scorecard) {
     const symbol = c.pass ? '\u2713' : '\u2717';
     return '<span class="ds-check-dot" data-pass="' + (c.pass ? '1' : '0') + '"/' + String(c.earned) + '"' + escapeHtml(c.label) + '">' + symbol + '</span>';
   }).join('');
-  return '<div class="ds-score-bar" data-tone="' + escapeAttribute(tone) + '">' +
+  return '<div class="ds-score-bar" data-tone="' + escapeAttribute(tone) + '" data-layer="1">' +
     '<div class="ds-score-track"><div class="ds-score-fill" style="width:' + String(pct) + '%"></div></div>' +
     '<div class="ds-score-text">' + String(earned) + '/' + String(total) + ' ' + String(pct) + '%</div>' +
+    '<div class="ds-score-dots">' + indicators + '</div>' +
+  '</div>';
+}
+function renderJudgeBar(judgeScorecard) {
+  if (!judgeScorecard) return '';
+  const dims = [
+    { key: 'notebook_structure', label: 'Structure' },
+    { key: 'visualization_quality', label: 'Viz' },
+    { key: 'statistical_interpretation', label: 'Stats' },
+    { key: 'grounding', label: 'Grounding' },
+    { key: 'product_recommendation', label: 'Rec' }
+  ];
+  const avg = dims.reduce((s, d) => s + (judgeScorecard[d.key] ?? 0), 0) / dims.length;
+  const avgPct = Math.round(avg / 10 * 100);
+  const tone = avgPct >= 75 ? 'safe' : avgPct >= 50 ? 'caution' : 'danger';
+  const indicators = dims.map(function(d) {
+    const val = judgeScorecard[d.key] ?? 0;
+    const sym = val >= 7 ? '\u2713' : val >= 4 ? '\u25CB' : '\u2717';
+    return '<span class="ds-check-dot" data-pass="' + (val >= 7 ? '1' : '0') + '"/' + String(val) + '" title="' + escapeHtml(d.label) + '">' + sym + ' ' + String(val) + '/10</span>';
+  }).join('');
+  return '<div class="ds-score-bar" data-tone="' + escapeAttribute(tone) + '" data-layer="2">' +
+    '<div class="ds-score-track"><div class="ds-score-fill" style="width:' + String(avgPct) + '%"></div></div>' +
+    '<div class="ds-score-text">Judge ' + String(Math.round(avg * 10) / 10) + '/10 \u00b7 ' + String(avgPct) + '%</div>' +
     '<div class="ds-score-dots">' + indicators + '</div>' +
   '</div>';
 }

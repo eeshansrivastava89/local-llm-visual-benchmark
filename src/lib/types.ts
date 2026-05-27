@@ -62,6 +62,7 @@ export type DataScienceAssets = {
   notebook?: string;
   summary?: string;
   scorecard?: string;
+  judgeScorecard?: string;
   chartDistribution?: string;
   chartTreatmentEffect?: string;
   chartCompletionRates?: string;
@@ -148,6 +149,15 @@ export interface DsScorecard {
   checks?: Record<string, { label: string; max: number; earned: number; pass: boolean; detail: string }>;
 }
 
+export interface DsJudgeScorecard {
+  notebook_structure: number;
+  visualization_quality: number;
+  statistical_interpretation: number;
+  grounding: number;
+  product_recommendation: number;
+  notes: string;
+}
+
 export interface DsSummary {
   status?: string;
   recommended_variant?: "A" | "B" | null;
@@ -171,6 +181,7 @@ export interface RunMetadata {
   promptText?: string;
   dsSummary?: DsSummary;
   dsScorecard?: DsScorecard;
+  dsJudgeScorecard?: DsJudgeScorecard;
   preparedAt?: string;
   tool?: "opencode" | "pi" | "hermes" | "generic";
   completedAt?: string;

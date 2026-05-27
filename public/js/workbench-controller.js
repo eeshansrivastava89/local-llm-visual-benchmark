@@ -10,11 +10,13 @@ import { renderModelInventory } from "./setup-ui.js";
 import { openModal } from "./modals.js";
 
 let captureRunMediaHandler = () => {};
+let scoreDsRunHandler = () => {};
 let openDetailHandler = () => {};
 let canUseOperationalControlsHandler = () => false;
 
 export function configureWorkbenchController(options = {}) {
   captureRunMediaHandler = options.onCaptureRunMedia ?? captureRunMediaHandler;
+  scoreDsRunHandler = options.onScoreDsRun ?? scoreDsRunHandler;
   openDetailHandler = options.onOpenDetail ?? openDetailHandler;
   canUseOperationalControlsHandler = options.canUseOperationalControls ?? canUseOperationalControlsHandler;
 }
@@ -233,6 +235,8 @@ function workbenchRenderContext() {
     canOperate: canUseOperationalControlsHandler(),
     captureBusy: state.captureBusy,
     captureRunDirectory: state.captureRunDirectory,
+    scoreBusy: state.scoreBusy,
+    scoreRunDirectory: state.scoreRunDirectory,
     compareSelection: state.compareSelection,
     comparisonExportBusy: state.comparisonExportBusy,
     runPage: state.runPage,
@@ -272,6 +276,20 @@ function wireRunCards() {
       const run = state.runs.find((r) => r.runId === runId);
       if (run) {
         void captureRunMediaHandler(run);
+      }
+    });
+  });
+
+  els.runsSurface.querySelectorAll("[data-score-run-id]").forEach((button) => {
+    button.addEventListener("keydown", (event) => {
+      event.stopPropagation();
+    });
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const runId = button.dataset.scoreRunId;
+      const run = state.runs.find((r) => r.runId === runId);
+      if (run) {
+        void scoreDsRunHandler(run);
       }
     });
   });

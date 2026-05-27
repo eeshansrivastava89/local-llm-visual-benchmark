@@ -107,11 +107,12 @@ async function exportRunAssets(
     ...(run.runner ? { runner: toPublicRunner(run.runner) } : {}),
     ...(run.capture ? { capture: toPublicCapture(run.capture) } : {}),
     ...(run.dsSummary ? { dsSummary: run.dsSummary } : {}),
-    ...(run.dsScorecard ? { dsScorecard: run.dsScorecard } : {})
+    ...(run.dsScorecard ? { dsScorecard: run.dsScorecard } : {}),
+    ...(run.dsJudgeScorecard ? { dsJudgeScorecard: run.dsJudgeScorecard } : {})
   };
 
   const dsAssetKeys = run.assets.ds
-    ? [run.assets.ds.chartDistribution, run.assets.ds.chartTreatmentEffect, run.assets.ds.chartCompletionRates, run.assets.ds.summary, run.assets.ds.scorecard].filter(Boolean) as string[]
+    ? [run.assets.ds.chartDistribution, run.assets.ds.chartTreatmentEffect, run.assets.ds.chartCompletionRates, run.assets.ds.summary, run.assets.ds.scorecard, run.assets.ds.judgeScorecard].filter(Boolean) as string[]
     : [];
 
   await mkdir(outputDirectory, { recursive: true });
