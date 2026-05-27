@@ -37,19 +37,27 @@ function renderComparePreviewCard(run) {
   const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
   const model = run.model?.id ?? "Unknown model";
   const stack = stackAttemptIdentity(run);
-  const videoHref = assetHref(run, run.assets?.videoMp4 ?? run.assets?.video);
-  const previewHref = assetHref(run, run.assets?.preview);
-  const media = videoHref
-    ? '<video class="h-full w-full object-cover" data-managed-loop-video autoplay muted playsinline preload="auto" ' +
+  const kind = run.kind ?? "visual";
+  const isDs = kind === "data-science";
+  const videoHref = isDs ? null : assetHref(run, run.assets?.videoMp4 ?? run.assets?.video);
+  const previewHref = isDs
+    ? assetHref(run, run.assets?.ds?.chartTreatmentEffect ?? run.assets?.ds?.chartDistribution)
+    : assetHref(run, run.assets?.preview);
+  let media;
+  if (videoHref) {
+    media = '<video class="h-full w-full object-cover" data-managed-loop-video autoplay muted playsinline preload="auto" ' +
       (previewHref ? 'poster="' + escapeAttribute(previewHref) + '" ' : '') +
-      'src="' + escapeAttribute(videoHref) + '"></video>'
-    : previewHref
-      ? '<img class="h-full w-full object-cover" src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />'
-      : '<div class="preview-placeholder"><strong>No captured media</strong></div>';
-
+      'src="' + escapeAttribute(videoHref) + '"></video>';
+  } else if (previewHref) {
+    media = '<img class="' + (isDs ? 'h-full w-full object-contain' : 'h-full w-full object-cover') + '" src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />';
+  } else {
+    media = '<div class="preview-placeholder"><strong>No captured media</strong></div>';
+  }
+  const ribbon = isDs && run.dsSummary ? renderCompareRibbon(run.dsSummary) : '';
   return (
     '<article class="compare-card" data-compare-run>' +
       '<div class="compare-media">' + media + "</div>" +
+      (ribbon ? '<div class="compare-card-ribbon">' + ribbon + '</div>' : '') +
       '<div class="grid min-w-0 gap-0.5">' +
         '<strong class="truncate-line">' + escapeHtml(model) + "</strong>" +
         '<span class="compare-prompt truncate-line">' + escapeHtml(title) + "</span>" +
@@ -57,6 +65,18 @@ function renderComparePreviewCard(run) {
       "</div>" +
     "</article>"
   );
+}
+
+function renderCompareRibbon(summary) {
+  const tone = summary.status === 'significant'
+    ? (summary.recommended_variant === 'B' ? 'safe' : 'danger')
+    : summary.status === 'not_significant'
+      ? 'caution'
+      : 'caution';
+  const label = summary.status === 'significant'
+    ? (summary.recommended_variant === 'B' ? 'Ship B' : 'Ship A')
+    : 'Inconclusive';
+  return '<span class="verdict-pill verdict-pill-sm" data-verdict="' + escapeAttribute(tone) + '">' + escapeHtml(label) + '</span>';
 }
 
 export function syncManagedCompareVideos(root = document) {

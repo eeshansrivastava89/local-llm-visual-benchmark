@@ -172,6 +172,7 @@ async function captureOne(
 }
 
 function shouldCaptureRun(run: RunMetadata, force = false): boolean {
+  if (run.kind && run.kind !== "visual") return false;
   return Boolean(run.assets?.html && (force || !run.assets?.preview || !hasCapturedVideo(run)));
 }
 

@@ -349,6 +349,7 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
           modelId: readRequiredString(request.modelId, "modelId"),
           modelSource: readModelSource(request.modelSource),
           runner: readPrepareRunner(request.runner),
+          kind: readRunKind(request.kind),
           baseUrl: readOptionalString(request.baseUrl, "baseUrl"),
           backendLabel: readOptionalString(request.backendLabel, "backendLabel"),
           runsRoot

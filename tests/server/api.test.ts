@@ -190,6 +190,7 @@ describe("createLocalApi", () => {
       modelId: "model-a",
       modelSource: "omlx",
       runner: "opencode",
+      kind: "visual",
       baseUrl: "http://127.0.0.1:8000/v1",
       backendLabel: undefined,
       runsRoot: "/runs"
@@ -230,6 +231,7 @@ describe("createLocalApi", () => {
       modelId: "ChatGPT",
       modelSource: "custom",
       runner: "manual",
+      kind: "visual",
       baseUrl: undefined,
       backendLabel: "cloud",
       runsRoot: "/runs"
@@ -251,7 +253,7 @@ describe("createLocalApi", () => {
         kind: "lighteval",
         runner: "lighteval"
       })
-    ).rejects.toThrow(/kind must be visual/);
+    ).rejects.toThrow(/kind must be visual or data-science/);
     expect(prepareRun).not.toHaveBeenCalled();
   });
 

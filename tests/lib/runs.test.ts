@@ -363,3 +363,166 @@ describe("run metadata helpers", () => {
     });
   });
 });
+
+function createDsMetadata(runDirectory: string): RunMetadata {
+  return {
+    kind: "data-science",
+    runId: "2026-05-26T01-02-03-004Z",
+    benchmark: {
+      id: "ab-test-analysis",
+      title: "A/B Test Production Analysis",
+      description: "Run a production A/B test analysis.",
+      prompt: "Analyze the A/B test data."
+    },
+    model: {
+      id: "qwen3-30b-a3b",
+      slug: "qwen3-30b-a3b"
+    },
+    status: "prepared",
+    createdAt: "2026-05-26T01:02:03.004Z",
+    updatedAt: "2026-05-26T01:02:03.004Z",
+    runDirectory,
+    assets: {
+      metadata: "metadata.json",
+      prompt: "prompt.md",
+      ds: {
+        notebook: "analysis.ipynb",
+        summary: "summary.json",
+        chartDistribution: "chart-distribution.png",
+        chartTreatmentEffect: "chart-treatment-effect.png",
+        chartCompletionRates: "chart-completion-rates.png"
+      }
+    }
+  };
+}
+
+describe("data-science run kind", () => {
+  it("discovers data-science runs alongside visual runs", async () => {
+    const runsRoot = await createRunsRoot();
+    const visualPaths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "sakura",
+      modelId: "qwen-coder",
+      runId: "2026-05-06T01-02-03-004Z"
+    });
+    const dsPaths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "ab-test-analysis",
+      modelId: "qwen3-30b-a3b",
+      runId: "2026-05-26T01-02-03-004Z"
+    });
+
+    await writeRunMetadata(visualPaths, createMetadata(visualPaths.runDirectory));
+    await writeRunMetadata(dsPaths, createDsMetadata(dsPaths.runDirectory));
+
+    const runs = await listRunMetadata(runsRoot);
+    const kinds = runs.map((r) => r.kind ?? "visual");
+    expect(kinds).toContain("visual");
+    expect(kinds).toContain("data-science");
+  });
+
+  it("hydrates data-science asset availability from run folder", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "ab-test-analysis",
+      modelId: "qwen3-30b-a3b",
+      runId: "2026-05-26T01-02-03-004Z"
+    });
+    const metadata = createDsMetadata(paths.runDirectory);
+
+    await writeRunMetadata(paths, metadata);
+    await writeFile(join(paths.runDirectory, "summary.json"), JSON.stringify({ status: "significant" }));
+
+    const runs = await listRunMetadata(runsRoot);
+    const ds = runs.find((r) => r.kind === "data-science");
+    expect(ds).toBeDefined();
+    expect(ds?.assets?.ds?.summary).toBe("summary.json");
+    // chart files don't exist yet, so they should not be hydrated
+    expect(ds?.assets?.ds?.chartDistribution).toBeUndefined();
+  });
+
+  it("hydrates dsSummary from summary.json in data-science runs", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "ab-test-analysis",
+      modelId: "qwen3-30b-a3b",
+      runId: "2026-05-26T01-02-03-004Z"
+    });
+    const metadata = createDsMetadata(paths.runDirectory);
+
+    await writeRunMetadata(paths, metadata);
+    await writeFile(
+      join(paths.runDirectory, "summary.json"),
+      JSON.stringify({
+        status: "significant",
+        recommended_variant: "A",
+        decision: "Variant B has significant guardrail drops; ship A.",
+        metrics: [
+          { label: "Completion Time", value: "+3.2s", delta: "+55.5%", delta_direction: "up", context: "p=0.001" },
+          { label: "Effect Size", value: "d=0.40", context: "small" }
+        ],
+        warnings: ["Significant drop in completion rate"]
+      })
+    );
+
+    const runs = await listRunMetadata(runsRoot);
+    const ds = runs.find((r) => r.kind === "data-science");
+    expect(ds?.dsSummary).toMatchObject({
+      status: "significant",
+      recommended_variant: "A",
+      decision: "Variant B has significant guardrail drops; ship A.",
+      metrics: [
+        { label: "Completion Time", value: "+3.2s", delta_direction: "up" },
+        { label: "Effect Size", value: "d=0.40" }
+      ],
+      warnings: ["Significant drop in completion rate"]
+    });
+  });
+
+  it("hydrates dsScorecard from scorecard.json", async () => {
+    const runsRoot = await createRunsRoot();
+    const paths = buildRunPaths({
+      runsRoot,
+      benchmarkId: "ab-test-analysis",
+      modelId: "qwen3-30b-a3b",
+      runId: "2026-05-26T01-02-03-004Z"
+    });
+    const metadata: RunMetadata = {
+      ...createDsMetadata(paths.runDirectory),
+      assets: {
+        ...createDsMetadata(paths.runDirectory).assets,
+        ds: {
+          ...createDsMetadata(paths.runDirectory).assets.ds!,
+          scorecard: "scorecard.json"
+        }
+      }
+    };
+
+    await writeRunMetadata(paths, metadata);
+    await writeFile(
+      join(paths.runDirectory, "scorecard.json"),
+      JSON.stringify({
+        layer: 1,
+        total: 100,
+        earned: 85,
+        pct: 85.0,
+        checks: {
+          summary_exists: { label: "summary.json exists and parses", max: 5, earned: 5, pass: true, detail: "ok" },
+          recommended_variant: { label: "recommended_variant matches oracle", max: 15, earned: 0, pass: false, detail: "got B, expected A" }
+        }
+      })
+    );
+
+    const runs = await listRunMetadata(runsRoot);
+    const ds = runs.find((r) => r.kind === "data-science");
+    expect(ds?.dsScorecard).toMatchObject({
+      layer: 1,
+      total: 100,
+      earned: 85,
+      pct: 85.0
+    });
+    expect(ds?.dsScorecard?.checks?.recommended_variant.pass).toBe(false);
+  });
+});

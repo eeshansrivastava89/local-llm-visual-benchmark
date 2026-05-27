@@ -3,7 +3,8 @@ import { uniqueBy } from "./utils.js";
 
 export function filteredRuns() {
   return state.runs.filter((run) => {
-    const workspaceMatch = runKind(run) === "visual";
+    const kind = runKind(run);
+    const workspaceMatch = kind === "visual" || kind === "data-science";
     const modelMatch = state.selectedModel === "all" || run.model?.id === state.selectedModel;
     const benchmarkMatch = state.selectedBenchmark === "all" || run.benchmark?.id === state.selectedBenchmark;
     const harnessMatch = state.selectedHarness === "all" || stackAttemptIdentity(run).harness === state.selectedHarness;
@@ -64,7 +65,9 @@ export function runKind(run) {
 }
 
 function runKindLabel(run) {
-  return runKind(run) === "visual" ? "Visual" : "Unsupported";
+  const kind = runKind(run);
+  if (kind === "data-science") return "Data Science";
+  return "Visual";
 }
 
 function runnerLabel(run) {
@@ -99,6 +102,12 @@ export function needsMediaCapture(run) {
 }
 
 export function runCardState(run) {
+  const kind = runKind(run);
+  if (kind === "data-science") {
+    const ds = run.assets?.ds ?? {};
+    if (ds.chartTreatmentEffect || ds.summary) return { status: "completed", label: "analysis" };
+    return { status: "prepared", label: "slot" };
+  }
   if (hasCapturedVideo(run)) {
     return { status: "completed", label: "video" };
   }
@@ -126,6 +135,14 @@ export function displayRunError(run) {
 
 export function runCardMediaMessage(run, isCapturing) {
   if (isCapturing) return "Capturing preview media";
+  if (runKind(run) === "data-science") {
+    const ds = run.assets?.ds ?? {};
+    const chartCount = [ds.chartDistribution, ds.chartTreatmentEffect, ds.chartCompletionRates].filter(Boolean).length;
+    if (chartCount === 3 && ds.summary) return "3 charts · summary ready";
+    if (chartCount > 0) return chartCount + " chart" + (chartCount > 1 ? "s" : "") + " ready";
+    if (run.status === "failed") return displayRunError(run) ?? "Analysis failed";
+    return "Waiting for analysis outputs";
+  }
   if (hasCapturedVideo(run)) return videoReadyMessage(run);
   if (run.status === "failed" || run.capture?.video?.status === "failed") {
     return displayRunError(run) ?? "Capture failed";

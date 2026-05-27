@@ -159,6 +159,9 @@ function renderCaptureOverlay(capturing) {
 }
 
 function renderPreview(run, options = {}) {
+  if (runKind(run) === "data-science") {
+    return renderDsPreview(run, options);
+  }
   const previewHref = assetHref(run, run.assets?.preview);
   if (previewHref) {
     return '<span class="preview"><img src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />' + renderCaptureOverlay(options.capturing) + '</span>';
@@ -167,10 +170,27 @@ function renderPreview(run, options = {}) {
   return (
     '<span class="preview">' + renderCaptureOverlay(options.capturing) +
       '<span class="preview-placeholder">' +
-        "<strong>" + escapeHtml(run.assets?.html ? "HTML source saved" : "No preview yet") + "</strong>" +
-        '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(run.status === "prepared" ? "Paste the prompt into your tool." : displayRunError(run) ?? "Add preview.png for gallery thumbnails.") + "</span>" +
-      "</span>" +
-    "</span>"
+        "<strong>" + escapeHtml(run.assets?.html ? "HTML source saved" : "No preview yet") + '</strong>' +
+      '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(run.status === "prepared" ? "Paste the prompt into your tool." : displayRunError(run) ?? "Add preview.png for gallery thumbnails.") + '</span>' +
+    '</span>' +
+    '</span>'
+  );
+}
+
+function renderDsPreview(run, options = {}) {
+  const thumbnail = assetHref(run, run.assets?.ds?.chartTreatmentEffect);
+  if (thumbnail) {
+    return '<span class="preview"><img src="' + escapeAttribute(thumbnail) + '" alt="" loading="lazy" />' + renderCaptureOverlay(options.capturing) + '</span>';
+  }
+  const hasDsOutput = run.assets?.ds?.summary;
+  const label = hasDsOutput ? "Analysis in progress" : "No output yet";
+  return (
+    '<span class="preview">' + renderCaptureOverlay(options.capturing) +
+      '<span class="preview-placeholder">' +
+        '<strong>' + escapeHtml(label) + '</strong>' +
+        '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(run.status === "prepared" ? "Paste the prompt into your harness." : displayRunError(run) ?? "Run the analysis to generate charts.") + '</span>' +
+      '</span>' +
+    '</span>'
   );
 }
 

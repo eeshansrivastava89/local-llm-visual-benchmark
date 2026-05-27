@@ -44,7 +44,7 @@ export async function generateStaticExport(
   ]);
   const exportedRuns = await Promise.all(
     runs
-      .filter((run) => (run.kind ?? "visual") === "visual")
+      .filter((run) => isExportableKind(run.kind ?? "visual"))
       .map((run) => exportRunAssets(run, publicExportDirectory))
   );
   const manifest: StaticExportManifest = {
@@ -84,11 +84,12 @@ async function exportRunAssets(
   const assets: RunMetadata["assets"] = {
     metadata: safeAsset(run.assets.metadata ?? "metadata.json"),
     ...(run.assets.preview ? { preview: safeAsset(run.assets.preview) } : {}),
-    ...(run.assets.videoMp4 ? { videoMp4: safeAsset(run.assets.videoMp4) } : {})
+    ...(run.assets.videoMp4 ? { videoMp4: safeAsset(run.assets.videoMp4) } : {}),
+    ...(run.assets.ds ? { ds: exportDsAssets(run.assets.ds) } : {})
   };
   const exportedRun: RunMetadata = {
     ...(run.schemaVersion ? { schemaVersion: run.schemaVersion } : {}),
-    kind: "visual",
+    kind: run.kind ?? "visual",
     runId: run.runId,
     benchmark: toStaticBenchmark(run.benchmark),
     model: run.model,
@@ -104,14 +105,21 @@ async function exportRunAssets(
     ...(run.settings ? { settings: run.settings } : {}),
     assets,
     ...(run.runner ? { runner: toPublicRunner(run.runner) } : {}),
-    ...(run.capture ? { capture: toPublicCapture(run.capture) } : {})
+    ...(run.capture ? { capture: toPublicCapture(run.capture) } : {}),
+    ...(run.dsSummary ? { dsSummary: run.dsSummary } : {}),
+    ...(run.dsScorecard ? { dsScorecard: run.dsScorecard } : {})
   };
+
+  const dsAssetKeys = run.assets.ds
+    ? [run.assets.ds.chartDistribution, run.assets.ds.chartTreatmentEffect, run.assets.ds.chartCompletionRates, run.assets.ds.summary, run.assets.ds.scorecard].filter(Boolean) as string[]
+    : [];
 
   await mkdir(outputDirectory, { recursive: true });
   await Promise.all([
     writePrettyJson(join(outputDirectory, assets.metadata), exportedRun),
     copyAssetIfPresent(run, outputDirectory, assets.preview),
-    copyAssetIfPresent(run, outputDirectory, assets.videoMp4)
+    copyAssetIfPresent(run, outputDirectory, assets.videoMp4),
+    ...dsAssetKeys.map((a) => copyAssetIfPresent(run, outputDirectory, a))
   ]);
 
   return exportedRun;
@@ -233,6 +241,21 @@ function isMissingPathError(error: unknown): boolean {
     "code" in error &&
     error.code === "ENOENT"
   );
+}
+
+const EXPORTABLE_RUN_KINDS = new Set(["visual", "data-science"]);
+
+function isExportableKind(kind: string): boolean {
+  return EXPORTABLE_RUN_KINDS.has(kind);
+}
+
+function exportDsAssets(ds: NonNullable<RunMetadata["assets"]["ds"]>): NonNullable<RunMetadata["assets"]["ds"]> {
+  const result: NonNullable<RunMetadata["assets"]["ds"]> = {};
+  if (ds.summary) result.summary = safeAsset(ds.summary);
+  if (ds.chartDistribution) result.chartDistribution = safeAsset(ds.chartDistribution);
+  if (ds.chartTreatmentEffect) result.chartTreatmentEffect = safeAsset(ds.chartTreatmentEffect);
+  if (ds.chartCompletionRates) result.chartCompletionRates = safeAsset(ds.chartCompletionRates);
+  return result;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -5,7 +5,7 @@ export type RunStatus =
   | "cancelled"
   | "skipped";
 
-export type RunKind = "visual";
+export type RunKind = "visual" | "data-science";
 
 export type RunnerMode =
   | "manual"
@@ -58,6 +58,15 @@ export interface CaptureSettings {
   preview: PreviewSettings;
 }
 
+export type DataScienceAssets = {
+  notebook?: string;
+  summary?: string;
+  scorecard?: string;
+  chartDistribution?: string;
+  chartTreatmentEffect?: string;
+  chartCompletionRates?: string;
+};
+
 export interface RunAssets {
   metadata: string;
   prompt?: string;
@@ -70,6 +79,8 @@ export interface RunAssets {
   preview?: string;
   video?: string;
   videoMp4?: string;
+  /** Data-science run assets (notebook, summary JSON, chart PNGs). */
+  ds?: DataScienceAssets;
 }
 
 export interface RunError {
@@ -129,6 +140,22 @@ export interface RunRunnerMetadata {
   tokenMetrics?: RunTokenMetrics;
 }
 
+export interface DsScorecard {
+  layer: number;
+  total: number;
+  earned: number;
+  pct: number;
+  checks?: Record<string, { label: string; max: number; earned: number; pass: boolean; detail: string }>;
+}
+
+export interface DsSummary {
+  status?: string;
+  recommended_variant?: "A" | "B" | null;
+  decision?: string;
+  metrics?: Array<{ label: string; value?: string; delta?: string; delta_direction?: string; context?: string }>;
+  warnings?: string[];
+}
+
 export interface RunMetadata {
   schemaVersion?: number;
   kind?: RunKind;
@@ -142,6 +169,8 @@ export interface RunMetadata {
   settings?: CaptureSettings;
   assets: RunAssets;
   promptText?: string;
+  dsSummary?: DsSummary;
+  dsScorecard?: DsScorecard;
   preparedAt?: string;
   tool?: "opencode" | "pi" | "hermes" | "generic";
   completedAt?: string;

@@ -66,10 +66,10 @@ export function readRunKind(value: unknown): RunKind {
   if (value === undefined || value === null || value === "") {
     return "visual";
   }
-  if (value === "visual") {
+  if (value === "visual" || value === "data-science") {
     return value;
   }
-  throw new ApiRequestError(400, "kind must be visual.");
+  throw new ApiRequestError(400, "kind must be visual or data-science.");
 }
 
 export function readPrepareRunner(value: unknown): PrepareRunRunner {

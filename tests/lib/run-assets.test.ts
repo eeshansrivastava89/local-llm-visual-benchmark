@@ -57,9 +57,9 @@ describe("run asset reader", () => {
 
     await expect(
       readRunAsset({ runsRoot, runDirectory, asset: "index.html" })
-    ).rejects.toThrow(/Only captured preview media can be served/);
+    ).rejects.toThrow(/Only captured media and data-science assets/);
     await expect(
       readRunAsset({ runsRoot, runDirectory, asset: "response.raw.txt" })
-    ).rejects.toThrow(/Only captured preview media can be served/);
+    ).rejects.toThrow(/Only captured media and data-science assets/);
   });
 });

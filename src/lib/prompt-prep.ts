@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { buildRunPaths, createRunId } from "./paths";
 
 import { writePromptMarkdown, writeRunMetadata } from "./runs";
-import type { BenchmarkRecord, ModelSourceId, PreparedRun, RunnerMode, RunMetadata } from "./types";
+import type { BenchmarkRecord, ModelSourceId, PreparedRun, RunnerMode, RunKind, RunMetadata } from "./types";
 
 export type PrepareRunRunner =
   | "manual"
@@ -15,6 +15,7 @@ export interface PrepareRunInput {
   modelId: string;
   modelSource?: ModelSourceId;
   runner?: PrepareRunRunner;
+  kind?: RunKind;
   baseUrl?: string;
   backendLabel?: string;
   runsRoot?: string;
@@ -24,6 +25,7 @@ export interface PrepareRunInput {
 export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
   const now = input.now ?? new Date();
   const runner = input.runner ?? "manual";
+  const kind = input.kind ?? "visual";
   const paths = buildRunPaths({
     runsRoot: input.runsRoot,
     benchmarkId: input.benchmark.id,
@@ -31,14 +33,16 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     runId: createRunId(now)
   });
   const prompt = buildToolPrompt({
-    benchmark: input.benchmark
+    benchmark: input.benchmark,
+    kind
   });
   const timestamp = now.toISOString();
   const modelSource = input.modelSource;
   const backendLabel = modelSource ? modelSourceLabel(modelSource, input.backendLabel) : undefined;
+  const isDs = kind === "data-science";
   const run: RunMetadata = {
     schemaVersion: 1,
-    kind: "visual",
+    kind,
     runId: paths.runId,
     benchmark: input.benchmark,
     model: {
@@ -50,14 +54,27 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     updatedAt: timestamp,
     preparedAt: timestamp,
     runDirectory: paths.runDirectory,
-    assets: {
-      metadata: "metadata.json",
-      prompt: "prompt.md",
-      html: "index.html",
-      preview: "preview.png",
-      video: "preview.webm",
-      rawResponse: "response.raw.txt"
-    },
+    assets: isDs
+      ? {
+          metadata: "metadata.json",
+          prompt: "prompt.md",
+          rawResponse: "response.raw.txt",
+          ds: {
+            notebook: "analysis.ipynb",
+            summary: "summary.json",
+            chartDistribution: "chart-distribution.png",
+            chartTreatmentEffect: "chart-treatment-effect.png",
+            chartCompletionRates: "chart-completion-rates.png"
+          }
+        }
+      : {
+          metadata: "metadata.json",
+          prompt: "prompt.md",
+          html: "index.html",
+          preview: "preview.png",
+          video: "preview.webm",
+          rawResponse: "response.raw.txt"
+        },
     runner: {
       mode: runnerModeFor(runner),
       ...(modelSource ? { modelSource } : {}),
@@ -96,7 +113,12 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
 
 export function buildToolPrompt(input: {
   benchmark: BenchmarkRecord;
+  kind?: RunKind;
 }): string {
+  const kind = input.kind ?? "visual";
+  if (kind === "data-science") {
+    return input.benchmark.prompt.trim();
+  }
   return [
     "Create a complete, self-contained HTML file for the request below.",
     "Write the file as `index.html` in the current working directory.",

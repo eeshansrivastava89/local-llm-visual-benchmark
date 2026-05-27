@@ -345,6 +345,56 @@ describe("generateStaticExport", () => {
     expect(manifest.runs).toEqual([]);
     await expect(stat(join(publicExportDirectory, "manifest.json"))).resolves.toBeTruthy();
   });
+
+  it("exports data-science runs with chart and summary assets", async () => {
+    const root = await createTempRoot("llm-visual-export-ds-");
+    const benchmarkDirectory = join(root, "benchmarks");
+    const runsRoot = join(root, "runs");
+    const publicExportDirectory = join(root, "public", "export");
+    await writeBenchmark(benchmarkDirectory);
+
+    const dsRunDir = join(runsRoot, "ab-test-analysis", "qwen3-30b", "2026-05-26T01-02-03-004Z");
+    await mkdir(dsRunDir, { recursive: true });
+    const dsMetadata: RunMetadata = {
+      kind: "data-science",
+      runId: "2026-05-26T01-02-03-004Z",
+      benchmark: { id: "ab-test-analysis", title: "A/B Test", description: "Analysis", prompt: "Analyze." },
+      model: { id: "qwen3-30b", slug: "qwen3-30b" },
+      status: "completed",
+      createdAt: "2026-05-26T01:02:03.004Z",
+      updatedAt: "2026-05-26T01:02:03.004Z",
+      runDirectory: dsRunDir,
+      assets: {
+        metadata: "metadata.json",
+        ds: {
+          summary: "summary.json",
+          chartTreatmentEffect: "chart-treatment-effect.png"
+        }
+      }
+    };
+    await writeFile(join(dsRunDir, "metadata.json"), JSON.stringify(dsMetadata), "utf8");
+    await writeFile(join(dsRunDir, "summary.json"), JSON.stringify({ status: "significant" }), "utf8");
+    await writeFile(join(dsRunDir, "chart-treatment-effect.png"), "png bytes", "utf8");
+
+    const manifest = await generateStaticExport({
+      benchmarkDirectory,
+      runsRoot,
+      publicExportDirectory,
+      generatedAt: new Date("2026-05-26T20:00:00.000Z")
+    });
+
+    const dsRun = manifest.runs.find((r) => r.kind === "data-science");
+    expect(dsRun).toBeDefined();
+    expect(dsRun?.kind).toBe("data-science");
+    expect(dsRun?.assets?.ds?.summary).toBe("summary.json");
+    expect(dsRun?.assets?.ds?.chartTreatmentEffect).toBe("chart-treatment-effect.png");
+    expect(dsRun?.assets?.preview).toBeUndefined();
+    expect(dsRun?.assets?.videoMp4).toBeUndefined();
+
+    const exportedDir = join(publicExportDirectory, "runs", "ab-test-analysis", "qwen3-30b", "2026-05-26T01-02-03-004Z");
+    await expect(readFile(join(exportedDir, "summary.json"), "utf8")).resolves.toBe(JSON.stringify({ status: "significant" }));
+    await expect(readFile(join(exportedDir, "chart-treatment-effect.png"), "utf8")).resolves.toBe("png bytes");
+  });
 });
 
 describe("static build script", () => {

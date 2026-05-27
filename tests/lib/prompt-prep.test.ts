@@ -118,4 +118,40 @@ describe("prepareRun", () => {
       "\"modelSource\": \"omlx\""
     );
   });
+
+  it("prepares data-science runs with DS assets and raw prompt", async () => {
+    const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-ds-runs-"));
+    const dsBenchmark: BenchmarkRecord = {
+      id: "ab-test-analysis",
+      title: "A/B Test Production Analysis",
+      description: "Analyze the A/B test.",
+      prompt: "Analyze the A/B test data from Supabase."
+    };
+    const prepared = await prepareRun({
+      benchmark: dsBenchmark,
+      modelId: "qwen3-30b-a3b",
+      kind: "data-science",
+      runsRoot,
+      now: new Date("2026-05-26T04:00:32.122Z")
+    });
+
+    expect(prepared.run).toMatchObject({
+      kind: "data-science",
+      assets: {
+        metadata: "metadata.json",
+        prompt: "prompt.md",
+        ds: {
+          notebook: "analysis.ipynb",
+          summary: "summary.json",
+          chartDistribution: "chart-distribution.png",
+          chartTreatmentEffect: "chart-treatment-effect.png",
+          chartCompletionRates: "chart-completion-rates.png"
+        }
+      }
+    });
+    expect(prepared.prompt).not.toContain("Write the file as `index.html`");
+    expect(prepared.prompt).toContain("Analyze the A/B test data from Supabase.");
+    expect(prepared.run.assets.html).toBeUndefined();
+    expect(prepared.run.assets.preview).toBeUndefined();
+  });
 });

@@ -20,7 +20,10 @@ export function configureWorkbenchController(options = {}) {
 }
 
 export function runsForCurrentWorkspace() {
-  return state.runs.filter((run) => runKind(run) === "visual");
+  return state.runs.filter((run) => {
+    const kind = runKind(run);
+    return kind === "visual" || kind === "data-science";
+  });
 }
 
 export function renderBenchmarks() {

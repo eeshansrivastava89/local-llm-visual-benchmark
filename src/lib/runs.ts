@@ -2,7 +2,7 @@ import { mkdir, readdir, readFile, rm, rmdir, stat, writeFile } from "node:fs/pr
 import { dirname, join, resolve } from "node:path";
 import { isPathInside, resolveRunAssetPath } from "./asset-paths.ts";
 import type { RunPaths } from "./paths";
-import type { RunError, RunMetadata } from "./types";
+import type { DsScorecard, DsSummary, RunError, RunMetadata } from "./types";
 
 export type RunMetadataUpdate = Partial<Omit<RunMetadata, "runId">>;
 
@@ -162,7 +162,7 @@ async function readDirentsIfPresent(path: string) {
 async function readMetadataIfPresent(path: string): Promise<RunMetadata | undefined> {
   try {
     const metadata = JSON.parse(await readFile(path, "utf8")) as RunMetadata;
-    if (metadata.kind && metadata.kind !== "visual") {
+    if (metadata.kind && !isKnownRunKind(metadata.kind)) {
       return undefined;
     }
     return hydrateAssetAvailability(metadata);
@@ -177,7 +177,9 @@ async function readMetadataIfPresent(path: string): Promise<RunMetadata | undefi
 
 async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetadata> {
   const declared = metadata.assets ?? {};
-  const candidates = {
+  const kind = metadata.kind ?? "visual";
+  const isDs = kind === "data-science";
+  const visualCandidates = {
     prompt: declared.prompt ?? "prompt.md",
     rawResponse: declared.rawResponse ?? "response.raw.txt",
     request: declared.request ?? "request.json",
@@ -189,43 +191,60 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
     video: declared.video ?? "preview.webm",
     videoMp4: declared.videoMp4 ?? "preview.mp4"
   };
-  const checks = await Promise.all([
-    assetExists(metadata, candidates.prompt),
-    assetExists(metadata, candidates.rawResponse),
-    assetExists(metadata, candidates.request),
-    assetExists(metadata, candidates.stream),
-    assetExists(metadata, candidates.response),
-    assetExists(metadata, candidates.command),
-    assetExists(metadata, candidates.html),
-    assetExists(metadata, candidates.preview),
-    assetExists(metadata, candidates.video),
-    assetExists(metadata, candidates.videoMp4)
-  ]);
+  const dsCandidates = {
+    notebook: declared.ds?.notebook ?? "analysis.ipynb",
+    summary: declared.ds?.summary ?? "summary.json",
+    scorecard: declared.ds?.scorecard ?? "scorecard.json",
+    chartDistribution: declared.ds?.chartDistribution ?? "chart-distribution.png",
+    chartTreatmentEffect: declared.ds?.chartTreatmentEffect ?? "chart-treatment-effect.png",
+    chartCompletionRates: declared.ds?.chartCompletionRates ?? "chart-completion-rates.png"
+  };
+  const visualChecks = await Promise.all(
+    Object.values(visualCandidates).map((c) => assetExists(metadata, c))
+  );
+  const dsChecks = isDs
+    ? await Promise.all(Object.values(dsCandidates).map((c) => assetExists(metadata, c)))
+    : Object.values(dsCandidates).map(() => false);
 
   const assets: RunMetadata["assets"] = {
     metadata: declared.metadata ?? "metadata.json"
   };
 
-  if (checks[0]) assets.prompt = candidates.prompt;
-  if (checks[1]) assets.rawResponse = candidates.rawResponse;
-  if (checks[2]) assets.request = candidates.request;
-  if (checks[3]) assets.stream = candidates.stream;
-  if (checks[4]) assets.response = candidates.response;
-  if (checks[5]) assets.command = candidates.command;
-  if (checks[6]) assets.html = candidates.html;
-  if (checks[7]) assets.preview = candidates.preview;
-  if (checks[8]) assets.video = candidates.video;
-  if (checks[9]) assets.videoMp4 = candidates.videoMp4;
+  const visualKeys = Object.keys(visualCandidates) as (keyof typeof visualCandidates)[];
+  for (let i = 0; i < visualKeys.length; i++) {
+    if (visualChecks[i]) assets[visualKeys[i]] = visualCandidates[visualKeys[i]];
+  }
+
+  const dsKeys = Object.keys(dsCandidates) as (keyof typeof dsCandidates)[];
+  const dsAssets: NonNullable<RunMetadata["assets"]["ds"]> = {};
+  let hasDs = false;
+  for (let i = 0; i < dsKeys.length; i++) {
+    if (dsChecks[i]) {
+      dsAssets[dsKeys[i]] = dsCandidates[dsKeys[i]];
+      hasDs = true;
+    }
+  }
+  if (hasDs) assets.ds = dsAssets;
 
   const promptText = assets.prompt
     ? await readAssetTextIfPresent(metadata, assets.prompt)
+    : undefined;
+
+  const dsSummary = isDs && assets.ds?.summary
+    ? await readDsSummaryIfPresent(metadata, assets.ds.summary)
+    : undefined;
+
+  const dsScorecard = isDs && assets.ds?.scorecard
+    ? await readDsScorecardIfPresent(metadata, assets.ds.scorecard)
     : undefined;
 
   return {
     ...metadata,
     kind: metadata.kind ?? "visual",
     assets,
-    ...(promptText !== undefined ? { promptText } : {})
+    ...(promptText !== undefined ? { promptText } : {}),
+    ...(dsSummary !== undefined ? { dsSummary } : {}),
+    ...(dsScorecard !== undefined ? { dsScorecard } : {})
   };
 }
 
@@ -241,6 +260,45 @@ async function readAssetTextIfPresent(
     }
 
     throw error;
+  }
+}
+
+async function readDsSummaryIfPresent(
+  metadata: RunMetadata,
+  asset: string
+): Promise<DsSummary | undefined> {
+  try {
+    const raw = await readFile(resolveRunAssetPath(metadata.runDirectory, asset), "utf8");
+    const parsed = JSON.parse(raw);
+    return {
+      status: parsed.status ?? undefined,
+      recommended_variant: parsed.recommended_variant === "A" || parsed.recommended_variant === "B" ? parsed.recommended_variant : null,
+      decision: parsed.decision ?? undefined,
+      metrics: Array.isArray(parsed.metrics) ? parsed.metrics : undefined,
+      warnings: Array.isArray(parsed.warnings) ? parsed.warnings : undefined
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+async function readDsScorecardIfPresent(
+  metadata: RunMetadata,
+  asset: string
+): Promise<DsScorecard | undefined> {
+  try {
+    const raw = await readFile(resolveRunAssetPath(metadata.runDirectory, asset), "utf8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.earned !== "number" || typeof parsed.total !== "number") return undefined;
+    return {
+      layer: parsed.layer ?? 1,
+      total: parsed.total,
+      earned: parsed.earned,
+      pct: parsed.pct ?? Math.round(parsed.earned / parsed.total * 1000) / 10,
+      checks: typeof parsed.checks === "object" ? parsed.checks : undefined
+    };
+  } catch {
+    return undefined;
   }
 }
 
@@ -303,4 +361,10 @@ function isNonEmptyDirectoryError(error: unknown): boolean {
     "code" in error &&
     (error.code === "ENOTEMPTY" || error.code === "EEXIST")
   );
+}
+
+const KNOWN_RUN_KINDS = new Set(["visual", "data-science"]);
+
+function isKnownRunKind(kind: string): boolean {
+  return KNOWN_RUN_KINDS.has(kind);
 }

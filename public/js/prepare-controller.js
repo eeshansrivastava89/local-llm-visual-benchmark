@@ -36,7 +36,9 @@ export function resetPrepareRunModal() {
 }
 
 export function updatePrepareMode() {
-  const workflow = "visual";
+  const selectedBenchmark = state.benchmarks.find((b) => b.id === els.prepBenchmark.value);
+  const isDs = selectedBenchmark?.id === "ab-test-analysis";
+  const workflow = isDs ? "data-science" : "visual";
   els.prepBackendHelperGroup.hidden = false;
   els.prepModelSourceGroup.hidden = false;
   els.prepVisualPromptGroup.hidden = false;
@@ -74,6 +76,8 @@ export async function prepareRunSlot() {
   const benchmarkId = els.prepBenchmark.value;
   const modelSource = els.prepModelSource.value;
   const isCustom = modelSource === "custom";
+  const selectedBenchmark = state.benchmarks.find((b) => b.id === benchmarkId);
+  const isDs = selectedBenchmark?.id === "ab-test-analysis";
   const modelId = isCustom ? els.prepCustomModel.value.trim() : els.prepModelSelect.value.trim();
   if (!benchmarkId || !modelId) {
     updatePrepareModelWarning();
@@ -96,7 +100,7 @@ export async function prepareRunSlot() {
       benchmarkId,
       modelId,
       modelSource,
-      kind: "visual",
+      kind: isDs ? "data-science" : "visual",
       runner,
       baseUrl,
       backendLabel

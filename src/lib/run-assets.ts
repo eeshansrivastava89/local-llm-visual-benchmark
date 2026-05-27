@@ -7,7 +7,9 @@ const DEFAULT_RUNS_ROOT = join(process.cwd(), "runs");
 const CONTENT_TYPES = new Map([
   [".png", "image/png"],
   [".webm", "video/webm"],
-  [".mp4", "video/mp4"]
+  [".mp4", "video/mp4"],
+  [".json", "application/json"],
+  [".ipynb", "application/json"]
 ]);
 
 export interface ReadRunAssetInput {
@@ -36,7 +38,7 @@ export async function readRunAsset(input: ReadRunAssetInput): Promise<RunAssetFi
   const extension = extname(assetPath).toLowerCase();
 
   if (!CONTENT_TYPES.has(extension)) {
-    throw new Error("Only captured preview media can be served through this endpoint.");
+    throw new Error("Only captured media and data-science assets can be served through this endpoint.");
   }
 
   const result = await stat(assetPath);

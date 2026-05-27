@@ -1327,3 +1327,84 @@ async function mockApi(
     });
   });
 }
+
+// --- Data-science run E2E tests ---
+
+const dsBenchmark = {
+  id: "ab-test-analysis",
+  title: "A/B Test Production Analysis",
+  description: "Run a production A/B test analysis.",
+  prompt: "Analyze the A/B test data from Supabase."
+};
+
+const dsRun = {
+  kind: "data-science",
+  runId: "2026-05-26T01-02-03-004Z",
+  benchmark: dsBenchmark,
+  model: { id: "qwen3-30b-a3b", slug: "qwen3-30b-a3b" },
+  status: "completed",
+  createdAt: "2026-05-26T01:02:03.004Z",
+  updatedAt: "2026-05-26T01:02:03.004Z",
+  runDirectory: "/runs/ab-test-analysis/qwen3-30b-a3b/2026-05-26T01-02-03-004Z",
+  assets: {
+    metadata: "metadata.json",
+    prompt: "prompt.md",
+    ds: {
+      summary: "summary.json",
+      chartTreatmentEffect: "chart-treatment-effect.png",
+      chartDistribution: "chart-distribution.png",
+      chartCompletionRates: "chart-completion-rates.png"
+    }
+  },
+  dsSummary: {
+    status: "significant",
+    recommended_variant: "A",
+    decision: "Variant B has significant guardrail drops; ship A.",
+    metrics: [
+      { label: "Completion Time", value: "+3.2s", delta: "+55.5%", delta_direction: "up", context: "p=0.001" },
+      { label: "Effect Size", value: "d=0.40", context: "small" }
+    ]
+  }
+};
+
+test.describe("data-science runs", () => {
+  test("data-science run shows chart triptych and verdict pill in detail", async ({ page }) => {
+    await page.route("**/api/runs", (route) =>
+      route.fulfill({ json: { runs: [dsRun] } })
+    );
+    await page.route("**/api/benchmarks", (route) =>
+      route.fulfill({ json: { benchmarks: [dsBenchmark] } })
+    );
+    await page.goto("/");
+
+    // Click the run card to open detail
+    const card = page.locator("[data-open-run]").first();
+    await card.click();
+
+    // Chart triptych containers should exist
+    await expect(page.locator(".ds-triptych")).toBeVisible();
+    await expect(page.locator(".ds-chart-full")).toBeVisible();
+    await expect(page.locator(".ds-chart-pair")).toBeVisible();
+
+    // Metrics ribbon with verdict pill should render
+    await expect(page.locator(".ds-ribbon")).toBeVisible();
+    await expect(page.locator(".verdict-pill[data-verdict='danger']")).toContainText("Ship A");
+
+    // Metric chips should show
+    await expect(page.locator(".ds-chip").first()).toContainText("Completion Time");
+  });
+
+  test("data-science card shows analysis status in workbench", async ({ page }) => {
+    await page.route("**/api/runs", (route) =>
+      route.fulfill({ json: { runs: [dsRun] } })
+    );
+    await page.route("**/api/benchmarks", (route) =>
+      route.fulfill({ json: { benchmarks: [dsBenchmark] } })
+    );
+    await page.goto("/");
+
+    // Card should show data-science messaging
+    await expect(page.locator(".run-card").first()).toBeVisible();
+    await expect(page.locator("text=3 charts · summary ready")).toBeVisible();
+  });
+});
