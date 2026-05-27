@@ -12,18 +12,17 @@ Each row is one event. The important event types are `puzzle_started` and `puzzl
 
 ## Data Access
 
-Use these environment variables for Supabase access:
-
-- `PUBLIC_SUPABASE_URL` — the PostgREST base URL
-- `PUBLIC_SUPABASE_ANON_KEY` — the anonymous auth key
-
-Query the data:
+The data lives in a Supabase `posthog_events` table. Fetch it with this exact URL and headers:
 
 ```
-GET {PUBLIC_SUPABASE_URL}/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null
+URL: https://nazioidbiydxduonenmb.supabase.co/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null
+
+Headers:
+  apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemlvaWRiaXlkeGR1b25lbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDEyMjQsImV4cCI6MjA3NjIxNzIyNH0.PjEzSI8wq74RCQpSkh7j4zhh_5nXc2nYX0M5vCjLEro
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemlvaWRiaXlkeGR1b25lbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDEyMjQsImV4cCI6MjA3NjIxNzIyNH0.PjEzSI8wq74RCQpSkh7j4zhh_5nXc2nYX0M5vCjLEro
 ```
 
-Include the anon key as an `apikey` header and an `Authorization: Bearer {key}` header on every request.
+Use `requests.get()` (or equivalent) with those headers. Do not read environment variables.
 
 ## Required Outputs
 
@@ -37,7 +36,7 @@ Write these files into the current working directory:
 
 ## Required Notebook Sections
 
-1. **Setup & data pull** — imports, env vars, Supabase API query, DataFrames
+1. **Setup & data pull** — imports, Supabase API query with provided URL and headers, DataFrames
 2. **Metric definitions & sanity checks** — primary KPI, guardrails, SRM test, data quality
 3. **Primary analysis** — Welch's t-test, CI, Cohen's d, interpretation
 4. **Guardrail analysis** — completion rate χ² test, repeat rate z-test
@@ -86,7 +85,7 @@ Write these files into the current working directory:
 
 Your output will be scored on:
 
-- **Data access**: Did you query real Supabase data via the API?
+- **Data access**: Did you query real Supabase data via the API (using the provided URL and headers)?
 - **Statistical correctness**: Correct SRM test, Welch's t-test, effect size, CI?
 - **Guardrails**: Did you check completion rate and repeat rate, not just the primary metric?
 - **Visualizations**: 3 clear, labeled, interpretable charts?
