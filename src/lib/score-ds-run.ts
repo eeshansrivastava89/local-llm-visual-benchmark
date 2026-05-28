@@ -174,7 +174,7 @@ async function runLayer2(
     ["-p", "--tools", "read,write", "--model", model, "@" + judgePromptPath],
     {
       cwd: runDirectory,
-      timeout: 180_000
+      timeout: 600_000
     }
   );
 
