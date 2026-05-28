@@ -70,31 +70,45 @@ export async function scoreDsRun(
     throw new Error("summary.json not found. The model must produce summary.json before scoring.");
   }
 
+  console.log(`[score-ds] Starting scoring for ${runDirectory}`);
+  console.log(`[score-ds] Run kind: ${metadata.kind}, model: ${metadata.model?.id ?? "unknown"}, benchmark: ${metadata.benchmark?.id ?? "unknown"}`);
+
   const timestamp = new Date().toISOString();
   let layer1: ScoreDsRunResult["layer1"];
   let layer2: ScoreDsRunResult["layer2"];
 
   // Layer 1: run deterministic scorer
+  console.log("[score-ds] Layer 1: running deterministic scorer (score-ds-run.py)...");
   try {
     const scorecard = await runLayer1(exec, runDirectory);
     layer1 = { scorecard };
+    console.log(`[score-ds] Layer 1 complete: ${scorecard.earned}/${scorecard.total} (${scorecard.pct}%)`);
     // Write scorecard.json to disk
     const scorecardPath = join(runDirectory, metadata.assets?.ds?.scorecard ?? "scorecard.json");
     await writeFileFn(scorecardPath, JSON.stringify(scorecard, null, 2) + "\n", "utf8");
+    console.log(`[score-ds] Layer 1 scorecard written to ${scorecardPath}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    console.error("[score-ds] Layer 1 failed:", message);
     throw new Error("Layer 1 scoring failed: " + message);
   }
 
   // Layer 2: run LLM-as-judge (unless skipped)
   if (!options.skipJudge) {
+    const model = options.judgeModel ?? process.env.DS_JUDGE_MODEL ?? DEFAULT_JUDGE_MODEL;
+    console.log(`[score-ds] Layer 2: running LLM judge (model: ${model})...`);
+    console.log("[score-ds] Layer 2: pi will read artifacts from the run directory and write scorecard-judge.json");
     try {
       const judgeScorecard = await runLayer2(exec, runDirectory, options.judgeModel, readFileFn);
       layer2 = { judgeScorecard };
+      const avg = (judgeScorecard.notebook_structure + judgeScorecard.visualization_quality + judgeScorecard.statistical_interpretation + judgeScorecard.grounding + judgeScorecard.product_recommendation) / 5;
+      console.log(`[score-ds] Layer 2 complete: avg ${avg.toFixed(1)}/10 (structure=${judgeScorecard.notebook_structure} viz=${judgeScorecard.visualization_quality} stats=${judgeScorecard.statistical_interpretation} grounding=${judgeScorecard.grounding} rec=${judgeScorecard.product_recommendation})`);
     } catch (error) {
       // Layer 2 failure is non-fatal — Layer 1 result is still valid
-      console.error("[score-ds] Layer 2 (LLM judge) failed:", error);
+      console.error("[score-ds] Layer 2 (LLM judge) failed:", error instanceof Error ? error.message : error);
     }
+  } else {
+    console.log("[score-ds] Layer 2: skipped (skipJudge=true)");
   }
 
   // Update metadata
@@ -120,6 +134,7 @@ export async function scoreDsRun(
   };
 
   await writeFileFn(metadataPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  console.log("[score-ds] metadata.json updated. Scoring complete.");
 
   return {
     scored: true,
@@ -134,6 +149,7 @@ async function runLayer1(
   runDirectory: string
 ): Promise<DsScorecard> {
   const scorerPath = resolve(process.cwd(), "scripts/score-ds-run.py");
+  console.log(`[score-ds] Layer 1 command: python3 ${scorerPath} ${runDirectory}`);
   const { stdout } = await exec("python3", [scorerPath, runDirectory], {
     timeout: 30_000
   });
@@ -169,6 +185,9 @@ async function runLayer2(
 
   // Run pi in print mode with read+write tools, in the run directory
   // The model reads the artifacts from CWD and writes scorecard-judge.json
+  console.log(`[score-ds] Layer 2 command: pi -p --tools read,write --model ${model} @${judgePromptPath}`);
+  console.log(`[score-ds] Layer 2 cwd: ${runDirectory}`);
+  const startTime = Date.now();
   const { stdout, stderr } = await exec(
     "pi",
     ["-p", "--tools", "read,write", "--model", model, "@" + judgePromptPath],
@@ -177,6 +196,8 @@ async function runLayer2(
       timeout: 600_000
     }
   );
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`[score-ds] Layer 2 pi finished in ${elapsed}s`);
 
   // Check if scorecard-judge.json was written
   const judgePath = join(runDirectory, "scorecard-judge.json");
@@ -198,8 +219,8 @@ async function runLayer2(
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
       "LLM judge did not produce a valid scorecard-judge.json. " +
-      "pi stdout: " + (stdout || "(empty)").slice(0, 200) + ". " +
-      "pi stderr: " + (stderr || "(empty)").slice(0, 200) + ". " +
+      "pi stdout: " + (stdout || "(empty)").slice(0, 500) + ". " +
+      "pi stderr: " + (stderr || "(empty)").slice(0, 500) + ". " +
       "Read error: " + message
     );
   }
