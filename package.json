@@ -23,7 +23,6 @@
     "@clack/prompts": "^1.4.0",
     "@tailwindcss/vite": "^4.3.0",
     "astro": "^6.3.3",
-    "daisyui": "^5.5.19",
     "gray-matter": "^4.0.3",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3"

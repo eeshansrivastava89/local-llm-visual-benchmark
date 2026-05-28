@@ -6,23 +6,25 @@ description: Run a full production A/B test analysis against live Supabase data,
 
 ## Context
 
+If you need Python packages, create a virtual environment and install them there — do not assume packages are pre-installed.
+
 The A/B Simulator is a Pineapple Finder memory game. Variant A has 4 pineapples, Variant B has 5. Data lives in a Supabase `posthog_events` table that records player interactions from live randomized traffic.
 
 Each row is one event. The important event types are `puzzle_started` and `puzzle_completed`. The `variant` column (A or B) is assigned per session. The `completion_time_seconds` column is only populated on `puzzle_completed` events. A single session can have multiple puzzle completions — treat each `puzzle_completed` event as a separate observation for the primary analysis, not one per session.
 
 ## Data Access
 
-The data lives in a Supabase `posthog_events` table. Fetch it with this exact URL and headers:
+Supabase connection details are in `supabase.json` in this directory. Read it and query the API:
 
+```python
+import json, requests
+with open("supabase.json") as f:
+    cfg = json.load(f)
+resp = requests.get(cfg["url"], headers=cfg["headers"])
+data = resp.json()
 ```
-URL: https://nazioidbiydxduonenmb.supabase.co/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null
 
-Headers:
-  apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemlvaWRiaXlkeGR1b25lbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDEyMjQsImV4cCI6MjA3NjIxNzIyNH0.PjEzSI8wq74RCQpSkh7j4zhh_5nXc2nYX0M5vCjLEro
-  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemlvaWRiaXlkeGR1b25lbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDEyMjQsImV4cCI6MjA3NjIxNzIyNH0.PjEzSI8wq74RCQpSkh7j4zhh_5nXc2nYX0M5vCjLEro
-```
-
-Use `requests.get()` (or equivalent) with those headers. Do not read environment variables.
+Use `requests.get()` (or equivalent). Do not read environment variables.
 
 ## Required Outputs
 
@@ -85,7 +87,7 @@ Write these files into the current working directory:
 
 Your output will be scored on:
 
-- **Data access**: Did you query real Supabase data via the API (using the provided URL and headers)?
+- **Data access**: Did you query real Supabase data via the API (using credentials from `supabase.json`)?
 - **Statistical correctness**: Correct SRM test, Welch's t-test, effect size, CI?
 - **Guardrails**: Did you check completion rate and repeat rate, not just the primary metric?
 - **Visualizations**: 3 clear, labeled, interpretable charts?

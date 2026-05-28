@@ -71,6 +71,15 @@ function initWorkspaceState() {
   state.workspace = "visual";
   state.mode = "benchmark";
   state.staticMode = document.body?.dataset.staticBuild === "true";
+
+  // Restore persisted kind tab selection
+  try {
+    const savedKind = localStorage.getItem("selectedKind");
+    if (savedKind === "visual" || savedKind === "data-science") {
+      state.selectedKind = savedKind;
+      document.body.dataset.workspace = savedKind;
+    }
+  } catch { /* localStorage unavailable */ }
 }
 
 function configureControllers() {
@@ -182,6 +191,8 @@ function wireEvents() {
     state.runsSearch = "";
     state.compareSelection = [];
     els.runsSearch.value = "";
+    document.body.dataset.workspace = "visual";
+    try { localStorage.removeItem("selectedKind"); } catch {}
     resetRunPage();
     renderKindTabs();
     renderBenchmarks();
@@ -220,6 +231,7 @@ function wireEvents() {
       state.selectedModel = "all";
       state.selectedHarness = "all";
       document.body.dataset.workspace = state.selectedKind;
+      try { localStorage.setItem("selectedKind", state.selectedKind); } catch {}
       resetRunPage();
       renderKindTabs();
       renderBenchmarks();

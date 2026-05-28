@@ -1,5 +1,25 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { buildRunPaths, createRunId } from "./paths";
+
+// Load .env from project root so process.env picks up SUPABASE_URL etc.
+// Does not override already-set env vars (e.g. from shell or CI).
+(function loadDotEnv() {
+  try {
+    const content = readFileSync(resolve(process.cwd(), ".env"), "utf8");
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      if (!process.env[key]) {
+        process.env[key] = trimmed.slice(eq + 1).trim();
+      }
+    }
+  } catch { /* no .env file — that's fine */ }
+})();
 
 import { writePromptMarkdown, writeRunMetadata } from "./runs";
 import type { BenchmarkRecord, ModelSourceId, PreparedRun, RunnerMode, RunKind, RunMetadata } from "./types";
@@ -91,7 +111,8 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
   };
 
   await mkdir(paths.runDirectory, { recursive: true });
-  const writes: Promise<unknown>[] = [writeRunMetadata(paths, run)];
+
+  const writes: Promise<unknown>[] = [writeRunMetadata(paths, run), writeSupabaseConfig(paths.runDirectory)];
   if (prompt) {
     writes.push(writePromptMarkdown(paths, prompt));
   }
@@ -152,4 +173,26 @@ function modelSourceLabel(source: ModelSourceId, customLabel?: string): string {
 function normalizeOptionalString(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+async function writeSupabaseConfig(
+  runDirectory: string
+): Promise<void> {
+  const baseUrl = process.env.SUPABASE_URL?.trim();
+  const anonKey = process.env.SUPABASE_ANON_KEY?.trim();
+  if (!baseUrl || !anonKey) return;
+
+  const config = {
+    url: `${baseUrl}/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null`,
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`
+    }
+  };
+
+  return writeFile(
+    join(runDirectory, "supabase.json"),
+    JSON.stringify(config, null, 2) + "\n",
+    "utf8"
+  );
 }

@@ -67,30 +67,142 @@ function renderDataScienceArtifact(run) {
   const treatmentHref = assetHref(run, ds.chartTreatmentEffect);
   const distributionHref = assetHref(run, ds.chartDistribution);
   const completionHref = assetHref(run, ds.chartCompletionRates);
-  let html = '<div class="ds-triptych">';
+
+  const summaryHtml = renderDsSummaryCard(run);
+  const chartsHtml = renderDsCharts(treatmentHref, distributionHref, completionHref);
+  const scoresHtml = renderDsScores(run);
+
+  return '<div class="ds-dashboard">' +
+    summaryHtml +
+    chartsHtml +
+    scoresHtml +
+    '</div>';
+}
+
+function renderDsSummaryCard(run) {
+  const summary = run.dsSummary;
+  if (!summary) return '<div class="ds-card ds-summary-card"><span class="muted-copy">No summary data.</span></div>';
+  const verdict = verdictPill(summary);
+  const decisionText = escapeHtml(summary.decision || '');
+  const chips = (summary.metrics ?? []).map(renderMetricChip).join('');
+  const warnings = (summary.warnings ?? []).length > 0
+    ? '<div class="ds-warnings">' + summary.warnings.map(function(w) { return '<span class="ds-warning-tag">' + escapeHtml(w) + '</span>'; }).join('') + '</div>'
+    : '';
+
+  return '<div class="ds-card ds-summary-card">' +
+    '<div class="ds-summary-top">' +
+      verdict +
+      '<p class="ds-decision">' + decisionText + '</p>' +
+    '</div>' +
+    warnings +
+    '<div class="ds-metrics-strip">' + chips + '</div>' +
+    '</div>';
+}
+
+function renderDsCharts(treatmentHref, distributionHref, completionHref) {
+  if (!treatmentHref && !distributionHref && !completionHref) return '';
+  let html = '<div class="ds-charts-row">';
   if (treatmentHref) {
-    html += '<div class="ds-chart-full"><img src="' + escapeAttribute(treatmentHref) + '" alt="Treatment effect confidence interval" loading="lazy" /></div>';
+    html += '<div class="ds-chart-card"><span class="ds-chart-label">Treatment effect</span><img src="' + escapeAttribute(treatmentHref) + '" alt="Treatment effect confidence interval" loading="lazy" /></div>';
   }
-  html += '<div class="ds-chart-pair">';
   if (distributionHref) {
-    html += '<div class="ds-chart-half"><img src="' + escapeAttribute(distributionHref) + '" alt="Completion time distribution" loading="lazy" /></div>';
+    html += '<div class="ds-chart-card"><span class="ds-chart-label">Completion time distribution</span><img src="' + escapeAttribute(distributionHref) + '" alt="Completion time distribution" loading="lazy" /></div>';
   }
   if (completionHref) {
-    html += '<div class="ds-chart-half"><img src="' + escapeAttribute(completionHref) + '" alt="Completion rates" loading="lazy" /></div>';
+    html += '<div class="ds-chart-card"><span class="ds-chart-label">Guardrail metrics</span><img src="' + escapeAttribute(completionHref) + '" alt="Completion rates" loading="lazy" /></div>';
   }
-  html += '</div></div>';
-  html += renderMetricsRibbon(run);
+  html += '</div>';
   return html;
 }
 
-function renderMetricsRibbon(run) {
-  const summary = run.dsSummary;
-  if (!summary) return '';
-  const verdict = verdictPill(summary);
-  const chips = (summary.metrics ?? []).map(renderMetricChip).join('');
-  const scoreBar = renderScoreBar(run.dsScorecard);
-  const judgeBar = renderJudgeBar(run.dsJudgeScorecard);
-  return '<div class="ds-ribbon">' + verdict + chips + '</div>' + scoreBar + judgeBar;
+function renderDsScores(run) {
+  const scorecard = run.dsScorecard;
+  const judgeScorecard = run.dsJudgeScorecard;
+  if (!scorecard && !judgeScorecard) return '';
+
+  let html = '<div class="ds-scores-row">';
+
+  if (scorecard) {
+    html += renderLayer1ScoreCard(scorecard);
+  }
+
+  if (judgeScorecard) {
+    html += renderLayer2ScoreCard(judgeScorecard);
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function renderLayer1ScoreCard(scorecard) {
+  const pct = scorecard.pct ?? 0;
+  const earned = scorecard.earned ?? 0;
+  const total = scorecard.total ?? 0;
+  const tone = pct >= 80 ? 'safe' : pct >= 50 ? 'caution' : 'danger';
+  const checks = scorecard.checks ?? {};
+
+  let html = '<div class="ds-card ds-score-card">';
+  html += '<div class="ds-score-card-head">';
+  html += '<span class="ds-score-card-title">Layer 1 · Deterministic</span>';
+  html += '<span class="ds-score-badge" data-tone="' + escapeAttribute(tone) + '">' + String(earned) + '/' + String(total) + '</span>';
+  html += '</div>';
+  html += '<p class="ds-score-explain">Automated checks comparing model output to the oracle. Each check has a fixed point value.</p>';
+  html += renderScoreBar(scorecard);
+  html += '<div class="ds-check-list">';
+  Object.values(checks).forEach(function(c) {
+    const icon = c.pass ? '\u2713' : '\u2717';
+    const passClass = c.pass ? 'pass' : 'fail';
+    html += '<div class="ds-check-item ' + passClass + '">';
+    html += '<span class="ds-check-icon">' + icon + '</span>';
+    html += '<span class="ds-check-label">' + escapeHtml(c.label) + '</span>';
+    html += '<span class="ds-check-pts">' + String(c.earned) + '/' + String(c.max) + '</span>';
+    if (c.detail) {
+      html += '<span class="ds-check-detail">' + escapeHtml(c.detail) + '</span>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+function renderLayer2ScoreCard(judgeScorecard) {
+  const dims = [
+    { key: 'notebook_structure', label: 'Notebook structure & runnability' },
+    { key: 'visualization_quality', label: 'Visualization quality' },
+    { key: 'statistical_interpretation', label: 'Statistical interpretation' },
+    { key: 'grounding', label: 'Grounding & data provenance' },
+    { key: 'product_recommendation', label: 'Product recommendation' }
+  ];
+  const avg = dims.reduce(function(s, d) { return s + (judgeScorecard[d.key] ?? 0); }, 0) / dims.length;
+  const avgRounded = Math.round(avg * 10) / 10;
+  const avgPct = Math.round(avg / 10 * 100);
+  const tone = avgPct >= 75 ? 'safe' : avgPct >= 50 ? 'caution' : 'danger';
+
+  let html = '<div class="ds-card ds-score-card">';
+  html += '<div class="ds-score-card-head">';
+  html += '<span class="ds-score-card-title">Layer 2 · LLM Judge</span>';
+  html += '<span class="ds-score-badge" data-tone="' + escapeAttribute(tone) + '">' + String(avgRounded) + '/10</span>';
+  html += '</div>';
+  html += '<p class="ds-score-explain">A second model evaluates the notebook across 5 rubric dimensions (0\u201310 each).</p>';
+  html += renderJudgeBar(judgeScorecard);
+  html += '<div class="ds-check-list">';
+  dims.forEach(function(d) {
+    const val = judgeScorecard[d.key] ?? 0;
+    const icon = val >= 7 ? '\u2713' : val >= 4 ? '\u25CB' : '\u2717';
+    const passClass = val >= 7 ? 'pass' : val >= 4 ? 'partial' : 'fail';
+    html += '<div class="ds-check-item ' + passClass + '">';
+    html += '<span class="ds-check-icon">' + icon + '</span>';
+    html += '<span class="ds-check-label">' + escapeHtml(d.label) + '</span>';
+    html += '<span class="ds-check-pts">' + String(val) + '/10</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  if (judgeScorecard.notes) {
+    html += '<div class="ds-judge-notes">' + escapeHtml(judgeScorecard.notes) + '</div>';
+  }
+  html += '</div>';
+  return html;
 }
 
 function verdictPill(summary) {
@@ -115,24 +227,14 @@ function renderMetricChip(metric) {
 }
 
 function renderScoreBar(scorecard) {
-  if (!scorecard) return '';
   const pct = scorecard.pct ?? 0;
-  const earned = scorecard.earned ?? 0;
-  const total = scorecard.total ?? 0;
   const tone = pct >= 80 ? 'safe' : pct >= 50 ? 'caution' : 'danger';
-  const checks = scorecard.checks ?? {};
-  const indicators = Object.values(checks).map(function(c) {
-    const symbol = c.pass ? '\u2713' : '\u2717';
-    return '<span class="ds-check-dot" data-pass="' + (c.pass ? '1' : '0') + '"/' + String(c.earned) + '"' + escapeHtml(c.label) + '">' + symbol + '</span>';
-  }).join('');
   return '<div class="ds-score-bar" data-tone="' + escapeAttribute(tone) + '" data-layer="1">' +
     '<div class="ds-score-track"><div class="ds-score-fill" style="width:' + String(pct) + '%"></div></div>' +
-    '<div class="ds-score-text">' + String(earned) + '/' + String(total) + ' ' + String(pct) + '%</div>' +
-    '<div class="ds-score-dots">' + indicators + '</div>' +
   '</div>';
 }
+
 function renderJudgeBar(judgeScorecard) {
-  if (!judgeScorecard) return '';
   const dims = [
     { key: 'notebook_structure', label: 'Structure' },
     { key: 'visualization_quality', label: 'Viz' },
@@ -143,15 +245,8 @@ function renderJudgeBar(judgeScorecard) {
   const avg = dims.reduce((s, d) => s + (judgeScorecard[d.key] ?? 0), 0) / dims.length;
   const avgPct = Math.round(avg / 10 * 100);
   const tone = avgPct >= 75 ? 'safe' : avgPct >= 50 ? 'caution' : 'danger';
-  const indicators = dims.map(function(d) {
-    const val = judgeScorecard[d.key] ?? 0;
-    const sym = val >= 7 ? '\u2713' : val >= 4 ? '\u25CB' : '\u2717';
-    return '<span class="ds-check-dot" data-pass="' + (val >= 7 ? '1' : '0') + '"/' + String(val) + '" title="' + escapeHtml(d.label) + '">' + sym + ' ' + String(val) + '/10</span>';
-  }).join('');
   return '<div class="ds-score-bar" data-tone="' + escapeAttribute(tone) + '" data-layer="2">' +
     '<div class="ds-score-track"><div class="ds-score-fill" style="width:' + String(avgPct) + '%"></div></div>' +
-    '<div class="ds-score-text">Judge ' + String(Math.round(avg * 10) / 10) + '/10 \u00b7 ' + String(avgPct) + '%</div>' +
-    '<div class="ds-score-dots">' + indicators + '</div>' +
   '</div>';
 }
 

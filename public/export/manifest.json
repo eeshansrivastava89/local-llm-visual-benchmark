@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-27T06:43:50.274Z",
+  "generatedAt": "2026-05-28T06:47:12.482Z",
   "benchmarks": [
     {
       "id": "ab-test-analysis",
       "title": "A/B Test Production Analysis",
       "description": "Run a full production A/B test analysis against live Supabase data, including statistical tests, guardrail checks, visualizations, and a grounded ship/don't-ship recommendation.",
-      "prompt": "## Context\n\nThe A/B Simulator is a Pineapple Finder memory game. Variant A has 4 pineapples, Variant B has 5. Data lives in a Supabase `posthog_events` table that records player interactions from live randomized traffic.\n\nEach row is one event. The important event types are `puzzle_started` and `puzzle_completed`. The `variant` column (A or B) is assigned per session. The `completion_time_seconds` column is only populated on `puzzle_completed` events. A single session can have multiple puzzle completions — treat each `puzzle_completed` event as a separate observation for the primary analysis, not one per session.\n\n## Data Access\n\nUse these environment variables for Supabase access:\n\n- `PUBLIC_SUPABASE_URL` — the PostgREST base URL\n- `PUBLIC_SUPABASE_ANON_KEY` — the anonymous auth key\n\nQuery the data:\n\n```\nGET {PUBLIC_SUPABASE_URL}/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null\n```\n\nInclude the anon key as an `apikey` header and an `Authorization: Bearer {key}` header on every request.\n\n## Required Outputs\n\nWrite these files into the current working directory:\n\n1. **`analysis.ipynb`** — a Jupyter notebook with the full analysis\n2. **`summary.json`** — a machine-readable summary (schema below)\n3. **`chart-distribution.png`** — completion time distribution by variant\n4. **`chart-treatment-effect.png`** — treatment effect confidence interval\n5. **`chart-completion-rates.png`** — completion/repeat rate comparison\n\n## Required Notebook Sections\n\n1. **Setup & data pull** — imports, env vars, Supabase API query, DataFrames\n2. **Metric definitions & sanity checks** — primary KPI, guardrails, SRM test, data quality\n3. **Primary analysis** — Welch's t-test, CI, Cohen's d, interpretation\n4. **Guardrail analysis** — completion rate χ² test, repeat rate z-test\n5. **Visualizations** — the 3 charts listed above\n6. **Conclusion & recommendation** — executive summary and `summary.json`\n\n## Not Required\n\n- OLS regression, CUPED variance reduction, power analysis\n- Outlier detection detail, KDE, daily volume/trend charts\n- Extended educational commentary\n\n## summary.json Schema\n\n```json\n{\n  \"status\": \"significant | not_significant | inconclusive\",\n  \"recommended_variant\": \"A | B | null\",\n  \"decision\": \"string — optional human-readable recommendation\",\n  \"metrics\": [\n    { \"label\": \"Completion Time\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Completion Rate\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Repeat Rate\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Effect Size\", \"value\": \"string\", \"context\": \"string\" }\n  ],\n  \"raw_stats\": {\n    \"p_value\": \"number\",\n    \"cohens_d\": \"number\",\n    \"mean_a\": \"number\",\n    \"mean_b\": \"number\",\n    \"std_a\": \"number\",\n    \"std_b\": \"number\",\n    \"completion_rate_a\": \"number\",\n    \"completion_rate_b\": \"number\",\n    \"repeat_rate_a\": \"number\",\n    \"repeat_rate_b\": \"number\",\n    \"srm_p_value\": \"number\"\n  },\n  \"warnings\": [\"string\"],\n  \"methodology\": \"string\",\n  \"generated_at\": \"ISO 8601 timestamp\"\n}\n```\n\n## Scoring\n\nYour output will be scored on:\n\n- **Data access**: Did you query real Supabase data via the API?\n- **Statistical correctness**: Correct SRM test, Welch's t-test, effect size, CI?\n- **Guardrails**: Did you check completion rate and repeat rate, not just the primary metric?\n- **Visualizations**: 3 clear, labeled, interpretable charts?\n- **Decision quality**: Does `recommended_variant` match the data? If Variant B is worse on guardrails, recommended_variant should be \"A\", not \"B\".\n- **Hallucination resistance**: All cited numbers come from queried data, not invented?"
+      "prompt": "## Context\n\nThe A/B Simulator is a Pineapple Finder memory game. Variant A has 4 pineapples, Variant B has 5. Data lives in a Supabase `posthog_events` table that records player interactions from live randomized traffic.\n\nEach row is one event. The important event types are `puzzle_started` and `puzzle_completed`. The `variant` column (A or B) is assigned per session. The `completion_time_seconds` column is only populated on `puzzle_completed` events. A single session can have multiple puzzle completions — treat each `puzzle_completed` event as a separate observation for the primary analysis, not one per session.\n\n## Data Access\n\nThe data lives in a Supabase `posthog_events` table. Fetch it with this exact URL and headers:\n\n```\nURL: https://nazioidbiydxduonenmb.supabase.co/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null\n\nHeaders:\n  apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemlvaWRiaXlkeGR1b25lbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDEyMjQsImV4cCI6MjA3NjIxNzIyNH0.PjEzSI8wq74RCQpSkh7j4zhh_5nXc2nYX0M5vCjLEro\n  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemlvaWRiaXlkeGR1b25lbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDEyMjQsImV4cCI6MjA3NjIxNzIyNH0.PjEzSI8wq74RCQpSkh7j4zhh_5nXc2nYX0M5vCjLEro\n```\n\nUse `requests.get()` (or equivalent) with those headers. Do not read environment variables.\n\n## Required Outputs\n\nWrite these files into the current working directory:\n\n1. **`analysis.ipynb`** — a Jupyter notebook with the full analysis\n2. **`summary.json`** — a machine-readable summary (schema below)\n3. **`chart-distribution.png`** — completion time distribution by variant\n4. **`chart-treatment-effect.png`** — treatment effect confidence interval\n5. **`chart-completion-rates.png`** — completion/repeat rate comparison\n\n## Required Notebook Sections\n\n1. **Setup & data pull** — imports, Supabase API query with provided URL and headers, DataFrames\n2. **Metric definitions & sanity checks** — primary KPI, guardrails, SRM test, data quality\n3. **Primary analysis** — Welch's t-test, CI, Cohen's d, interpretation\n4. **Guardrail analysis** — completion rate χ² test, repeat rate z-test\n5. **Visualizations** — the 3 charts listed above\n6. **Conclusion & recommendation** — executive summary and `summary.json`\n\n## Not Required\n\n- OLS regression, CUPED variance reduction, power analysis\n- Outlier detection detail, KDE, daily volume/trend charts\n- Extended educational commentary\n\n## summary.json Schema\n\n```json\n{\n  \"status\": \"significant | not_significant | inconclusive\",\n  \"recommended_variant\": \"A | B | null\",\n  \"decision\": \"string — optional human-readable recommendation\",\n  \"metrics\": [\n    { \"label\": \"Completion Time\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Completion Rate\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Repeat Rate\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Effect Size\", \"value\": \"string\", \"context\": \"string\" }\n  ],\n  \"raw_stats\": {\n    \"p_value\": \"number\",\n    \"cohens_d\": \"number\",\n    \"mean_a\": \"number\",\n    \"mean_b\": \"number\",\n    \"std_a\": \"number\",\n    \"std_b\": \"number\",\n    \"completion_rate_a\": \"number\",\n    \"completion_rate_b\": \"number\",\n    \"repeat_rate_a\": \"number\",\n    \"repeat_rate_b\": \"number\",\n    \"srm_p_value\": \"number\"\n  },\n  \"warnings\": [\"string\"],\n  \"methodology\": \"string\",\n  \"generated_at\": \"ISO 8601 timestamp\"\n}\n```\n\n## Scoring\n\nYour output will be scored on:\n\n- **Data access**: Did you query real Supabase data via the API (using the provided URL and headers)?\n- **Statistical correctness**: Correct SRM test, Welch's t-test, effect size, CI?\n- **Guardrails**: Did you check completion rate and repeat rate, not just the primary metric?\n- **Visualizations**: 3 clear, labeled, interpretable charts?\n- **Decision quality**: Does `recommended_variant` match the data? If Variant B is worse on guardrails, recommended_variant should be \"A\", not \"B\".\n- **Hallucination resistance**: All cited numbers come from queried data, not invented?"
     },
     {
       "id": "macro-wildflower-meadow",
@@ -40,6 +40,164 @@
     }
   ],
   "runs": [
+    {
+      "schemaVersion": 1,
+      "kind": "data-science",
+      "runId": "2026-05-27T15-54-51-763Z",
+      "benchmark": {
+        "id": "ab-test-analysis",
+        "title": "A/B Test Production Analysis",
+        "description": "Run a full production A/B test analysis against live Supabase data, including statistical tests, guardrail checks, visualizations, and a grounded ship/don't-ship recommendation.",
+        "prompt": "## Context\n\nThe A/B Simulator is a Pineapple Finder memory game. Variant A has 4 pineapples, Variant B has 5. Data lives in a Supabase `posthog_events` table that records player interactions from live randomized traffic.\n\nEach row is one event. The important event types are `puzzle_started` and `puzzle_completed`. The `variant` column (A or B) is assigned per session. The `completion_time_seconds` column is only populated on `puzzle_completed` events. A single session can have multiple puzzle completions — treat each `puzzle_completed` event as a separate observation for the primary analysis, not one per session.\n\n## Data Access\n\nThe data lives in a Supabase `posthog_events` table. Fetch it with this exact URL and headers:\n\n```\nURL: https://nazioidbiydxduonenmb.supabase.co/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null\n\nHeaders:\n  apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemlvaWRiaXlkeGR1b25lbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDEyMjQsImV4cCI6MjA3NjIxNzIyNH0.PjEzSI8wq74RCQpSkh7j4zhh_5nXc2nYX0M5vCjLEro\n  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemlvaWRiaXlkeGR1b25lbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDEyMjQsImV4cCI6MjA3NjIxNzIyNH0.PjEzSI8wq74RCQpSkh7j4zhh_5nXc2nYX0M5vCjLEro\n```\n\nUse `requests.get()` (or equivalent) with those headers. Do not read environment variables.\n\n## Required Outputs\n\nWrite these files into the current working directory:\n\n1. **`analysis.ipynb`** — a Jupyter notebook with the full analysis\n2. **`summary.json`** — a machine-readable summary (schema below)\n3. **`chart-distribution.png`** — completion time distribution by variant\n4. **`chart-treatment-effect.png`** — treatment effect confidence interval\n5. **`chart-completion-rates.png`** — completion/repeat rate comparison\n\n## Required Notebook Sections\n\n1. **Setup & data pull** — imports, Supabase API query with provided URL and headers, DataFrames\n2. **Metric definitions & sanity checks** — primary KPI, guardrails, SRM test, data quality\n3. **Primary analysis** — Welch's t-test, CI, Cohen's d, interpretation\n4. **Guardrail analysis** — completion rate χ² test, repeat rate z-test\n5. **Visualizations** — the 3 charts listed above\n6. **Conclusion & recommendation** — executive summary and `summary.json`\n\n## Not Required\n\n- OLS regression, CUPED variance reduction, power analysis\n- Outlier detection detail, KDE, daily volume/trend charts\n- Extended educational commentary\n\n## summary.json Schema\n\n```json\n{\n  \"status\": \"significant | not_significant | inconclusive\",\n  \"recommended_variant\": \"A | B | null\",\n  \"decision\": \"string — optional human-readable recommendation\",\n  \"metrics\": [\n    { \"label\": \"Completion Time\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Completion Rate\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Repeat Rate\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Effect Size\", \"value\": \"string\", \"context\": \"string\" }\n  ],\n  \"raw_stats\": {\n    \"p_value\": \"number\",\n    \"cohens_d\": \"number\",\n    \"mean_a\": \"number\",\n    \"mean_b\": \"number\",\n    \"std_a\": \"number\",\n    \"std_b\": \"number\",\n    \"completion_rate_a\": \"number\",\n    \"completion_rate_b\": \"number\",\n    \"repeat_rate_a\": \"number\",\n    \"repeat_rate_b\": \"number\",\n    \"srm_p_value\": \"number\"\n  },\n  \"warnings\": [\"string\"],\n  \"methodology\": \"string\",\n  \"generated_at\": \"ISO 8601 timestamp\"\n}\n```\n\n## Scoring\n\nYour output will be scored on:\n\n- **Data access**: Did you query real Supabase data via the API (using the provided URL and headers)?\n- **Statistical correctness**: Correct SRM test, Welch's t-test, effect size, CI?\n- **Guardrails**: Did you check completion rate and repeat rate, not just the primary metric?\n- **Visualizations**: 3 clear, labeled, interpretable charts?\n- **Decision quality**: Does `recommended_variant` match the data? If Variant B is worse on guardrails, recommended_variant should be \"A\", not \"B\".\n- **Hallucination resistance**: All cited numbers come from queried data, not invented?"
+      },
+      "model": {
+        "id": "GLM 5.1",
+        "slug": "glm-5-1-86c2a86a7f"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-27T15:54:51.763Z",
+      "updatedAt": "2026-05-28T03:50:36.180Z",
+      "preparedAt": "2026-05-27T15:54:51.763Z",
+      "completedAt": "2026-05-28T03:50:36.180Z",
+      "runDirectory": "export/runs/ab-test-analysis/glm-5-1-86c2a86a7f/2026-05-27T15-54-51-763Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "ds": {
+          "summary": "summary.json",
+          "chartDistribution": "chart-distribution.png",
+          "chartTreatmentEffect": "chart-treatment-effect.png",
+          "chartCompletionRates": "chart-completion-rates.png"
+        }
+      },
+      "runner": {
+        "mode": "manual",
+        "modelSource": "custom",
+        "intendedRunner": "manual",
+        "backendLabel": "cloud",
+        "model": "GLM 5.1",
+        "retries": 0
+      },
+      "dsSummary": {
+        "status": "significant",
+        "recommended_variant": "A",
+        "decision": "Variant A (4 pineapples) is recommended. It has significantly faster completion times (mean 5.73s vs 8.93s, p=0.0006), a significantly higher completion rate (89.0% vs 70.8%, p=0.0000), and a significantly higher repeat rate (53.6% vs 40.2%, p=0.0081). Variant B is worse on all metrics, likely because the extra pineapple increases difficulty. Ship Variant A.",
+        "metrics": [
+          {
+            "label": "Completion Time",
+            "value": "A: 5.73s, B: 8.93s",
+            "delta": "-3.20s (A faster)",
+            "delta_direction": "down",
+            "context": "Lower is better. Variant A completions are 35.9% faster. Welch t-test p=0.0006."
+          },
+          {
+            "label": "Completion Rate",
+            "value": "A: 89.0%, B: 70.8%",
+            "delta": "+18.1pp (A higher)",
+            "delta_direction": "up",
+            "context": "Higher is better. Chi-squared test p=0.0000."
+          },
+          {
+            "label": "Repeat Rate",
+            "value": "A: 53.6%, B: 40.2%",
+            "delta": "+13.4pp (A higher)",
+            "delta_direction": "up",
+            "context": "Higher is better. Z-test p=0.0081."
+          },
+          {
+            "label": "Effect Size",
+            "value": "Cohen's d = -0.40",
+            "context": "Small-to-medium negative effect. Variant B increases completion time by ~0.4 standard deviations."
+          }
+        ],
+        "warnings": []
+      },
+      "dsScorecard": {
+        "layer": 1,
+        "total": 100,
+        "earned": 90,
+        "pct": 90,
+        "checks": {
+          "summary_exists": {
+            "label": "summary.json exists and parses",
+            "max": 5,
+            "earned": 5,
+            "pass": true,
+            "detail": "parsed 1801 bytes"
+          },
+          "required_fields": {
+            "label": "summary.json has required fields",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "all required fields present"
+          },
+          "status_matches": {
+            "label": "status matches oracle",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "got 'significant', expected 'significant'"
+          },
+          "p_value": {
+            "label": "p_value within tolerance",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "got 0.000556, oracle 0.000630, tolerance ±0.05"
+          },
+          "cohens_d": {
+            "label": "cohens_d within tolerance",
+            "max": 10,
+            "earned": 0,
+            "pass": false,
+            "detail": "got -0.3987, oracle 0.3961, tolerance ±0.1"
+          },
+          "supabase_access": {
+            "label": "Data accessed from real Supabase",
+            "max": 15,
+            "earned": 15,
+            "pass": true,
+            "detail": "found Supabase API calls with credentials"
+          },
+          "hypothesis_tests": {
+            "label": "Key hypothesis tests present",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "found: t-test, chi-square"
+          },
+          "charts_exist": {
+            "label": "3 chart files exist",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "all 3 chart files present"
+          },
+          "srm_test": {
+            "label": "SRM test performed",
+            "max": 5,
+            "earned": 5,
+            "pass": true,
+            "detail": "SRM check found in notebook"
+          },
+          "recommended_variant": {
+            "label": "recommended_variant matches oracle",
+            "max": 15,
+            "earned": 15,
+            "pass": true,
+            "detail": "got 'A', expected 'A'"
+          }
+        }
+      },
+      "dsJudgeScorecard": {
+        "notebook_structure": 9,
+        "visualization_quality": 9,
+        "statistical_interpretation": 9,
+        "grounding": 10,
+        "product_recommendation": 9,
+        "notes": "Notebook structure: Well-organized with logical flow (imports → data pull → sanity checks → primary analysis → guardrails → charts → conclusion). All cells executed top-to-bottom with execution counts 1–12. Markdown cells delineate each section. Would run without edits on the same Supabase data. Minor: hardcoded API key is per the prompt instructions, not a structural flaw.\n\nVisualization quality: All 3 required charts present with proper titles, axis labels, and legends. Treatment effect chart shows CI and zero reference line with annotated delta/CI/p-value. Distribution chart uses density-normalized overlaid histograms with mean lines. Completion rates chart includes 95% CI error bars and significance markers. Charts are saved as separate PNGs.\n\nStatistical interpretation: Correctly uses Welch's t-test (unequal variances), reports Cohen's d = -0.40 labeled 'small-to-medium', interprets 95% CI [-5.00, -1.40], and correctly concludes statistical significance (p = 0.0006). SRM check passes (p = 0.16). Both guardrails tested. Discusses practical significance (35.9% reduction) alongside statistical significance. Minor: CI uses z=1.96 normal approximation rather than exact t-quantile, acceptable given large n.\n\nGrounding: All cited numbers match the computed output. 913 events, 309 completions, 161/148 per variant, means 5.73s/8.93s, delta -3.20s, CI, p-values, and guardrail rates all trace to the actual Supabase pull. No fabricated data or phantom statistics observed.\n\nProduct recommendation: Clear recommendation for Variant A, justified by data across all three metrics (faster completion, higher completion rate, higher repeat rate). Correctly notes there is no tradeoff since B is worse on every metric. Consistent with recommended_variant in summary.json."
+      }
+    },
     {
       "schemaVersion": 1,
       "kind": "visual",
@@ -2601,7 +2759,7 @@
     }
   ],
   "machineProfile": {
-    "collectedAt": "2026-05-27T06:43:50.275Z",
+    "collectedAt": "2026-05-28T06:47:12.483Z",
     "platform": {
       "node": "v26.0.0",
       "platform": "darwin",
@@ -2611,7 +2769,7 @@
       "type": "Darwin",
       "release": "25.5.0",
       "hostname": "Eeshans-MacBook-Pro-16.local",
-      "uptimeSeconds": 605443
+      "uptimeSeconds": 692045
     },
     "cpu": {
       "model": "Apple M4 Pro",
@@ -2620,10 +2778,10 @@
     },
     "memory": {
       "totalBytes": 51539607552,
-      "availableBytes": 21647851520,
-      "freeBytes": 1508360192,
-      "usedBytes": 29891756032,
-      "pressurePercent": 58,
+      "availableBytes": 22242967552,
+      "freeBytes": 650608640,
+      "usedBytes": 29296640000,
+      "pressurePercent": 56.8,
       "pressureLabel": "low",
       "source": "macOS VM stats, cached and purgeable memory excluded"
     },

@@ -12,7 +12,7 @@ import type { RunMetadata } from "./types";
 const execFileAsync = promisify(execFile);
 const DEFAULT_WIDTH = 1920;
 const DEFAULT_DURATION_SECONDS = 20;
-const BRAND_TITLE = "Eeshan's Local AI Visual Benchmarks";
+const BRAND_TITLE = "Local AI benchmarks collection";
 
 export interface ExportComparisonVideoInput {
   runsRoot?: string;

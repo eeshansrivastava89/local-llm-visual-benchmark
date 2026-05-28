@@ -2,9 +2,9 @@
 import PostHog from "./PostHog.astro";
 import "../styles/global.css";
 
-const title = "Local LLM Visual Benchmark";
+const title = "Local AI Benchmarks";
 const basePath = import.meta.env.BASE_URL;
-const subtitle = "Browse visual benchmark outputs by prompt, model, or table.";
+const subtitle = "a side quest by eeshans.com";
 const isStaticBuild = process.env.ASTRO_OUTPUT === "static";
 const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name}.svg')`;
 ---
@@ -29,19 +29,15 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
   <body data-workspace="visual" data-base-path={basePath} data-static-build={isStaticBuild ? "true" : undefined}>
     <div class="app-shell">
       <header class="app-header">
-        <div class="app-header-inner mx-auto flex min-h-14 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+        <div class="app-header-inner mx-auto flex min-h-16 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
           <div class="header-title flex min-w-0 flex-1 items-center gap-3">
             <div class="min-w-0">
-              <h1 class="truncate-line text-sm font-semibold tracking-[-0.01em]">
-                Local LLM Visual Benchmark
+              <h1 class="truncate-line text-base font-semibold tracking-[-0.01em]">
+                Local AI Benchmarks
               </h1>
-              <p class="muted-copy truncate-line text-xs">{subtitle}</p>
+              <p class="muted-copy truncate-line text-sm">a side quest by <a href="https://eeshans.com/" target="_blank" rel="noopener" class="header-subtitle-link"><strong>eeshans.com</strong></a></p>
             </div>
           </div>
-
-          <a class="sidequest-attribution" href="https://eeshans.com/" target="_blank" rel="noopener">
-            a side quest by <span>eeshans.com</span>
-          </a>
 
           <div class="header-actions flex shrink-0 items-center gap-2">
             <a class="btn-sm-outline source-pill" href="https://github.com/eeshansrivastava89/local-llm-visual-benchmark" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub">
@@ -167,7 +163,7 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
             <h2 id="detailTitle" class="truncate-line text-lg font-semibold">Run detail</h2>
             <p class="muted-copy truncate-line mt-1 text-sm" id="detailSubtitle"></p>
           </div>
-          <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <div class="flex flex-wrap items-center justify-end gap-2">
             <button type="button" class="btn-sm-outline operational-control" id="openHtml" data-icon="file-code" data-operational-available="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("file-code")}></span>Open HTML</button>
             <button type="button" class="btn-sm-outline operational-control" id="copyDetailPath" data-icon="copy" data-operational-available="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span>Copy path</button>
             <button type="button" class="btn-sm-outline operational-control" id="openRunFolder" data-icon="folder-open" data-operational-available="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("folder-open")}></span>Open in Finder</button>
@@ -211,8 +207,8 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
           <button type="button" class="btn-sm-outline" id="closeDeleteConfirm"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
         </header>
         <div class="grid gap-4 p-5">
-          <div class="rounded-lg border border-[oklch(0.78_0.06_28)] bg-[oklch(0.97_0.018_28)] p-3">
-            <p class="text-sm font-medium text-[oklch(0.45_0.12_28)]">This cannot be undone.</p>
+          <div class="rounded-lg border border-[var(--app-border)] bg-[var(--card)] p-3">
+            <p class="text-sm font-medium text-[var(--red)]">This cannot be undone.</p>
             <p class="muted-copy mt-1 text-sm leading-5">The whole run folder will be deleted, including metadata, prompt, HTML, preview, and raw response files.</p>
           </div>
           <div class="grid gap-1">
@@ -273,8 +269,8 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                   <button type="button" class="help-pill" data-tooltip="Choose whether this is a visual HTML benchmark or a data-science analysis benchmark. This decides which prompts appear below.">?</button>
                 </div>
                 <div class="kind-tabs kind-tabs-sm">
-                  <button type="button" class="kind-tab" data-prep-kind="visual" aria-pressed="true"><span class="ui-icon" aria-hidden="true" style={iconStyle("eye")}></span>Visual Benchmark</button>
-                  <button type="button" class="kind-tab" data-prep-kind="data-science" aria-pressed="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("chart-bar")}></span>Data Science Benchmark</button>
+                  <button type="button" class="kind-tab" data-prep-kind="visual" aria-pressed="true">Visual Benchmark</button>
+                  <button type="button" class="kind-tab" data-prep-kind="data-science" aria-pressed="false">Data Science Benchmark</button>
                 </div>
               </div>
               <div class="grid gap-2" id="prepBackendHelperGroup">
