@@ -1,19 +1,18 @@
 import { execFile } from "node:child_process";
 import { readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { DsJudgeScorecard, DsScorecard, RunMetadata } from "./types";
 
 const execFileAsync = promisify(execFile);
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 const DEFAULT_JUDGE_MODEL = "ollama-cloud/glm-5.1";
 
 export interface ScoreDsRunOptions {
   runsRoot: string;
   runDirectory: string;
   judgeModel?: string;
+  /** Skip Layer 2 (LLM judge). Default false. Set true for fast deterministic-only scoring. */
+  skipJudge?: boolean;
 }
 
 export interface ScoreDsRunResult {
@@ -87,13 +86,15 @@ export async function scoreDsRun(
     throw new Error("Layer 1 scoring failed: " + message);
   }
 
-  // Layer 2: run LLM-as-judge
-  try {
-    const judgeScorecard = await runLayer2(exec, runDirectory, options.judgeModel, readFileFn);
-    layer2 = { judgeScorecard };
-  } catch (error) {
-    // Layer 2 failure is non-fatal — Layer 1 result is still valid
-    console.error("[score-ds] Layer 2 (LLM judge) failed:", error);
+  // Layer 2: run LLM-as-judge (unless skipped)
+  if (!options.skipJudge) {
+    try {
+      const judgeScorecard = await runLayer2(exec, runDirectory, options.judgeModel, readFileFn);
+      layer2 = { judgeScorecard };
+    } catch (error) {
+      // Layer 2 failure is non-fatal — Layer 1 result is still valid
+      console.error("[score-ds] Layer 2 (LLM judge) failed:", error);
+    }
   }
 
   // Update metadata
@@ -132,7 +133,7 @@ async function runLayer1(
   exec: typeof execFileAsync,
   runDirectory: string
 ): Promise<DsScorecard> {
-  const scorerPath = resolve(__dirname, "../scripts/score-ds-run.py");
+  const scorerPath = resolve(process.cwd(), "scripts/score-ds-run.py");
   const { stdout } = await exec("python3", [scorerPath, runDirectory], {
     timeout: 30_000
   });
@@ -164,7 +165,7 @@ async function runLayer2(
   readFileFn: typeof readFile
 ): Promise<DsJudgeScorecard> {
   const model = judgeModel ?? process.env.DS_JUDGE_MODEL ?? DEFAULT_JUDGE_MODEL;
-  const judgePromptPath = resolve(__dirname, "../scripts/judge/llm-judge-prompt.md");
+  const judgePromptPath = resolve(process.cwd(), "scripts/judge/llm-judge-prompt.md");
 
   // Run pi in print mode with read+write tools, in the run directory
   // The model reads the artifacts from CWD and writes scorecard-judge.json

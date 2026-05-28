@@ -204,6 +204,7 @@ export interface UpdateRunMetadataResponse {
 export interface ScoreDsRunRequest {
   runDirectory?: string;
   judgeModel?: string;
+  skipJudge?: boolean;
 }
 
 export interface ScoreDsRunResponse {
@@ -377,7 +378,8 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       const result = await scoreDsRunFn({
         runsRoot,
         runDirectory: readRequiredString(request.runDirectory, "runDirectory"),
-        judgeModel: readOptionalString(request.judgeModel, "judgeModel")
+        judgeModel: readOptionalString(request.judgeModel, "judgeModel"),
+        skipJudge: request.skipJudge === true
       });
       const runs = await listRunMetadata(runsRoot);
       return {

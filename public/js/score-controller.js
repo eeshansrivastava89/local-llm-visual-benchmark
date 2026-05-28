@@ -29,7 +29,8 @@ export async function scoreDsRun(run) {
 
   try {
     const data = await postJson("/api/score-ds-run", {
-      runDirectory: run.runDirectory
+      runDirectory: run.runDirectory,
+      skipJudge: true
     });
     // Refresh runs from server — the scorecard is now on disk
     if (Array.isArray(data.runs)) {
