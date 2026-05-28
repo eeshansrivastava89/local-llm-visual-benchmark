@@ -24,7 +24,7 @@ export async function scoreDsRun(run) {
   updateWriteControls();
   renderRuns();
   if (wasSelected) {
-    setButtonLabel(els.recaptureRun, "Scoring…", "check");
+    setButtonLabel(els.recaptureRun, "Scoring…", "check-circle");
   }
 
   try {

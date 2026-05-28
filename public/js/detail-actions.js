@@ -283,7 +283,7 @@ export function updateDetailActions(run) {
     const isScoring = state.scoreBusy && state.scoreRunDirectory === run.runDirectory;
     els.recaptureRun.disabled = !canOperate || isScoring;
     els.recaptureRun.title = availability.showScore ? "" : "Score needs summary.json in the run folder.";
-    setButtonLabel(els.recaptureRun, isScoring ? "Scoring…" : availability.recaptureLabel, "check");
+    setButtonLabel(els.recaptureRun, isScoring ? "Scoring…" : availability.recaptureLabel, "check-circle");
     return;
   }
 

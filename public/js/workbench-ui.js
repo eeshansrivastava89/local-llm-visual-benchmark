@@ -142,7 +142,7 @@ function renderRunCaptureAction(run, isCapturing, context) {
         '<button type="button" class="btn-sm-outline run-card-score operational-control" data-score-run-id="' + escapeAttribute(run.runId) + '" ' +
           'aria-label="' + escapeAttribute(label + " " + title + " on " + model) + '"' +
           (isScoring || context.scoreBusy ? " disabled" : "") + '>' +
-          icon("check") + escapeHtml(isScoring ? "Scoring..." : label) +
+          icon("check-circle") + escapeHtml(isScoring ? "Scoring..." : label) +
         '</button>' +
       '</span>'
     );
