@@ -2,7 +2,7 @@ import { mkdir, readdir, readFile, rm, rmdir, stat, writeFile } from "node:fs/pr
 import { dirname, join, resolve } from "node:path";
 import { isPathInside, resolveRunAssetPath } from "./asset-paths.ts";
 import type { RunPaths } from "./paths";
-import type { DsJudgeScorecard, DsScorecard, DsSummary, RunError, RunMetadata } from "./types";
+import type { DsScorecard, DsSummary, RunError, RunMetadata } from "./types";
 
 export type RunMetadataUpdate = Partial<Omit<RunMetadata, "runId">>;
 
@@ -195,7 +195,6 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
     notebook: declared.ds?.notebook ?? "analysis.ipynb",
     summary: declared.ds?.summary ?? "summary.json",
     scorecard: declared.ds?.scorecard ?? "scorecard.json",
-    judgeScorecard: declared.ds?.judgeScorecard ?? "scorecard-judge.json",
     chartDistribution: declared.ds?.chartDistribution ?? "chart-distribution.png",
     chartTreatmentEffect: declared.ds?.chartTreatmentEffect ?? "chart-treatment-effect.png",
     chartCompletionRates: declared.ds?.chartCompletionRates ?? "chart-completion-rates.png"
@@ -239,18 +238,13 @@ async function hydrateAssetAvailability(metadata: RunMetadata): Promise<RunMetad
     ? await readDsScorecardIfPresent(metadata, assets.ds.scorecard)
     : undefined;
 
-  const dsJudgeScorecard = isDs && assets.ds?.judgeScorecard
-    ? await readDsJudgeScorecardIfPresent(metadata, assets.ds.judgeScorecard)
-    : undefined;
-
   return {
     ...metadata,
     kind: metadata.kind ?? "visual",
     assets,
     ...(promptText !== undefined ? { promptText } : {}),
     ...(dsSummary !== undefined ? { dsSummary } : {}),
-    ...(dsScorecard !== undefined ? { dsScorecard } : {}),
-    ...(dsJudgeScorecard !== undefined ? { dsJudgeScorecard } : {})
+    ...(dsScorecard !== undefined ? { dsScorecard } : {})
   };
 }
 
@@ -297,32 +291,10 @@ async function readDsScorecardIfPresent(
     const parsed = JSON.parse(raw);
     if (typeof parsed.earned !== "number" || typeof parsed.total !== "number") return undefined;
     return {
-      layer: parsed.layer ?? 1,
       total: parsed.total,
       earned: parsed.earned,
       pct: parsed.pct ?? Math.round(parsed.earned / parsed.total * 1000) / 10,
       checks: typeof parsed.checks === "object" ? parsed.checks : undefined
-    };
-  } catch {
-    return undefined;
-  }
-}
-
-async function readDsJudgeScorecardIfPresent(
-  metadata: RunMetadata,
-  asset: string
-): Promise<DsJudgeScorecard | undefined> {
-  try {
-    const raw = await readFile(resolveRunAssetPath(metadata.runDirectory, asset), "utf8");
-    const parsed = JSON.parse(raw);
-    if (typeof parsed.notebook_structure !== "number") return undefined;
-    return {
-      notebook_structure: parsed.notebook_structure,
-      visualization_quality: parsed.visualization_quality ?? 0,
-      statistical_interpretation: parsed.statistical_interpretation ?? 0,
-      grounding: parsed.grounding ?? 0,
-      product_recommendation: parsed.product_recommendation ?? 0,
-      notes: typeof parsed.notes === "string" ? parsed.notes : ""
     };
   } catch {
     return undefined;

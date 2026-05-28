@@ -122,5 +122,12 @@ export const els = {
   promptLength: document.querySelector("#promptLength"),
   copyDetailPrompt: document.querySelector("#copyDetailPrompt"),
   detailMeta: document.querySelector("#detailMeta"),
-  detailBody: document.querySelector(".detail-body")
+  detailBody: document.querySelector(".detail-body"),
+  // Chart lightbox
+  chartLightbox: document.querySelector("#chartLightbox"),
+  chartLightboxImg: document.querySelector("#chartLightboxImg"),
+  chartLightboxLabel: document.querySelector("#chartLightboxLabel"),
+  closeChartLightbox: document.querySelector("#closeChartLightbox"),
+  chartLightboxPrev: document.querySelector("#chartLightboxPrev"),
+  chartLightboxNext: document.querySelector("#chartLightboxNext")
 };

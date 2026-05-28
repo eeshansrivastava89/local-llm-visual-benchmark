@@ -41,7 +41,7 @@ function renderComparePreviewCard(run) {
   const isDs = kind === "data-science";
   const videoHref = isDs ? null : assetHref(run, run.assets?.videoMp4 ?? run.assets?.video);
   const previewHref = isDs
-    ? assetHref(run, run.assets?.ds?.chartTreatmentEffect ?? run.assets?.ds?.chartDistribution)
+    ? assetHref(run, run.assets?.ds?.chartDistribution ?? run.assets?.ds?.chartTreatmentEffect)
     : assetHref(run, run.assets?.preview);
   let media;
   if (videoHref) {

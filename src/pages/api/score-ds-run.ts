@@ -20,5 +20,4 @@ export const POST: APIRoute = async ({ request }) =>
 
 export interface ScoreDsRunRequest {
   runDirectory?: string;
-  judgeModel?: string;
 }

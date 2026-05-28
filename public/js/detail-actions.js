@@ -1,4 +1,5 @@
 import { els } from "./dom.js";
+import { wireChartClicks } from "./chart-lightbox.js";
 import { state } from "./state.js";
 import { escapeAttribute, escapeHtml } from "./utils.js";
 import { deleteJson, patchJson, postJson } from "./api.js";
@@ -117,6 +118,7 @@ export function renderDetail(run) {
   els.detailPreview.innerHTML = detail.previewHtml;
   if (runKind(run) === "data-science") {
     els.detailPreview.dataset.ds = "";
+    wireChartClicks(els.detailPreview);
   } else {
     delete els.detailPreview.dataset.ds;
   }

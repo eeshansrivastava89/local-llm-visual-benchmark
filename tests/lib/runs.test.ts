@@ -504,7 +504,6 @@ describe("data-science run kind", () => {
     await writeFile(
       join(paths.runDirectory, "scorecard.json"),
       JSON.stringify({
-        layer: 1,
         total: 100,
         earned: 85,
         pct: 85.0,
@@ -518,7 +517,6 @@ describe("data-science run kind", () => {
     const runs = await listRunMetadata(runsRoot);
     const ds = runs.find((r) => r.kind === "data-science");
     expect(ds?.dsScorecard).toMatchObject({
-      layer: 1,
       total: 100,
       earned: 85,
       pct: 85.0

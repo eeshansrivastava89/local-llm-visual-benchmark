@@ -117,39 +117,26 @@ function renderDsCharts(treatmentHref, distributionHref, completionHref) {
 
 function renderDsScores(run) {
   const scorecard = run.dsScorecard;
-  const judgeScorecard = run.dsJudgeScorecard;
-  if (!scorecard && !judgeScorecard) return '';
-
-  let html = '<div class="ds-scores-row">';
-
-  if (scorecard) {
-    html += renderLayer1ScoreCard(scorecard);
-  }
-
-  if (judgeScorecard) {
-    html += renderLayer2ScoreCard(judgeScorecard);
-  }
-
-  html += '</div>';
-  return html;
+  if (!scorecard) return '';
+  return renderScoreCard(scorecard);
 }
 
-function renderLayer1ScoreCard(scorecard) {
+function renderScoreCard(scorecard) {
   const pct = scorecard.pct ?? 0;
   const earned = scorecard.earned ?? 0;
   const total = scorecard.total ?? 0;
   const tone = pct >= 80 ? 'safe' : pct >= 50 ? 'caution' : 'danger';
   const checks = scorecard.checks ?? {};
 
-  let html = '<div class="ds-card ds-score-card">';
+  let html = '<div class="ds-card ds-score-card ds-score-card-full">';
   html += '<div class="ds-score-card-head">';
-  html += '<span class="ds-score-card-title">Layer 1 · Deterministic</span>';
+  html += '<span class="ds-score-card-title">Scoring</span>';
   html += '<span class="ds-score-badge" data-tone="' + escapeAttribute(tone) + '">' + String(earned) + '/' + String(total) + '</span>';
   html += '</div>';
-  html += '<p class="ds-score-explain">Automated checks comparing model output to the oracle. Each check has a fixed point value.</p>';
   html += renderScoreBar(scorecard);
-  html += '<div class="ds-check-list">';
-  Object.values(checks).forEach(function(c) {
+  html += '<div class="ds-check-grid">';
+  var sortedChecks = Object.values(checks).sort(function(a, b) { return b.max - a.max; });
+  sortedChecks.forEach(function(c) {
     const icon = c.pass ? '\u2713' : '\u2717';
     const passClass = c.pass ? 'pass' : 'fail';
     html += '<div class="ds-check-item ' + passClass + '">';
@@ -162,45 +149,6 @@ function renderLayer1ScoreCard(scorecard) {
     html += '</div>';
   });
   html += '</div>';
-  html += '</div>';
-  return html;
-}
-
-function renderLayer2ScoreCard(judgeScorecard) {
-  const dims = [
-    { key: 'notebook_structure', label: 'Notebook structure & runnability' },
-    { key: 'visualization_quality', label: 'Visualization quality' },
-    { key: 'statistical_interpretation', label: 'Statistical interpretation' },
-    { key: 'grounding', label: 'Grounding & data provenance' },
-    { key: 'product_recommendation', label: 'Product recommendation' }
-  ];
-  const avg = dims.reduce(function(s, d) { return s + (judgeScorecard[d.key] ?? 0); }, 0) / dims.length;
-  const avgRounded = Math.round(avg * 10) / 10;
-  const avgPct = Math.round(avg / 10 * 100);
-  const tone = avgPct >= 75 ? 'safe' : avgPct >= 50 ? 'caution' : 'danger';
-
-  let html = '<div class="ds-card ds-score-card">';
-  html += '<div class="ds-score-card-head">';
-  html += '<span class="ds-score-card-title">Layer 2 · LLM Judge</span>';
-  html += '<span class="ds-score-badge" data-tone="' + escapeAttribute(tone) + '">' + String(avgRounded) + '/10</span>';
-  html += '</div>';
-  html += '<p class="ds-score-explain">A second model evaluates the notebook across 5 rubric dimensions (0\u201310 each).</p>';
-  html += renderJudgeBar(judgeScorecard);
-  html += '<div class="ds-check-list">';
-  dims.forEach(function(d) {
-    const val = judgeScorecard[d.key] ?? 0;
-    const icon = val >= 7 ? '\u2713' : val >= 4 ? '\u25CB' : '\u2717';
-    const passClass = val >= 7 ? 'pass' : val >= 4 ? 'partial' : 'fail';
-    html += '<div class="ds-check-item ' + passClass + '">';
-    html += '<span class="ds-check-icon">' + icon + '</span>';
-    html += '<span class="ds-check-label">' + escapeHtml(d.label) + '</span>';
-    html += '<span class="ds-check-pts">' + String(val) + '/10</span>';
-    html += '</div>';
-  });
-  html += '</div>';
-  if (judgeScorecard.notes) {
-    html += '<div class="ds-judge-notes">' + escapeHtml(judgeScorecard.notes) + '</div>';
-  }
   html += '</div>';
   return html;
 }
@@ -229,24 +177,8 @@ function renderMetricChip(metric) {
 function renderScoreBar(scorecard) {
   const pct = scorecard.pct ?? 0;
   const tone = pct >= 80 ? 'safe' : pct >= 50 ? 'caution' : 'danger';
-  return '<div class="ds-score-bar" data-tone="' + escapeAttribute(tone) + '" data-layer="1">' +
+  return '<div class="ds-score-bar" data-tone="' + escapeAttribute(tone) + '">' +
     '<div class="ds-score-track"><div class="ds-score-fill" style="width:' + String(pct) + '%"></div></div>' +
-  '</div>';
-}
-
-function renderJudgeBar(judgeScorecard) {
-  const dims = [
-    { key: 'notebook_structure', label: 'Structure' },
-    { key: 'visualization_quality', label: 'Viz' },
-    { key: 'statistical_interpretation', label: 'Stats' },
-    { key: 'grounding', label: 'Grounding' },
-    { key: 'product_recommendation', label: 'Rec' }
-  ];
-  const avg = dims.reduce((s, d) => s + (judgeScorecard[d.key] ?? 0), 0) / dims.length;
-  const avgPct = Math.round(avg / 10 * 100);
-  const tone = avgPct >= 75 ? 'safe' : avgPct >= 50 ? 'caution' : 'danger';
-  return '<div class="ds-score-bar" data-tone="' + escapeAttribute(tone) + '" data-layer="2">' +
-    '<div class="ds-score-track"><div class="ds-score-fill" style="width:' + String(avgPct) + '%"></div></div>' +
   '</div>';
 }
 

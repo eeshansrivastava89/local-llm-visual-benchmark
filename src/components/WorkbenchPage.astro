@@ -223,6 +223,15 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
       </article>
     </div>
 
+    <!-- Chart Lightbox -->
+    <div class="detail-backdrop" id="chartLightbox" role="dialog" aria-modal="true" aria-label="Chart viewer">
+      <button type="button" class="chart-lightbox-close" id="closeChartLightbox" aria-label="Close">&times;</button>
+      <button type="button" class="chart-lightbox-nav chart-lightbox-prev" id="chartLightboxPrev" aria-label="Previous chart">&lsaquo;</button>
+      <img id="chartLightboxImg" src="" alt="" />
+      <button type="button" class="chart-lightbox-nav chart-lightbox-next" id="chartLightboxNext" aria-label="Next chart">&rsaquo;</button>
+      <p class="chart-lightbox-label" id="chartLightboxLabel"></p>
+    </div>
+
     <!-- Prepare Run Modal -->
     <div class="detail-backdrop" id="prepBackdrop">
       <article class="prep-shell" role="dialog" aria-modal="true" aria-label="Prepare run">

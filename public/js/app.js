@@ -3,6 +3,7 @@ import { state } from "./state.js";
 import { loadLocalData, refreshAndCaptureMissing, refreshRunsForPolling } from "./data-controller.js";
 import { loadConnection, loadModelSyncState, loadModels, loadOmlxModels, syncModels } from "./model-source-controller.js";
 import { captureMissingMedia, captureRunMedia, captureSelectedRunMedia } from "./capture-controller.js";
+import { initChartLightbox } from "./chart-lightbox.js";
 import { scoreDsRun } from "./score-controller.js";
 import {
   configureWorkbenchController,
@@ -49,6 +50,7 @@ function init() {
   applyStoredTheme();
   wireEvents();
   initSourceStatuses();
+  initChartLightbox();
   renderViewTabs();
   updateOnboarding();
   void loadLocalData();

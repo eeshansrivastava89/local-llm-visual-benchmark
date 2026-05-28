@@ -142,7 +142,6 @@ export interface RunRunnerMetadata {
 }
 
 export interface DsScorecard {
-  layer: number;
   total: number;
   earned: number;
   pct: number;
@@ -181,7 +180,6 @@ export interface RunMetadata {
   promptText?: string;
   dsSummary?: DsSummary;
   dsScorecard?: DsScorecard;
-  dsJudgeScorecard?: DsJudgeScorecard;
   preparedAt?: string;
   tool?: "opencode" | "pi" | "hermes" | "generic";
   completedAt?: string;

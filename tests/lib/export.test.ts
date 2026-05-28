@@ -428,7 +428,7 @@ describe("static build script", () => {
     ).resolves.toContain("2026-05-06T19-12-00-000Z");
     await expect(
       readFile(join(staticOutputDirectory, "index.html"), "utf8")
-    ).resolves.toContain("Browse visual benchmark outputs by prompt, model, or table.");
+    ).resolves.toContain("a side quest by eeshans.com");
     await expect(
       readFile(join(staticOutputDirectory, "index.html"), "utf8")
     ).resolves.toContain('data-static-build="true"');
