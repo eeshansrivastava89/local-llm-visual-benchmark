@@ -98,6 +98,7 @@ function renderRunCard(run, mode, context) {
       ? { status: "prepared", label: "Scoring" }
       : runCardState(run);
   const identity = runCardIdentity(run, mode);
+  const isScoredDs = runKind(run) === "data-science" && Boolean(run.dsScorecard);
   return (
     '<article class="run-card" data-open-run data-run-id="' + escapeAttribute(run.runId) + '" tabindex="0" role="button" aria-label="' +
     escapeAttribute(run.benchmark?.title ?? "Run") + " " + escapeAttribute(run.model?.id ?? "") + '">' +
@@ -114,8 +115,10 @@ function renderRunCard(run, mode, context) {
             escapeHtml(stateLabel.label) +
           "</span>" +
         "</span>" +
-        '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing, isScoring)) + "</span>" +
-        renderRunCaptureAction(run, isCapturing, context) +
+        (isScoredDs
+          ? renderDsScoreRow(run, isCapturing, isScoring, context)
+          : '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing, isScoring)) + "</span>" + renderRunCaptureAction(run, isCapturing, context)
+        ) +
       "</span>" +
     "</article>"
   );
@@ -226,6 +229,32 @@ function renderDsPreview(run, options = {}) {
       '</span>' +
     '</span>'
   );
+}
+
+function renderDsScoreRow(run, isCapturing, isScoring, context) {
+  var sc = run.dsScorecard;
+  var pct = sc.pct ?? 0;
+  var earned = sc.earned ?? 0;
+  var total = sc.total ?? 0;
+  var tone = pct >= 90 ? 'great' : pct >= 75 ? 'good' : pct >= 50 ? 'ok' : 'low';
+
+  var badge = '<span class="ds-score-badge" data-tone="' + escapeAttribute(tone) + '">' +
+    String(earned) + '/' + String(total) +
+    '</span>';
+
+  var canRescore = context.canOperate && run.runDirectory && run.assets?.ds?.scorecard;
+  if (!canRescore) return '<span class="ds-score-row">' + badge + '</span>';
+
+  var label = "Rescore";
+  var title = run.benchmark?.title ?? run.benchmark?.id ?? "run";
+  var model = run.model?.id ?? "unknown model";
+  var btn = '<button type="button" class="btn-sm-outline run-card-score operational-control" data-score-run-id="' + escapeAttribute(run.runId) + '" ' +
+    'aria-label="' + escapeAttribute(label + " " + title + " on " + model) + '"' +
+    (isScoring || context.scoreBusy ? " disabled" : "") + '>' +
+    icon("check-circle") + escapeHtml(isScoring ? "Scoring..." : label) +
+    '</button>';
+
+  return '<span class="ds-score-row">' + badge + btn + '</span>';
 }
 
 function renderPromptPill(group, mode) {

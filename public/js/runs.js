@@ -18,8 +18,15 @@ export function filteredRuns() {
     const benchmarkMatch = state.selectedBenchmark === "all" || run.benchmark?.id === state.selectedBenchmark;
     const harnessMatch = state.selectedHarness === "all" || stackAttemptIdentity(run).harness === state.selectedHarness;
     const searchMatch = !state.runsSearch.trim() || searchableRunText(run).includes(state.runsSearch.trim().toLowerCase());
-    return kindMatch && modelMatch && benchmarkMatch && harnessMatch && searchMatch;
+    const cloudMatch = state.showCloudModels || !isCloudRun(run);
+    return kindMatch && modelMatch && benchmarkMatch && harnessMatch && searchMatch && cloudMatch;
   });
+}
+
+export function isCloudRun(run) {
+  const source = run.runner?.modelSource;
+  if (!source) return false;
+  return source !== "omlx" && source !== "lmstudio";
 }
 
 export function groupRuns(runs, titleForRun, subtitleForRun) {
@@ -65,7 +72,7 @@ export function runSummaryText(runs) {
   const needsCapture = runs.filter((r) => needsMediaCapture(r)).length;
   const failed = runs.filter((r) => r.status === "failed").length;
   const dsReady = runs.filter((r) => runKind(r) === "data-science" && r.assets?.ds?.summary).length;
-  if (state.mode === "table") {
+  if (state.mode === "compare") {
     if (isDs) return String(runs.length) + " data-science, " + dsReady + " with summary, " + failed + " failed";
     return String(runs.length) + " visual, " + videoReady + " with video, " + needsCapture + " need capture, " + failed + " failed";
   }
@@ -156,7 +163,7 @@ export function runCardMediaMessage(run, isCapturing, isScoring) {
   if (runKind(run) === "data-science") {
     const ds = run.assets?.ds ?? {};
     const chartCount = [ds.chartDistribution, ds.chartTreatmentEffect, ds.chartCompletionRates].filter(Boolean).length;
-    if (ds.scorecard) return "Scored " + String(run.dsScorecard?.earned ?? "?") + "/" + String(run.dsScorecard?.total ?? "?");
+    if (ds.scorecard) return "Scored";
     if (chartCount === 3 && ds.summary) return "3 charts · summary ready";
     if (chartCount > 0) return chartCount + " chart" + (chartCount > 1 ? "s" : "") + " ready";
     if (run.status === "failed") return displayRunError(run) ?? "Analysis failed";

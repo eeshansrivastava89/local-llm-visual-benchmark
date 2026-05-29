@@ -71,7 +71,7 @@ function init() {
 
 function initWorkspaceState() {
   state.workspace = "visual";
-  state.mode = "benchmark";
+  state.mode = "model";
   state.staticMode = document.body?.dataset.staticBuild === "true";
 
   // Restore persisted kind tab selection
@@ -200,6 +200,12 @@ function wireEvents() {
     renderBenchmarks();
     renderModels();
     renderHarnesses();
+    renderRuns();
+  });
+  els.cloudModelsToggle?.addEventListener("change", () => {
+    state.showCloudModels = els.cloudModelsToggle.checked;
+    resetRunPage();
+    renderModels();
     renderRuns();
   });
   els.prepareRun.addEventListener("click", () => prepareRunSlot());

@@ -107,19 +107,19 @@ export function renderRuns() {
   els.runCount.textContent = String(runs.length);
   els.runSummary.textContent = runSummaryText(runs);
   els.viewTitle.textContent = state.mode === "model"
-    ? "Model attempts"
-    : state.mode === "table"
-    ? "Table"
+    ? "Model comparison"
+    : state.mode === "compare"
+    ? "Compare"
     : state.mode === "benchmark"
       ? "Prompt comparison"
-      : "Prompt comparison";
+      : "Model comparison";
   els.viewSubtitle.textContent = state.mode === "model"
     ? "Group attempts by model and prompt."
-    : state.mode === "table"
-    ? "Select table rows to compare visual outputs."
+    : state.mode === "compare"
+    ? "Select rows to compare outputs."
     : state.mode === "benchmark"
       ? "Compare one prompt across models."
-      : "Compare one prompt across models.";
+      : "Group attempts by model and prompt.";
   updateClearWorkbenchStateButton();
   updateFiltersToggleCount();
 
@@ -136,7 +136,7 @@ export function renderRuns() {
     return;
   }
 
-  if (state.mode === "table") {
+  if (state.mode === "compare") {
     renderRunsTable(runs);
     return;
   }

@@ -69,6 +69,7 @@ export const els = {
   toolbarFilterGroup: document.querySelector("#toolbarFilterGroup"),
   // View tabs
   viewTabs: document.querySelectorAll("[data-mode]"),
+  cloudModelsToggle: document.querySelector("#cloudModelsToggle"),
   // Onboarding
   onboardingPanel: document.querySelector("#onboardingPanel"),
   dismissOnboarding: document.querySelector("#dismissOnboarding"),
