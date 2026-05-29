@@ -112,6 +112,39 @@ function openCodeModelConfig(profile) {
   };
 }
 
+export async function removeFromPiConfig(profile) {
+  const config = await readJsonIfExists(PI_CONFIG, { providers: {} });
+  config.providers ??= {};
+  const provider = config.providers[profile.providerId];
+  if (!provider?.models) return { cleaned: false, reason: `no ${profile.providerId} provider in Pi config` };
+  const before = provider.models.length;
+  provider.models = provider.models.filter((m) => m.id !== profile.modelAlias);
+  const removed = before - provider.models.length;
+  if (provider.models.length === 0) {
+    delete config.providers[profile.providerId];
+  }
+  if (removed > 0) {
+    await writeJson(PI_CONFIG, config);
+    console.log(colors.green(`Removed ${profile.modelAlias} from Pi config`));
+  }
+  return { cleaned: removed > 0, removed };
+}
+
+export async function removeFromOpenCodeConfig(profile) {
+  const config = await readJsonIfExists(OPENCODE_CONFIG, { provider: {} });
+  config.provider ??= {};
+  const provider = config.provider[profile.providerId];
+  if (!provider?.models) return { cleaned: false, reason: `no ${profile.providerId} provider in OpenCode config` };
+  if (!provider.models[profile.modelAlias]) return { cleaned: false, reason: `${profile.modelAlias} not in OpenCode config` };
+  delete provider.models[profile.modelAlias];
+  if (Object.keys(provider.models).length === 0) {
+    delete config.provider[profile.providerId];
+  }
+  await writeJson(OPENCODE_CONFIG, config);
+  console.log(colors.green(`Removed ${profile.modelAlias} from OpenCode config`));
+  return { cleaned: true, removed: 1 };
+}
+
 export async function hasPiModel(profile) {
   const config = await readJsonIfExists(PI_CONFIG, null);
   return Boolean(config?.providers?.[profile.providerId]?.models?.some?.((model) => model.id === profile.modelAlias));

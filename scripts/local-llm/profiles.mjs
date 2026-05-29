@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
-import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { commandFileText, applyCommandArgv, parseLlamaCommand } from "./command.mjs";
-import { PROFILE_DIR, RUN_DIR } from "./paths.mjs";
+import { PROFILE_DIR, RUN_DIR, LOG_DIR } from "./paths.mjs";
 import { normalizeServerVariantId, SERVER_VARIANTS } from "./server-variants.mjs";
 
 export function profileDir(id) {
@@ -35,6 +35,46 @@ export function profileExists(id) {
 
 export function statePath(id) {
   return join(RUN_DIR, `${sanitizeProfileId(id)}.state.json`);
+}
+
+export async function deleteProfile(profile, options = {}) {
+  const id = sanitizeProfileId(profile.id ?? profile);
+  const results = { profileDir: false, legacyFile: false, state: false, logs: [] };
+
+  // Delete directory-based profile
+  const dir = profileDir(id);
+  if (existsSync(dir)) {
+    await rm(dir, { recursive: true, force: true });
+    results.profileDir = true;
+  }
+
+  // Delete legacy flat JSON file
+  const legacyPath = legacyProfilePath(id);
+  if (existsSync(legacyPath)) {
+    await unlink(legacyPath);
+    results.legacyFile = true;
+  }
+
+  // Delete state file
+  const stateFile = statePath(id);
+  if (existsSync(stateFile)) {
+    await unlink(stateFile);
+    results.state = true;
+  }
+
+  // Delete logs (unless --keep-logs)
+  if (!options.keepLogs) {
+    const entries = await readdir(LOG_DIR, { withFileTypes: true }).catch(() => []);
+    const prefix = `${id}-`;
+    for (const entry of entries) {
+      if (entry.isFile() && entry.name.startsWith(prefix)) {
+        await unlink(join(LOG_DIR, entry.name));
+        results.logs.push(entry.name);
+      }
+    }
+  }
+
+  return results;
 }
 
 export async function loadProfiles() {

@@ -14,9 +14,9 @@
   },
   "status": "completed",
   "createdAt": "2026-05-27T15:54:51.763Z",
-  "updatedAt": "2026-05-28T15:03:21.990Z",
+  "updatedAt": "2026-05-29T05:38:53.711Z",
   "preparedAt": "2026-05-27T15:54:51.763Z",
-  "completedAt": "2026-05-28T03:50:36.180Z",
+  "completedAt": "2026-05-29T05:38:53.711Z",
   "runDirectory": "export/runs/ab-test-analysis/glm-5-1-86c2a86a7f/2026-05-27T15-54-51-763Z",
   "assets": {
     "metadata": "metadata.json",
@@ -28,9 +28,9 @@
     }
   },
   "runner": {
-    "mode": "manual",
+    "mode": "external",
     "modelSource": "custom",
-    "intendedRunner": "manual",
+    "intendedRunner": "Pi",
     "backendLabel": "cloud",
     "model": "GLM 5.1",
     "retries": 0

@@ -212,7 +212,7 @@ function renderPreview(run, options = {}) {
 }
 
 function renderDsPreview(run, options = {}) {
-  const thumbnail = assetHref(run, run.assets?.ds?.chartDistribution);
+  const thumbnail = assetHref(run, run.assets?.ds?.chartTreatmentEffect ?? run.assets?.ds?.chartDistribution);
   if (thumbnail) {
     return '<span class="preview"><img src="' + escapeAttribute(thumbnail) + '" alt="" loading="lazy" />' + renderCaptureOverlay(options.capturing) + '</span>';
   }

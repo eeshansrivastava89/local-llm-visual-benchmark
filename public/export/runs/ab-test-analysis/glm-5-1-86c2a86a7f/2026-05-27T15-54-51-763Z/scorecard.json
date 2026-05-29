@@ -1,7 +1,7 @@
 {
   "total": 100,
   "earned": 100,
-  "pct": 100.0,
+  "pct": 100,
   "checks": {
     "summary_valid": {
       "label": "summary.json valid",
@@ -32,7 +32,7 @@
       "detail": "SRM check found"
     },
     "hypothesis_tests": {
-      "label": "Hypothesis tests (t-test + chi\u00b2)",
+      "label": "Hypothesis tests (t-test + chi²)",
       "max": 10,
       "earned": 10,
       "pass": true,
@@ -43,14 +43,14 @@
       "max": 10,
       "earned": 10,
       "pass": true,
-      "detail": "got 0.000556, oracle 0.00063, tolerance \u00b10.05"
+      "detail": "got 0.000556, oracle 0.00063, tolerance ±0.05"
     },
     "cohens_d": {
       "label": "Cohen's d accuracy",
       "max": 10,
       "earned": 10,
       "pass": true,
-      "detail": "got -0.3987, oracle 0.3961, tolerance \u00b10.1"
+      "detail": "got -0.3987, oracle 0.3961, tolerance ±0.1"
     },
     "completion_rates": {
       "label": "Completion rates match oracle",

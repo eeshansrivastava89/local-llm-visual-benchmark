@@ -1,14 +1,14 @@
 {
   "total": 100,
-  "earned": 100,
-  "pct": 100,
+  "earned": 90,
+  "pct": 90,
   "checks": {
     "summary_valid": {
       "label": "summary.json valid",
       "max": 5,
       "earned": 5,
       "pass": true,
-      "detail": "parsed 1496 bytes, all required fields present"
+      "detail": "parsed 1703 bytes, all required fields present"
     },
     "data_access": {
       "label": "Data accessed from Supabase",
@@ -43,21 +43,21 @@
       "max": 10,
       "earned": 10,
       "pass": true,
-      "detail": "got 0.000556463, oracle 0.00063, tolerance ±0.05"
+      "detail": "got 0.00055646, oracle 0.00063, tolerance ±0.05"
     },
     "cohens_d": {
       "label": "Cohen's d accuracy",
       "max": 10,
       "earned": 10,
       "pass": true,
-      "detail": "got -0.39875, oracle 0.3961, tolerance ±0.1"
+      "detail": "got 0.39875, oracle 0.3961, tolerance ±0.1"
     },
     "completion_rates": {
       "label": "Completion rates match oracle",
       "max": 10,
-      "earned": 10,
-      "pass": true,
-      "detail": "A:0.8895 B:0.7081, oracle A:0.8889 B:0.7067"
+      "earned": 0,
+      "pass": false,
+      "detail": "both rates off: A:0.9559 B:0.9649, oracle A:0.8889 B:0.7067"
     },
     "charts_exist": {
       "label": "3 chart files exist",
@@ -85,7 +85,7 @@
       "max": 5,
       "earned": 5,
       "pass": true,
-      "detail": "statistical significance, conclusion section, completion rate"
+      "detail": "p-value, effect size, statistical significance"
     }
   }
 }

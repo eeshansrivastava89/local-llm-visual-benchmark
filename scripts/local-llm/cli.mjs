@@ -4,11 +4,11 @@ import { LMSTUDIO_MODELS_DIR } from "./paths.mjs";
 import { ensureLocalDirs } from "./paths.mjs";
 import { PRESETS } from "./presets.mjs";
 import { scanModels } from "./scan.mjs";
-import { ensureProfileCommand, loadProfiles, profileExists, readProfile, saveProfile, profilePath, profileTimestamp, sanitizeProfileId, slugFromLabel, normalizeProfile, readState } from "./profiles.mjs";
+import { ensureProfileCommand, loadProfiles, profileExists, readProfile, saveProfile, profilePath, profileTimestamp, sanitizeProfileId, slugFromLabel, normalizeProfile, readState, deleteProfile } from "./profiles.mjs";
 import { buildPrettyCommand } from "./command.mjs";
 import { renderEstimate, renderEstimateExplanation } from "./estimate.mjs";
 import { colors, createPrompt, formatBytes, printHelp, relativeTime, renderRows, startInteractive } from "./ui.mjs";
-import { hasOpenCodeModel, hasPiModel, launchHarness, syncOpenCodeConfig, syncPiConfig } from "./harnesses.mjs";
+import { hasOpenCodeModel, hasPiModel, launchHarness, syncOpenCodeConfig, syncPiConfig, removeFromPiConfig, removeFromOpenCodeConfig } from "./harnesses.mjs";
 import { isProfileRunning, profileRuntimeStatus, serverReady, startServer, stopProfile, waitForReady } from "./process.mjs";
 import { tailFriendly } from "./logs.mjs";
 import { inferServerVariantId, SERVER_VARIANTS, serverBinaryFor } from "./server-variants.mjs";
@@ -21,6 +21,7 @@ export async function runCli(argv) {
   if (command === "show") return showCommand(args); // Backward-compatible alias; prefer: list <profile>
   if (command === "run") return runCommand(args);
   if (command === "stop") return stopCommand(args);
+  if (command === "remove" || command === "rm") return removeCommand(args);
   throw new Error(`Unknown command: ${command}. Run scripts/local-llm.mjs help`);
 }
 
@@ -398,6 +399,103 @@ async function stopInteractive() {
       const result = await stopProfile(item.profile);
       console.log(result.stopped ? colors.green(result.message) : colors.yellow(result.message));
     }
+  } finally {
+    prompt.close();
+  }
+}
+
+async function removeCommand(argv) {
+  await ensureLocalDirs();
+  const { positional, options } = parseOptions(argv);
+  if (positional[0]) return removeProfile(positional[0], options);
+  return removeInteractive();
+}
+
+async function removeProfile(id, options) {
+  if (!profileExists(id)) throw new Error(`Profile "${id}" not found.`);
+  const profile = await readProfile(id);
+
+  // Confirm unless --force
+  if (!options.force && !options.yes) {
+    if (!process.stdin.isTTY) {
+      throw new Error("Confirmation required in non-interactive mode. Use --force to skip.");
+    }
+    const prompt = createPrompt();
+    try {
+      const confirmed = await prompt.yesNo(
+        `Remove ${profile.label} (${profile.id}) and its harness configs?`,
+        false
+      );
+      if (!confirmed) {
+        console.log(colors.dim("Cancelled."));
+        return;
+      }
+    } finally {
+      prompt.close();
+    }
+  }
+
+  // Stop server if running
+  if (await isProfileRunning(profile)) {
+    console.log(colors.yellow(`Stopping running server for ${profile.label}...`));
+    await stopProfile(profile);
+  }
+
+  // Remove from Pi config
+  const piResult = await removeFromPiConfig(profile);
+  if (!piResult.cleaned && piResult.reason) {
+    console.log(colors.dim(`Pi: ${piResult.reason}`));
+  }
+
+  // Remove from OpenCode config
+  const ocResult = await removeFromOpenCodeConfig(profile);
+  if (!ocResult.cleaned && ocResult.reason) {
+    console.log(colors.dim(`OpenCode: ${ocResult.reason}`));
+  }
+
+  // Delete profile files
+  const keepLogs = Boolean(options["keep-logs"]);
+  const deleted = await deleteProfile(profile, { keepLogs });
+
+  const parts = [];
+  if (deleted.profileDir) parts.push("profile directory");
+  if (deleted.legacyFile) parts.push("legacy file");
+  if (deleted.state) parts.push("state");
+  if (deleted.logs.length > 0) parts.push(`${deleted.logs.length} log file${deleted.logs.length === 1 ? "" : "s"}`);
+
+  console.log(colors.green(`Removed ${profile.label} (${profile.id})`));
+  if (parts.length > 0) console.log(colors.dim(`Deleted: ${parts.join(", ")}`));
+  if (keepLogs) console.log(colors.dim("Logs preserved (--keep-logs)"));
+}
+
+async function removeInteractive() {
+  const profiles = await loadProfiles();
+  if (profiles.length === 0) {
+    console.log(colors.dim("No profiles to remove."));
+    return;
+  }
+
+  if (!process.stdin.isTTY) throw new Error("Profile id is required when not running in an interactive terminal.");
+  startInteractive("local-llm remove");
+
+  const prompt = createPrompt();
+  try {
+    const choices = await Promise.all(profiles.map(async (profile) => {
+      const missing = missingProfileFiles(profile);
+      const running = await isProfileRunning(profile);
+      return {
+        value: profile.id,
+        label: profile.label,
+        hint: `${running ? "running · " : ""}${profile.providerId}/${profile.modelAlias}${missing ? ` · ${missing}` : ""}`
+      };
+    }));
+    choices.push({ value: "__cancel", label: "Cancel" });
+    const selected = await prompt.choice("Remove profile", choices, "__cancel");
+    if (selected === "__cancel") {
+      console.log(colors.dim("Cancelled."));
+      return;
+    }
+    await removeProfile(selected, {});
   } finally {
     prompt.close();
   }

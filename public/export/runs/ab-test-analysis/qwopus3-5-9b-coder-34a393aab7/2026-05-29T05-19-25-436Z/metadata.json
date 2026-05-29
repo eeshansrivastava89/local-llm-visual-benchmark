@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "kind": "data-science",
-  "runId": "2026-05-28T14-50-48-796Z",
+  "runId": "2026-05-29T05-19-25-436Z",
   "benchmark": {
     "id": "ab-test-analysis",
     "title": "A/B Test Production Analysis",
@@ -13,71 +13,75 @@
     "slug": "qwopus3-5-9b-coder-34a393aab7"
   },
   "status": "completed",
-  "createdAt": "2026-05-28T14:50:48.796Z",
-  "updatedAt": "2026-05-29T05:38:39.775Z",
-  "preparedAt": "2026-05-28T14:50:48.796Z",
-  "completedAt": "2026-05-29T05:38:39.775Z",
-  "runDirectory": "export/runs/ab-test-analysis/qwopus3-5-9b-coder-34a393aab7/2026-05-28T14-50-48-796Z",
+  "createdAt": "2026-05-29T05:19:25.436Z",
+  "updatedAt": "2026-05-29T05:55:33.354Z",
+  "preparedAt": "2026-05-29T05:19:25.436Z",
+  "completedAt": "2026-05-29T05:55:33.354Z",
+  "runDirectory": "export/runs/ab-test-analysis/qwopus3-5-9b-coder-34a393aab7/2026-05-29T05-19-25-436Z",
   "assets": {
     "metadata": "metadata.json",
     "ds": {
       "summary": "summary.json",
       "chartDistribution": "chart-distribution.png",
+      "chartTreatmentEffect": "chart-treatment-effect.png",
       "chartCompletionRates": "chart-completion-rates.png"
     }
   },
   "runner": {
     "mode": "external",
+    "modelSource": "lmstudio",
     "intendedRunner": "Pi",
-    "backendLabel": "llama.cpp",
+    "backendLabel": "LM Studio",
     "model": "qwopus3.5-9b-coder",
     "retries": 0
   },
   "dsSummary": {
-    "status": "not_significant",
+    "status": "significant",
     "recommended_variant": "A",
-    "decision": "Variant B shows a statistically significant improvement in completion time (Δ = +1.25s, p = 4.1960e-01). Effect size (Cohen's d = -0.14) is small. Guardrails are concerning. Recommendation: Continue with Variant A.",
+    "decision": "Continue with Variant A: B shows a significant slowdown of 3.20s (slower), making A the clear choice",
     "metrics": [
       {
         "label": "Completion Time",
-        "value": "9.6s vs 8.4s",
-        "delta": "+1.25s",
-        "delta_direction": "slower",
-        "context": "Cohen's d = -0.14 (95% CI: [-4.3, 1.8])"
+        "value": "A=5.7s vs B=8.9s",
+        "delta": "-3.2s",
+        "delta_direction": "down",
+        "context": "p=0.000556, d=3.49, 95% CI [-5.0, -1.4]"
       },
       {
         "label": "Completion Rate",
-        "value": "186.0% vs 443.8%",
-        "delta": "-257.7%",
+        "value": "A=100.0% vs B=100.0%",
+        "delta": "+0.0%",
         "delta_direction": "down",
-        "context": "χ² = 0.0, p = 0.0000"
+        "context": "χ²=0.00, p=1"
       },
       {
-        "label": "Outlier Rate",
-        "value": "26.6% vs 29.4%",
-        "delta": "-2.8%",
-        "delta_direction": "down",
-        "context": "z = -0.38, p = 0.7034"
+        "label": "Repeat Rate",
+        "value": "A=50.8% vs B=54.5%",
+        "delta": "+3.78%",
+        "delta_direction": "up",
+        "context": "z=0.00, p=1"
       },
       {
         "label": "Effect Size",
-        "value": "Cohen's d = -0.14",
-        "context": "Small effect"
+        "value": "d=3.49",
+        "context": "small=0.2, medium=0.5, large=0.8"
       }
     ],
-    "warnings": []
+    "warnings": [
+      "Extreme effect size (Cohen's d=3.49) suggests data may contain extreme outliers or the effect is very large"
+    ]
   },
   "dsScorecard": {
     "total": 100,
-    "earned": 60,
-    "pct": 60,
+    "earned": 80,
+    "pct": 80,
     "checks": {
       "summary_valid": {
         "label": "summary.json valid",
         "max": 5,
         "earned": 5,
         "pass": true,
-        "detail": "parsed 1552 bytes, all required fields present"
+        "detail": "parsed 1415 bytes, all required fields present"
       },
       "data_access": {
         "label": "Data accessed from Supabase",
@@ -110,30 +114,30 @@
       "p_value": {
         "label": "p_value accuracy",
         "max": 10,
-        "earned": 0,
-        "pass": false,
-        "detail": "got 0.419598, oracle 0.00063, tolerance ±0.05"
+        "earned": 10,
+        "pass": true,
+        "detail": "got 0.000556463, oracle 0.00063, tolerance ±0.05"
       },
       "cohens_d": {
         "label": "Cohen's d accuracy",
         "max": 10,
         "earned": 0,
         "pass": false,
-        "detail": "got -0.136025, oracle 0.3961, tolerance ±0.1"
+        "detail": "got -3.48966, oracle 0.3961, tolerance ±0.1"
       },
       "completion_rates": {
         "label": "Completion rates match oracle",
         "max": 10,
         "earned": 0,
         "pass": false,
-        "detail": "both rates off: A:4.4375 B:1.8604651162790697, oracle A:0.8889 B:0.7067"
+        "detail": "both rates off: A:1.0 B:1.0, oracle A:0.8889 B:0.7067"
       },
       "charts_exist": {
         "label": "3 chart files exist",
         "max": 10,
-        "earned": 0,
-        "pass": false,
-        "detail": "found 2/3, missing: chart-treatment-effect.png"
+        "earned": 10,
+        "pass": true,
+        "detail": "all 3 chart files present"
       },
       "charts_labeled": {
         "label": "Charts have labels and titles",
@@ -154,7 +158,7 @@
         "max": 5,
         "earned": 5,
         "pass": true,
-        "detail": "effect size, statistical significance, conclusion section"
+        "detail": "statistical significance, conclusion section"
       }
     }
   }

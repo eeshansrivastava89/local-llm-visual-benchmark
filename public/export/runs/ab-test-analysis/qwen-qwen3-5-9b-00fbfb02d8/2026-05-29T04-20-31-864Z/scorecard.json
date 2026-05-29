@@ -1,14 +1,14 @@
 {
   "total": 100,
-  "earned": 100,
-  "pct": 100,
+  "earned": 90,
+  "pct": 90,
   "checks": {
     "summary_valid": {
       "label": "summary.json valid",
       "max": 5,
       "earned": 5,
       "pass": true,
-      "detail": "parsed 1496 bytes, all required fields present"
+      "detail": "parsed 1213 bytes, all required fields present"
     },
     "data_access": {
       "label": "Data accessed from Supabase",
@@ -22,7 +22,7 @@
       "max": 5,
       "earned": 5,
       "pass": true,
-      "detail": "null handling, type conversion"
+      "detail": "null handling, validation/asserts"
     },
     "srm_test": {
       "label": "SRM test performed",
@@ -50,14 +50,14 @@
       "max": 10,
       "earned": 10,
       "pass": true,
-      "detail": "got -0.39875, oracle 0.3961, tolerance ±0.1"
+      "detail": "got 0.398745, oracle 0.3961, tolerance ±0.1"
     },
     "completion_rates": {
       "label": "Completion rates match oracle",
       "max": 10,
-      "earned": 10,
-      "pass": true,
-      "detail": "A:0.8895 B:0.7081, oracle A:0.8889 B:0.7067"
+      "earned": 0,
+      "pass": false,
+      "detail": "both rates off: A:0.9571428571428572 B:0.9655172413793104, oracle A:0.8889 B:0.7067"
     },
     "charts_exist": {
       "label": "3 chart files exist",
@@ -85,7 +85,7 @@
       "max": 5,
       "earned": 5,
       "pass": true,
-      "detail": "statistical significance, conclusion section, completion rate"
+      "detail": "statistical significance, conclusion section, completion time"
     }
   }
 }

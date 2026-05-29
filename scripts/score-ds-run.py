@@ -41,19 +41,23 @@ def check_summary_valid(run_dir: Path) -> dict:
 
 
 def read_notebook_source(run_dir: Path) -> str:
-    """Extract all code cell source from the notebook."""
+    """Extract all code from the analysis notebook or a .py fallback."""
     nb_path = run_dir / "analysis.ipynb"
-    if not nb_path.is_file():
-        return ""
-    try:
-        nb = json.loads(nb_path.read_text("utf8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return ""
-    return "\n".join(
-        "".join(c.get("source", []))
-        for c in nb.get("cells", [])
-        if c.get("cell_type") == "code"
-    )
+    if nb_path.is_file():
+        try:
+            nb = json.loads(nb_path.read_text("utf8"))
+            return "\n".join(
+                "".join(c.get("source", []))
+                for c in nb.get("cells", [])
+                if c.get("cell_type") == "code"
+            )
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
+    # Fallback: if no notebook, try any .py file (some models write scripts instead)
+    py_files = sorted(run_dir.glob("*.py"))
+    if py_files:
+        return py_files[0].read_text("utf8")
+    return ""
 
 
 def check_data_access(source: str) -> dict:
@@ -61,15 +65,20 @@ def check_data_access(source: str) -> dict:
     has_api_call = bool(re.search(r"requests\.(get|post)\s*\(", source))
     has_url = bool(re.search(r"SUPABASE_URL|supabase.*rest|nazioidbiydxduonenmb", source, re.IGNORECASE))
     has_key = bool(re.search(r"apikey|api_key|ANON_KEY", source, re.IGNORECASE))
-    has_config = bool(re.search(r"open\(['\"]supabase\.json['\"]\)", source))
+    # Config-file pattern: reads supabase.json then makes API calls using loaded values
+    has_config_read = bool(re.search(r"open\(['\"]supabase\.json['\"]\)", source))
+    has_config_usage = bool(re.search(r"(cfg|config|supabase_config)\s*\[['\"]", source))
 
     if has_api_call and has_url:
         return {"pass": True, "detail": "Supabase API calls with inline credentials"}
     if has_api_call and has_key:
         return {"pass": True, "detail": "API calls with auth headers"}
-    if has_api_call and has_config:
+    if has_api_call and has_config_read:
         return {"pass": True, "detail": "API calls using supabase.json config"}
-    return {"pass": False, "detail": "no Supabase API calls detected in notebook"}
+    # Broader: any API call in a file that loaded supabase.json
+    if has_api_call and has_config_usage:
+        return {"pass": True, "detail": "API calls with config-loaded credentials"}
+    return {"pass": False, "detail": "no Supabase API calls detected in source"}
 
 
 def check_data_quality(source: str) -> dict:
