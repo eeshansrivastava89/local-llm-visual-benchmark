@@ -6,11 +6,20 @@ import { join } from "node:path";
 import { buildShellCommand } from "./command.mjs";
 import { LOG_DIR } from "./paths.mjs";
 import { ensureProfileCommand, readState, writeState } from "./profiles.mjs";
+import { backendFor } from "./backends.mjs";
 import { colors } from "./ui.mjs";
 
 const execFileAsync = promisify(execFile);
 
 export async function startServer(profile) {
+  const backend = backendFor(profile.backend);
+  if (backend.type === "managed-server") {
+    return startManagedServer(profile, backend);
+  }
+  return startLocalServer(profile);
+}
+
+async function startLocalServer(profile) {
   profile = await ensureProfileCommand(profile);
   assertCommandReady(profile);
   const timestamp = timestampForFile();
@@ -42,7 +51,43 @@ export async function startServer(profile) {
   return state;
 }
 
+async function startManagedServer(profile, backend) {
+  const ready = await serverReady(profile.baseUrl);
+  if (ready) {
+    console.log(colors.green(`[ready] ${backend.label} is already running at ${profile.baseUrl}`));
+  } else {
+    console.log(colors.yellow(`[waiting] ${backend.label} is not responding at ${profile.baseUrl}`));
+    console.log(colors.dim(`Start it manually, then local-llm will verify readiness.`));
+    // Wait for the user to start it
+    for (let i = 0; i < 60; i++) {
+      await sleep(2000);
+      if (await serverReady(profile.baseUrl)) {
+        console.log(colors.green(`[ready] ${backend.label} is responding at ${profile.baseUrl}`));
+        break;
+      }
+      process.stdout.write(".");
+    }
+    if (!(await serverReady(profile.baseUrl))) {
+      throw new Error(`${backend.label} is not responding at ${profile.baseUrl}. Start it and try again.`);
+    }
+  }
+  const state = {
+    pid: null,
+    profileId: profile.id,
+    baseUrl: profile.baseUrl,
+    managedBy: backend.id,
+    startedAt: new Date().toISOString()
+  };
+  await writeState(profile.id, state);
+  return state;
+}
+
 export async function waitForReady(profile, pid, rawLogPath) {
+  const backend = backendFor(profile.backend);
+  if (backend.type === "managed-server") {
+    // Managed servers are already verified in startServer
+    return;
+  }
   for (let i = 0; i < 180; i++) {
     if (await serverReady(profile.baseUrl)) return;
     if (pid && !pidAlive(pid)) {
@@ -55,6 +100,14 @@ export async function waitForReady(profile, pid, rawLogPath) {
 }
 
 export async function stopProfile(profile) {
+  const backend = backendFor(profile.backend);
+  if (backend.type === "managed-server") {
+    // Managed servers are not stopped by local-llm
+    const state = await readState(profile.id);
+    await writeState(profile.id, { ...state, pid: null, stoppedAt: new Date().toISOString(), stopReason: "managed-server" });
+    return { stopped: false, message: `${backend.label} is a managed service — local-llm does not stop it. Use the service's own controls.` };
+  }
+
   const state = await readState(profile.id);
   if (!state?.pid) return { stopped: false, message: `No state pid for ${profile.id}.` };
   if (!pidAlive(state.pid)) {
@@ -75,25 +128,27 @@ export async function stopProfile(profile) {
 }
 
 export async function isProfileRunning(profile) {
+  const backend = backendFor(profile.backend);
+  if (backend.type === "managed-server") {
+    return await serverReady(profile.baseUrl);
+  }
   const state = await readState(profile.id);
   return Boolean(state?.pid && pidAlive(state.pid));
 }
 
 export async function profileRuntimeStatus(profile) {
+  const backend = backendFor(profile.backend);
+  if (backend.type === "managed-server") {
+    const ready = await serverReady(profile.baseUrl);
+    return { state: null, pid: null, running: ready, ready, rssBytes: null, startedAt: null };
+  }
   const state = await readState(profile.id);
   const running = Boolean(state?.pid && pidAlive(state.pid));
   const [ready, rssBytes] = await Promise.all([
     serverReady(profile.baseUrl),
     running ? pidRssBytes(state.pid) : Promise.resolve(null)
   ]);
-  return {
-    state,
-    pid: state?.pid ?? null,
-    running,
-    ready,
-    rssBytes,
-    startedAt: state?.startedAt ? new Date(state.startedAt) : null
-  };
+  return { state, pid: state?.pid ?? null, running, ready, rssBytes, startedAt: state?.startedAt ? new Date(state.startedAt) : null };
 }
 
 export async function serverReady(baseUrl) {

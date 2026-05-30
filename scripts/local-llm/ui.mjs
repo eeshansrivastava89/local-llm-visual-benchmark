@@ -12,7 +12,7 @@ export const colors = {
 };
 
 export function printHelp() {
-  console.log(`${colors.bold("local-llm")} - transparent llama.cpp profile runner\n`);
+  console.log(`${colors.bold("local-llm")} - local LLM profile runner\n`);
   console.log("Usage:");
   console.log("  scripts/local-llm.mjs list [profile-id]");
   console.log("  scripts/local-llm.mjs setup [profile]");

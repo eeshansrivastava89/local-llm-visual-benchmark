@@ -1,9 +1,8 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { LMSTUDIO_MODELS_DIR } from "./paths.mjs";
 import { ensureLocalDirs } from "./paths.mjs";
 import { PRESETS } from "./presets.mjs";
-import { scanModels } from "./scan.mjs";
+import { scanGgufModels } from "./scan.mjs";
 import { ensureProfileCommand, loadProfiles, profileExists, readProfile, saveProfile, profilePath, profileTimestamp, sanitizeProfileId, slugFromLabel, normalizeProfile, readState, deleteProfile } from "./profiles.mjs";
 import { buildPrettyCommand } from "./command.mjs";
 import { renderEstimate, renderEstimateExplanation } from "./estimate.mjs";
@@ -11,7 +10,8 @@ import { colors, createPrompt, formatBytes, printHelp, relativeTime, renderRows,
 import { hasOpenCodeModel, hasPiModel, launchHarness, syncOpenCodeConfig, syncPiConfig, removeFromPiConfig, removeFromOpenCodeConfig } from "./harnesses.mjs";
 import { isProfileRunning, profileRuntimeStatus, serverReady, startServer, stopProfile, waitForReady } from "./process.mjs";
 import { tailFriendly } from "./logs.mjs";
-import { inferServerVariantId, SERVER_VARIANTS, serverBinaryFor } from "./server-variants.mjs";
+import { backendFor, BACKENDS, backendChoices, inferBackendId } from "./backends.mjs";
+import { SERVER_VARIANTS, serverBinaryFor } from "./server-variants.mjs";
 
 export async function runCli(argv) {
   const [command = "help", ...args] = argv;
@@ -40,10 +40,13 @@ async function listProfile(id) {
 async function listAll(options = {}) {
   if (process.stdin.isTTY) startInteractive("local-llm list");
   await ensureLocalDirs();
-  const profiles = await Promise.all((await loadProfiles()).map((profile) => ensureProfileCommand(profile)));
-  const models = await scanModels();
+  const profiles = await Promise.all((await loadProfiles()).map(async (profile) => {
+    const backend = backendFor(profile.backend);
+    return backend.needsCommandFile ? ensureProfileCommand(profile) : profile;
+  }));
+  const ggufModels = await scanGgufModels();
   const profiledModelPaths = new Set(profiles.map((profile) => profile.modelPath).filter(Boolean));
-  const unprofiledModels = models.filter((model) => !profiledModelPaths.has(model.path));
+  const unprofiledGguf = ggufModels.filter((model) => !profiledModelPaths.has(model.path));
   const items = [];
 
   if (!options.onlyModels) {
@@ -55,16 +58,18 @@ async function listAll(options = {}) {
         const index = items.push({ type: "profile", profile });
         const running = await isProfileRunning(profile);
         const timestamp = await profileTimestamp(profile.id);
-        const missing = missingProfileFiles(profile);
-        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
+        const backend = backendFor(profile.backend);
+        const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
+        const badge = backend.type === "managed-server" ? ` ${colors.magenta(`[${backend.label}]`)}` : "";
+        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)}${badge} ${colors.dim(relativeTime(timestamp))}`);
         console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${missing ? ` · ${colors.red(missing)}` : ""}`);
       }
     }
     console.log("");
   }
 
-  console.log(colors.bold(options.onlyModels ? `Downloaded GGUF models under ${LMSTUDIO_MODELS_DIR}` : "Downloaded models not set up yet"));
-  const visibleModels = options.onlyModels ? models : unprofiledModels;
+  console.log(colors.bold(options.onlyModels ? `Downloaded GGUF models under ~/.lmstudio/models` : "Downloaded models not set up yet"));
+  const visibleModels = options.onlyModels ? ggufModels : unprofiledGguf;
   if (visibleModels.length === 0) {
     console.log(options.onlyModels ? colors.yellow("  No GGUF models found.") : colors.dim("  None. Every downloaded GGUF has a profile."));
   } else {
@@ -78,6 +83,30 @@ async function listAll(options = {}) {
     }
   }
 
+  // Managed backend models (Ollama, oMLX)
+  const profiledAliases = new Set(profiles.map((p) => {
+    if (p.backend === "ollama") return `ollama:${p.ollamaModel ?? p.modelAlias}`;
+    if (p.backend === "omlx") return `omlx:${p.omlxModel ?? p.modelAlias}`;
+    return null;
+  }).filter(Boolean));
+  for (const beId of ["ollama", "omlx"]) {
+    const be = BACKENDS[beId];
+    const models = await be.scanModels();
+    if (models.length === 0) continue;
+    const unprofiled = models.filter((m) => !profiledAliases.has(`${beId}:${m.id}`));
+    console.log("");
+    console.log(colors.bold(`${be.label} models`));
+    if (unprofiled.length === 0) {
+      console.log(colors.dim("  None without a profile."));
+    } else {
+      for (const model of unprofiled) {
+        const index = items.push({ type: "managed", model, backendId: beId });
+        console.log(`${String(index).padStart(2, " ")}. ${colors.cyan(model.label)} ${colors.magenta(`[${be.label}]`)}`);
+        console.log(`    id: ${colors.cyan(model.id)}`);
+      }
+    }
+  }
+
   if (process.stdin.isTTY && items.length > 0) {
     const prompt = createPrompt();
     try {
@@ -85,14 +114,17 @@ async function listAll(options = {}) {
         ...items.map((item, index) => ({
           value: String(index),
           label: item.type === "profile" ? item.profile.label : item.model.label,
-          hint: item.type === "profile" ? `${item.profile.id} · ${item.profile.modelAlias}` : `alias: ${item.model.aliasSuggestion}`
+          hint: item.type === "profile" ? `${item.profile.id} · ${item.profile.modelAlias}` : item.type === "managed" ? `${BACKENDS[item.backendId].label} · id: ${item.model.id}` : `alias: ${item.model.aliasSuggestion}`
         })),
         { value: "__done", label: "Done" }
       ], "__done");
       if (selected === "__done") return;
       const item = items[Number(selected)];
       if (item.type === "profile") {
-        console.log("\n" + await renderFullProfile(await ensureProfileCommand(item.profile)));
+        const backend = backendFor(item.profile.backend);
+        console.log("\n" + await renderFullProfile(backend.needsCommandFile ? await ensureProfileCommand(item.profile) : item.profile));
+      } else if (item.type === "managed") {
+        console.log("\n" + renderManagedModelDetails(item.model, BACKENDS[item.backendId]));
       } else {
         console.log("\n" + renderModelDetails(item.model));
       }
@@ -147,9 +179,71 @@ async function setupCommand(argv) {
       return;
     }
 
-    const models = await scanModels();
-    if (models.length === 0) throw new Error(`No GGUF models found under ${LMSTUDIO_MODELS_DIR}.`);
-    const profiles = await Promise.all((await loadProfiles()).map((profile) => ensureProfileCommand(profile)));
+    // ── Backend selection ─────────────────────────────────────────────────
+    const backendId = await prompt.choice("Backend", backendChoices(), "llama-cpp");
+    const backend = backendFor(backendId);
+
+    if (backend.type === "managed-server") {
+      // Ollama / oMLX: pick from running service models
+      const managedModels = await backend.scanModels();
+      if (managedModels.length === 0) {
+        console.log(colors.yellow(`No models found from ${backend.label}. Is the service running?`));
+        return;
+      }
+      const modelChoice = await prompt.choice(`${backend.label} model`, managedModels.map((m) => ({
+        value: m.id,
+        label: m.label,
+        hint: [m.quant, m.family].filter(Boolean).join(" · ") || m.id
+      })), managedModels[0].id);
+      const model = managedModels.find((m) => m.id === modelChoice);
+      if (!model) throw new Error(`Model disappeared: ${modelChoice}`);
+
+      const existingById = profiles.find((p) => p.backend === backendId && (p.ollamaModel === model.id || p.omlxModel === model.id || p.modelAlias === model.id));
+      if (existingById) {
+        console.log(renderProfileSummary(existingById));
+        console.log(colors.bold("Already set up"));
+        const sync = await prompt.choice("Update harness configs?", syncChoices(), "both");
+        await syncHarnessConfigs(existingById, sync);
+        return;
+      }
+
+      const id = sanitizeProfileId(await prompt.text("Profile id", requestedId ?? slugFromLabel(model.label)));
+      const modelAlias = await prompt.text("Model alias for Pi/OpenCode", model.id);
+      const host = await prompt.text("Host", "127.0.0.1");
+      const port = await prompt.number("Port", backend.defaultPort, 1, 65535);
+
+      const profile = normalizeProfile({
+        id,
+        backend: backendId,
+        label: model.label,
+        providerId: backend.providerId,
+        modelAlias,
+        ollamaModel: backendId === "ollama" ? model.id : undefined,
+        omlxModel: backendId === "omlx" ? model.id : undefined,
+        flags: { host, port, ctxSize: 131072, temperature: 0.6, topP: 0.95, topK: 20, minP: 0, presencePenalty: 0, repeatPenalty: 1, parallel: 1, cacheTypeK: "bf16", cacheTypeV: "bf16", flashAttention: "on", jinja: true, batchSize: 512 },
+        harnesses: {
+          pi: { enabled: true, model: `${backend.providerId}/${modelAlias}` },
+          opencode: { enabled: true, model: `${backend.providerId}/${modelAlias}` }
+        }
+      });
+
+      console.log("\n" + renderProfileSummary(profile));
+      if (!(await prompt.yesNo("Save profile", true))) return;
+      await saveProfile(profile);
+      const saved = await readProfile(id);
+      console.log(colors.green(`Saved ${profilePath(id)}`));
+
+      const sync = await prompt.choice("Update harness configs?", syncChoices(), "both");
+      await syncHarnessConfigs(saved, sync);
+      return;
+    }
+
+    // ── llama.cpp: GGUF model selection ─────────────────────────────────
+    if (models.length === 0) throw new Error(`No GGUF models found under ~/.lmstudio/models.`);
+    const profiles = await Promise.all((await loadProfiles()).map(async (profile) => {
+      const be = backendFor(profile.backend);
+      return be.needsCommandFile ? ensureProfileCommand(profile) : profile;
+    }));
     const profileByModelPath = new Map(profiles.map((profile) => [profile.modelPath, profile]));
     const modelChoices = models.map((model) => {
       const profile = profileByModelPath.get(model.path);
@@ -299,31 +393,48 @@ async function runProfile(profile, options) {
   if (withHarness === "opencode" && !(await hasOpenCodeModel(profile))) throw new Error(`OpenCode config is missing ${profile.harnesses.opencode.model}. Run setup and choose opencode/both config sync.`);
   assertProfileFiles(profile);
 
+  const backend = backendFor(profile.backend);
   const ready = await serverReady(profile.baseUrl);
-  if (ready && !options["reuse-existing"]) throw new Error(`${profile.baseUrl}/models already responds. Rerun with --reuse-existing to use it explicitly.`);
+  const isManaged = backend.type === "managed-server";
 
-  const startedServer = !ready;
-  let state = await readState(profile.id);
-  if (startedServer) state = await startServer(profile);
-  else console.log(colors.yellow(`Reusing existing server at ${profile.baseUrl}`));
-
-  const tail = state?.rawLogPath ? tailFriendly(state.rawLogPath, state.friendlyLogPath) : { stop() {} };
-  try {
-    await waitForReady(profile, state?.pid, state?.rawLogPath);
-    console.log(colors.green(`[ready] ${profile.baseUrl}/models responded`));
+  if (isManaged) {
+    if (!ready) throw new Error(`${backend.label} is not running at ${profile.baseUrl}. Start it and try again, or use --reuse-existing.`);
+    console.log(colors.green(`[ready] ${backend.label} responding at ${profile.baseUrl}`));
     if (!withHarness) {
-      if (state?.rawLogPath) console.log(colors.dim(`Raw log: ${state.rawLogPath}`));
-      console.log(colors.dim(`Stop with: local-llm stop ${profile.id}`));
+      console.log(colors.dim(`${backend.label} is a managed service — local-llm does not stop it.`));
+      return;
+    }
+  } else {
+    if (ready && !options["reuse-existing"]) throw new Error(`${profile.baseUrl}/models already responds. Rerun with --reuse-existing to use it explicitly.`);
+  }
+
+  const startedServer = !isManaged && !ready;
+  let state = startedServer ? await startServer(profile) : (isManaged ? { baseUrl: profile.baseUrl, profileId: profile.id, managedBy: backend.id } : await readState(profile.id));
+  if (!isManaged && ready) console.log(colors.yellow(`Reusing existing server at ${profile.baseUrl}`));
+
+  const tail = !isManaged && state?.rawLogPath ? tailFriendly(state.rawLogPath, state.friendlyLogPath) : { stop() {} };
+  try {
+    if (!isManaged) {
+      await waitForReady(profile, state?.pid, state?.rawLogPath);
+      console.log(colors.green(`[ready] ${profile.baseUrl}/models responded`));
+    }
+    if (!withHarness) {
+      if (!isManaged && state?.rawLogPath) console.log(colors.dim(`Raw log: ${state.rawLogPath}`));
+      if (isManaged) {
+        console.log(colors.dim(`${backend.label} is a managed service — local-llm does not stop it.`));
+      } else {
+        console.log(colors.dim(`Stop with: local-llm stop ${profile.id}`));
+      }
       return;
     }
     tail.stop();
     try {
       await launchHarness(profile, withHarness);
     } finally {
-      if (startedServer && !options["keep-server"]) {
+      if (startedServer && !isManaged && !options["keep-server"]) {
         const result = await stopProfile(profile);
         console.log(result.stopped ? colors.green(`[stop] ${result.message}`) : colors.yellow(`[stop] ${result.message}`));
-      } else {
+      } else if (!isManaged) {
         console.log(colors.dim(`Server is still running. Stop with: local-llm stop ${profile.id}`));
       }
     }
@@ -532,67 +643,119 @@ async function syncHarnessConfigs(profile, sync) {
 }
 
 async function renderFullProfile(profile) {
-  const commandText = await readFile(profile.commandPath, "utf8").catch(() => buildPrettyCommand(profile));
+  const backend = backendFor(profile.backend);
+  const isManaged = backend.type === "managed-server";
+  const commandText = !isManaged && existsSync(profile.commandPath) ? await readFile(profile.commandPath, "utf8").catch(() => buildPrettyCommand(profile)) : null;
   const piConfigured = await hasPiModel(profile);
   const openCodeConfigured = await hasOpenCodeModel(profile);
-  const missing = missingProfileFiles(profile);
-  return [
+  const missing = isManaged ? "" : missingProfileFiles(profile);
+  const sections = [
     colors.bold(colors.cyan(profile.label)),
     "",
     renderSection("Profile", renderRows([
       ["ID", colors.cyan(profile.id)],
       ["Endpoint", colors.green(profile.baseUrl)],
+      ["Backend", colors.magenta(backend.label)],
       ["Provider", colors.cyan(profile.providerId)],
-      ["Server", colors.dim(serverBinaryFor(profile))],
-      ["Alias", colors.cyan(profile.modelAlias)],
-      ["Model", renderPathStatus(profile.modelPath, "missing --model")],
-      ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")]
+      ...(!isManaged ? [
+        ["Server", colors.dim(serverBinaryFor(profile))],
+        ["Model", renderPathStatus(profile.modelPath, "missing --model")],
+        ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")]
+      ] : [
+        ...(backendId === "ollama" ? [["Ollama model", colors.cyan(profile.ollamaModel ?? profile.modelAlias)]] : []),
+        ...(backendId === "omlx" ? [["oMLX model", colors.cyan(profile.omlxModel ?? profile.modelAlias)]] : [])
+      ]),
+      ["Alias", colors.cyan(profile.modelAlias)]
     ])),
-    "",
-    renderSection("Memory", missing ? colors.red(`Unavailable: ${missing}`) : withoutFirstLine(renderEstimate(profile))),
-    "",
-    renderSection("How estimate works", missing ? colors.red("Restore missing files to calculate memory estimates.") : withoutFirstLine(renderEstimateExplanation(profile))),
-    "",
-    renderSection("Harness", renderRows([
-      ["Pi", `${configBadge(piConfigured)} ${colors.cyan(profile.harnesses.pi.model)}`],
-      ["OpenCode", `${configBadge(openCodeConfigured)} ${colors.cyan(profile.harnesses.opencode.model)}`]
-    ])),
-    "",
-    renderSection("Editable command file", colors.dim(profile.commandPath)),
-    "",
-    renderSection("Command", highlightShell(commandText.trim())),
-    "",
-    renderSection("Next", [
-      `${colors.green("Run:")}  local-llm run ${profile.id} --with pi`,
-      `${colors.cyan("Edit:")} ${profile.commandPath}`,
-      colors.dim(`Metadata: ${profilePath(profile.id)}`)
-    ].join("\n"))
-  ].join("\n");
+    ""
+  ];
+  if (!isManaged && !missing) {
+    sections.push(renderSection("Memory", renderEstimate(profile)));
+    sections.push("");
+    sections.push(renderSection("How estimate works", withoutFirstLine(renderEstimateExplanation(profile))));
+    sections.push("");
+  } else if (isManaged) {
+    sections.push(renderSection("Memory", colors.dim(`${backend.label} manages its own memory. No local estimate needed.`)));
+    sections.push("");
+  }
+  sections.push(renderSection("Harness", renderRows([
+    ["Pi", `${configBadge(piConfigured)} ${colors.cyan(profile.harnesses.pi.model)}`],
+    ["OpenCode", `${configBadge(openCodeConfigured)} ${colors.cyan(profile.harnesses.opencode.model)}`]
+  ])));
+  if (!isManaged && commandText) {
+    sections.push("");
+    sections.push(renderSection("Editable command file", colors.dim(profile.commandPath)));
+    sections.push("");
+    sections.push(renderSection("Command", highlightShell(commandText.trim())));
+  }
+  sections.push("");
+  sections.push(renderSection("Next", [
+    `${colors.green("Run:")}  local-llm run ${profile.id} --with pi`,
+    ...(!isManaged ? [`${colors.cyan("Edit:")} ${profile.commandPath}`] : []),
+    colors.dim(`Metadata: ${profilePath(profile.id)}`)
+  ].join("\n")));
+  return sections.join("\n");
+}
+
+function backendId(profile) {
+  return profile.backend ?? (profile.serverVariant === "mtp" ? "llama-cpp-mtp" : "llama-cpp");
 }
 
 function renderProfileSummary(profile) {
+  const backend = backendFor(profile.backend);
+  const badge = backend.type === "managed-server" ? ` ${colors.magenta(`[${backend.label}]`)}` : "";
   return renderSection("Profile", renderRows([
     ["ID", colors.cyan(profile.id)],
-    ["Label", colors.bold(profile.label)],
+    ["Label", colors.bold(profile.label) + badge],
     ["Endpoint", colors.green(profile.baseUrl)],
+    ["Backend", colors.magenta(backend.label)],
     ["Provider", colors.cyan(profile.providerId)],
-    ["Server", colors.dim(serverBinaryFor(profile))],
+    ...(!backend.needsCommandFile ? [] : [
+      ["Server", colors.dim(serverBinaryFor(profile))],
+    ]),
     ["Alias", colors.cyan(profile.modelAlias)],
-    ["Model", renderPathStatus(profile.modelPath, "missing --model")],
-    ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")]
+    ...(backend.needsModelFile ? [
+      ["Model", renderPathStatus(profile.modelPath, "missing --model")],
+      ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")],
+    ] : [
+      ...(profile.backend === "ollama" ? [["Ollama model", colors.cyan(profile.ollamaModel ?? profile.modelAlias)]] : []),
+      ...(profile.backend === "omlx" ? [["oMLX model", colors.cyan(profile.omlxModel ?? profile.modelAlias)]] : []),
+    ])
   ]));
 }
 
 function assertProfileFiles(profile) {
+  const backend = backendFor(profile.backend);
+  if (backend.type === "managed-server") return; // No files to check for managed backends
   const missing = missingProfileFiles(profile);
   if (missing) throw new Error(`Cannot run ${profile.label}: ${missing}. Re-download it in LM Studio or edit ${profile.commandPath}.`);
 }
 
 function missingProfileFiles(profile) {
+  const backend = backendFor(profile.backend);
+  if (backend.type === "managed-server") return "";
   const missing = [];
   if (!profile.modelPath || !existsSync(profile.modelPath)) missing.push("model not in LM Studio");
   if (profile.mmprojPath && !existsSync(profile.mmprojPath)) missing.push("mmproj missing");
   return missing.join(", ");
+}
+
+function renderManagedModelDetails(model, backend) {
+  const suggestedId = slugFromLabel(model.label);
+  const lines = [
+    colors.bold(model.label),
+    `Id:     ${model.id}`,
+    `Source: ${backend.label}`,
+    model.quant ? `Quant:  ${model.quant}` : null,
+    model.family ? `Family: ${model.family}` : null,
+    model.sizeBytes ? `Size:   ${formatBytes(model.sizeBytes)}` : null,
+    "",
+    colors.bold("To create a runnable profile"),
+    `local-llm setup ${suggestedId}`,
+    "",
+    colors.dim("After setup, this model will appear in the Saved profiles section.")
+  ].filter(Boolean);
+  return lines.join("\n");
 }
 
 function renderPathStatus(path, missingLabel) {
@@ -636,11 +799,7 @@ function cacheTypeChoices() {
 }
 
 function serverVariantChoices() {
-  return Object.entries(SERVER_VARIANTS).map(([value, variant]) => ({
-    value,
-    label: variant.label,
-    hint: variant.hint
-  }));
+  return backendChoices().filter((c) => c.value === "llama-cpp" || c.value === "llama-cpp-mtp");
 }
 
 function syncChoices() {

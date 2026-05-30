@@ -1,9 +1,9 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { chmod, mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { commandFileText, applyCommandArgv, parseLlamaCommand } from "./command.mjs";
 import { PROFILE_DIR, RUN_DIR, LOG_DIR } from "./paths.mjs";
-import { normalizeServerVariantId, SERVER_VARIANTS } from "./server-variants.mjs";
+import { backendFor, BACKENDS } from "./backends.mjs";
 
 export function profileDir(id) {
   return join(PROFILE_DIR, sanitizeProfileId(id));
@@ -41,28 +41,24 @@ export async function deleteProfile(profile, options = {}) {
   const id = sanitizeProfileId(profile.id ?? profile);
   const results = { profileDir: false, legacyFile: false, state: false, logs: [] };
 
-  // Delete directory-based profile
   const dir = profileDir(id);
   if (existsSync(dir)) {
     await rm(dir, { recursive: true, force: true });
     results.profileDir = true;
   }
 
-  // Delete legacy flat JSON file
   const legacyPath = legacyProfilePath(id);
   if (existsSync(legacyPath)) {
     await unlink(legacyPath);
     results.legacyFile = true;
   }
 
-  // Delete state file
   const stateFile = statePath(id);
   if (existsSync(stateFile)) {
     await unlink(stateFile);
     results.state = true;
   }
 
-  // Delete logs (unless --keep-logs)
   if (!options.keepLogs) {
     const entries = await readdir(LOG_DIR, { withFileTypes: true }).catch(() => []);
     const prefix = `${id}-`;
@@ -112,9 +108,10 @@ export async function readProfile(id) {
   profile.profileDir = profileDir(profile.id);
   profile.profilePath = sourcePath;
   profile.commandPath = commandPath(profile.id);
-  profile.commandSource = existsSync(profile.commandPath) ? "file" : "generated";
+  profile.backend = profile.backend ?? inferBackendFromFields(profile);
+  profile.commandSource = profile.backend !== "llama-cpp" && profile.backend !== "llama-cpp-mtp" ? "none" : (existsSync(profile.commandPath) ? "file" : "generated");
 
-  if (existsSync(profile.commandPath)) {
+  if (profile.commandSource === "file" && existsSync(profile.commandPath)) {
     const command = parseLlamaCommand(await readFile(profile.commandPath, "utf8"));
     profile = normalizeProfile({
       ...applyCommandArgv(profile, command.argv),
@@ -124,6 +121,7 @@ export async function readProfile(id) {
       commandPath: profile.commandPath,
       commandSource: "file"
     });
+    profile.backend = profile.backend ?? inferBackendFromFields(profile);
   }
   return profile;
 }
@@ -132,10 +130,13 @@ export async function ensureProfileCommand(profile) {
   await mkdir(profileDir(profile.id), { recursive: true });
   const jsonPath = profileJsonPath(profile.id);
   await writeJson(jsonPath, profileForJson(profile));
-  const path = commandPath(profile.id);
-  if (!existsSync(path)) {
-    await writeFile(path, commandFileText(profile), "utf8");
-    await chmod(path, 0o755).catch(() => {});
+  const backend = backendFor(profile.backend);
+  if (backend.needsCommandFile) {
+    const path = commandPath(profile.id);
+    if (!existsSync(path)) {
+      await writeFile(path, commandFileText(profile), "utf8");
+      await chmod(path, 0o755).catch(() => {});
+    }
   }
   if (!existsSync(notesPath(profile.id))) {
     await writeFile(notesPath(profile.id), `# ${profile.label}\n\nNotes for this local model profile.\n`, "utf8");
@@ -152,10 +153,13 @@ export async function saveProfile(profile) {
     updatedAt: now
   });
   await writeJson(profileJsonPath(normalized.id), profileForJson(normalized));
-  const path = commandPath(normalized.id);
-  if (!existsSync(path)) {
-    await writeFile(path, commandFileText(normalized), "utf8");
-    await chmod(path, 0o755).catch(() => {});
+  const backend = backendFor(normalized.backend);
+  if (backend.needsCommandFile) {
+    const path = commandPath(normalized.id);
+    if (!existsSync(path)) {
+      await writeFile(path, commandFileText(normalized), "utf8");
+      await chmod(path, 0o755).catch(() => {});
+    }
   }
   if (!existsSync(notesPath(normalized.id))) {
     await writeFile(notesPath(normalized.id), `# ${normalized.label}\n\nNotes for this local model profile.\n`, "utf8");
@@ -172,16 +176,26 @@ export async function writeState(id, state) {
 
 export function normalizeProfile(profile) {
   profile.flags ??= {};
+  if (profile.backend && !profile.serverVariant) {
+    profile.serverVariant = profile.backend === "llama-cpp-mtp" ? "mtp" : "standard";
+  }
   profile.serverVariant = normalizeServerVariantId(profile.serverVariant, profile.providerId);
-  profile.providerId ??= SERVER_VARIANTS[profile.serverVariant].providerId;
+  profile.backend = profile.backend ?? (profile.serverVariant === "mtp" ? "llama-cpp-mtp" : "llama-cpp");
+  const backend = backendFor(profile.backend);
+  profile.providerId ??= backend.providerId;
   profile.flags.host ??= "127.0.0.1";
-  profile.flags.port ??= SERVER_VARIANTS[profile.serverVariant].flags.port;
+  if (backend.type === "managed-server" && !profile.flags.port) {
+    const url = new URL(backend.defaultBaseUrl);
+    profile.flags.port = parseInt(url.port, 10) || 80;
+  } else if (!profile.flags.port) {
+    profile.flags.port = backend.defaultPort;
+  }
   profile.flags.repeatPenalty ??= 1.0;
   profile.flags.parallel ??= 1;
   profile.baseUrl = baseUrlFor(profile.flags);
   profile.harnesses ??= {};
-  profile.harnesses.pi ??= { enabled: true, model: `${profile.providerId}/${profile.modelAlias}` };
-  profile.harnesses.opencode ??= { enabled: true, model: `${profile.providerId}/${profile.modelAlias}` };
+  profile.harnesses.pi ??= { enabled: true, model: `${profile.providerId}/${profile.modelAlias ?? profile.id}` };
+  profile.harnesses.opencode ??= { enabled: true, model: `${profile.providerId}/${profile.modelAlias ?? profile.id}` };
   profile.profileDir ??= profileDir(profile.id);
   profile.profilePath ??= profileJsonPath(profile.id);
   profile.commandPath ??= commandPath(profile.id);
@@ -200,7 +214,9 @@ export function slugFromLabel(value) {
   return sanitizeProfileId(value);
 }
 
-export async function readJsonIfExists(path, fallback) {
+export { readJsonIfExists, writeJson };
+
+async function readJsonIfExists(path, fallback) {
   try {
     return JSON.parse(await readFile(path, "utf8"));
   } catch (error) {
@@ -209,19 +225,44 @@ export async function readJsonIfExists(path, fallback) {
   }
 }
 
-export async function writeJson(path, value) {
+async function writeJson(path, value) {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
 function profileForJson(profile) {
-  return {
+  const backend = backendFor(profile.backend);
+  const base = {
     id: profile.id,
     label: profile.label,
-    providerId: profile.providerId ?? "llama-cpp",
-    serverVariant: profile.serverVariant ?? normalizeServerVariantId(undefined, profile.providerId),
+    backend: profile.backend ?? "llama-cpp",
+    modelAlias: profile.modelAlias,
+    ...(profile.backend === "ollama" ? { ollamaModel: profile.ollamaModel } : {}),
+    ...(profile.backend === "omlx" ? { omlxModel: profile.omlxModel } : {}),
+    ...(profile.providerId && profile.providerId !== backend.providerId ? { providerId: profile.providerId } : {}),
+    ...(profile.serverVariant && profile.serverVariant !== "standard" ? { serverVariant: profile.serverVariant } : {}),
     ...(profile.preset ? { preset: profile.preset } : {}),
     ...(profile.createdAt ? { createdAt: profile.createdAt } : {}),
     ...(profile.updatedAt ? { updatedAt: profile.updatedAt } : {})
   };
+  if (profile.modelPath) base.modelPath = profile.modelPath;
+  if (profile.mmprojPath) base.mmprojPath = profile.mmprojPath;
+  // For managed backends, save host/port for baseUrl
+  if (backend.type === "managed-server") {
+    base.flags = { host: profile.flags?.host, port: profile.flags?.port };
+  }
+  return base;
 }
+
+function inferBackendFromFields(profile) {
+  if (profile.serverVariant === "mtp" || profile.providerId === "llama-cpp-mtp") return "llama-cpp-mtp";
+  return "llama-cpp";
+}
+
+function normalizeServerVariantId(value, providerId) {
+  if (value === "mtp") return "mtp";
+  if (value === "standard") return "standard";
+  if (providerId === "llama-cpp-mtp") return "mtp";
+  return "standard";
+}
+

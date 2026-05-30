@@ -1,6 +1,6 @@
 # local-llm CLI
 
-Tiny helper for running LM Studio GGUF models with `llama-server`, then using Pi or OpenCode.
+Local LLM profile runner supporting llama.cpp, Ollama, and oMLX backends.
 
 ## Run it from anywhere
 
@@ -26,31 +26,20 @@ That opens a picker for profile + Pi/OpenCode/server-only mode. `local-llm` keep
 local-llm setup
 ```
 
-Shows all downloaded models. Models that already have profiles are marked as set up; choosing one will offer sync/details instead of creating a duplicate.
+Choose a backend (llama.cpp, llama.cpp MTP, Ollama, or oMLX), then pick a model and configure:
 
-Setup asks which server mode to use. Both modes use the same current upstream llama.cpp build at `/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server` until the Homebrew stable `llama-server` is new enough for MTP.
+- **llama.cpp / MTP**: Select a GGUF model file from `~/.lmstudio/models/`, choose a server variant and preset, configure sampling parameters, save the profile.
+- **Ollama**: Select a model from the running Ollama service (`localhost:11434`), configure the endpoint, save the profile. No command file or local GGUF needed — Ollama manages everything.
+- **oMLX**: Select a model from the running oMLX service (`127.0.0.1:8000`), same story.
 
-- **Standard llama.cpp**: provider `llama-cpp`, port `8080`, no speculative MTP flags.
-- **MTP llama.cpp**: provider `llama-cpp-mtp`, port `8081`, and adds `--spec-type draft-mtp --spec-draft-n-max 2`.
+For existing profiles, edit the command file (llama.cpp) or `profile.json` (managed backends) directly:
 
-Models with `MTP` in the name default to the MTP mode, but you can override it.
-
-Creates a profile folder:
-
-```text
-.local-llm/profiles/<profile-id>/
-  profile.json       # display metadata only: id, label, provider, server variant
-  llama-server.sh    # source of truth for runtime flags, model path, and alias
-  notes.md           # scratch notes for this local profile
+```bash
+$EDITOR .local-llm/profiles/<id>/llama-server.sh   # llama.cpp
+$EDITOR .local-llm/profiles/<id>/profile.json        # Ollama / oMLX
 ```
 
-For existing profiles, edit `profile.json` for the friendly list label and edit `llama-server.sh` for runtime details. `setup <profile> --sync both` only syncs Pi/OpenCode from that command file.
-
-### MTP models
-
-For MTP GGUFs, choose **MTP llama.cpp** during setup. The CLI writes the shared upstream binary plus speculative-decoding flags into `llama-server.sh`, stores `providerId: "llama-cpp-mtp"` in `profile.json`, and syncs Pi/OpenCode under that provider.
-
-Only one server can use port `8081` at a time. If you want to run multiple MTP profiles concurrently, edit the `--port` in that profile's `llama-server.sh`, then run `local-llm setup <profile-id> --sync both`.
+`local-llm setup <profile> --sync both` syncs Pi/OpenCode from that profile.
 
 ### List / inspect
 
@@ -58,13 +47,7 @@ Only one server can use port `8081` at a time. If you want to run multiple MTP p
 local-llm list
 ```
 
-Shows saved profiles with the friendly `profile.json` label first, then the profile id, server alias, and endpoint. If the model or mmproj file was deleted from LM Studio, the profile is still listed but marked in red so you can fix or remove it. Downloaded models that are not set up yet show the inferred label plus the alias that setup will suggest. Pick a number to inspect details.
-
-Direct inspect still works if you already know the profile id:
-
-```bash
-local-llm list qwen36-27b-mtp
-```
+Shows saved profiles with backend badges (`[Ollama]`, `[oMLX]`), then unprofiled GGUF models, then Ollama and oMLX models. 🟢 = server responding. Pick a number to inspect details.
 
 ### Run
 
@@ -74,39 +57,49 @@ local-llm run
 
 Choose a profile, then choose Pi, OpenCode, or server-only mode.
 
-You can still skip the picker:
+For **llama.cpp** profiles: starts `llama-server`, waits for readiness, then launches the harness. Stops the server when the harness exits (unless `--keep-server`).
+
+For **Ollama / oMLX** profiles: verifies the service is responding, then launches the harness. Does not start or stop the managed service.
 
 ```bash
-local-llm run qwen36-27b-mtp --with pi
-local-llm run qwen36-27b-mtp --with opencode
+local-llm run <profile> --with pi
+local-llm run <profile> --with opencode
 ```
-
-When the CLI starts the server for Pi/OpenCode, it stops that server again after Pi/OpenCode exits. Use `--keep-server` to leave it running.
 
 ### Stop
 
 ```bash
 local-llm stop
-local-llm stop qwen36-27b-mtp
+local-llm stop <profile>
 local-llm stop --all
 ```
 
-With no profile id, `stop` shows tracked running servers first, including pid, readiness, and RSS memory, then lets you pick one to stop. Use `--all` when you want to stop every tracked local-llm server immediately. If nothing is loaded, it exits with a short "No tracked local-llm servers are running" message.
+For **llama.cpp** profiles: stops the tracked `llama-server` process.
 
-## Edit llama.cpp flags
+For **Ollama / oMLX** profiles: reports that the service is managed and not stopped by local-llm.
 
-Open the command file and edit the `llama-server` command directly:
+## Backends
 
-```bash
-$EDITOR .local-llm/profiles/qwen36-27b-mtp/llama-server.sh
+| Backend | Type | Server management | Model source | Profile files |
+|---|---|---|---|---|
+| llama.cpp | local-server | Start/stop `llama-server` process | `~/.lmstudio/models/` GGUF files | `llama-server.sh` + `profile.json` |
+| llama.cpp MTP | local-server | Start/stop with speculative decoding flags | `~/.lmstudio/models/` GGUF files | `llama-server.sh` + `profile.json` |
+| Ollama | managed-server | Verify connectivity only | Ollama API (`localhost:11434`) | `profile.json` only |
+| oMLX | managed-server | Verify connectivity only | oMLX API (`127.0.0.1:8000`) | `profile.json` only |
+
+## Profile structure
+
+```text
+.local-llm/profiles/<profile-id>/
+  profile.json       # display metadata + backend + model info
+  llama-server.sh    # llama.cpp command file (local-server backends only)
+  notes.md           # scratch notes
 ```
 
-Add, remove, or reorder flags as plain shell text. `list`, `run`, memory estimates, and Pi/OpenCode sync all read this file as the source of truth for runtime behavior. Edit `profile.json` only for display metadata like `label`; do not use it for context/cache/model/server changes.
+For llama.cpp profiles, `llama-server.sh` is the source of truth for runtime flags, model path, alias, and port. For Ollama/oMLX profiles, only `profile.json` is needed.
 
-## Sync Pi/OpenCode config
+## MTP profiles
 
-```bash
-local-llm setup qwen36-27b-mtp --sync both
-```
+For MTP GGUFs, choose **MTP llama.cpp** during setup. The CLI writes the shared upstream binary plus speculative-decoding flags into `llama-server.sh`, stores `providerId: "llama-cpp-mtp"` in `profile.json`, and syncs Pi/OpenCode under that provider.
 
-Use `pi`, `opencode`, or `both`.
+Only one server can use port `8081` at a time. If you want to run multiple MTP profiles concurrently, edit the `--port` in that profile's `llama-server.sh`, then run `local-llm setup <profile-id> --sync both`.

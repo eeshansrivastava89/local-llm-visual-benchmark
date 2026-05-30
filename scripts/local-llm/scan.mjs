@@ -3,7 +3,7 @@ import { readdir } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { LMSTUDIO_MODELS_DIR } from "./paths.mjs";
 
-export async function scanModels(root = LMSTUDIO_MODELS_DIR) {
+export async function scanGgufModels(root = LMSTUDIO_MODELS_DIR) {
   const files = await findFiles(root, (path) => path.toLowerCase().endsWith(".gguf"));
   const mmprojs = files.filter((path) => basename(path).toLowerCase().includes("mmproj"));
   const models = files.filter((path) => !basename(path).toLowerCase().includes("mmproj"));
@@ -17,7 +17,9 @@ export async function scanModels(root = LMSTUDIO_MODELS_DIR) {
       label: labelFromName(name),
       aliasSuggestion: aliasFromName(name),
       quant: quantFromName(name),
-      sizeBytes: statSync(path).size
+      sizeBytes: statSync(path).size,
+      backend: "llama-cpp",
+      source: "lmstudio"
     };
   }).sort((a, b) => a.label.localeCompare(b.label));
 }

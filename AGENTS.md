@@ -30,8 +30,8 @@ Why: local benchmark runs are written to ignored `runs/`, but production reads t
 
 ## Local LLM profile rules
 
-- `.local-llm/profiles/*/profile.json` is display metadata only, mostly `label`.
-- `.local-llm/profiles/*/llama-server.sh` is the runtime source of truth: binary, model path, alias, port, context/cache, MTP flags, sampling flags.
+- `.local-llm/profiles/*/profile.json` stores backend, model info, and display metadata.
+- `.local-llm/profiles/*/llama-server.sh` is the runtime source of truth for llama.cpp profiles: binary, model path, alias, port, context/cache, MTP flags, sampling flags. Ollama/oMLX profiles have no command file.
 - If `--alias`, `--port`, or provider-facing details change, sync harness config:
 
 ```bash
@@ -39,6 +39,16 @@ local-llm setup <profile-id> --sync both
 ```
 
 - `local-llm stop` with no profile should show running tracked servers; use `local-llm stop --all` for emergencies.
+- `local-llm list` shows all profiles across llama.cpp, Ollama, and oMLX backends.
+
+## Supported backends
+
+| Backend | Type | Server management | Model source |
+|---|---|---|---|
+| llama.cpp | local-server | Start/stop process | `~/.lmstudio/models/` GGUF |
+| llama.cpp MTP | local-server | Start/stop with speculative decoding | `~/.lmstudio/models/` GGUF |
+| Ollama | managed-server | Verify connectivity | Ollama API (`localhost:11434`) |
+| oMLX | managed-server | Verify connectivity | oMLX API (`127.0.0.1:8000`) |
 
 ## llama.cpp setup
 

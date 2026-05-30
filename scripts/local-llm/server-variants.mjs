@@ -1,22 +1,12 @@
-export const LLAMA_SERVER_BINARY = "/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server";
+import { BACKENDS, backendFor, inferBackendId } from "./backends.mjs";
+
+// Legacy constants preserved for backward compatibility.
+// Server variant IDs map 1:1 to backend IDs for local-server backends.
+export const LLAMA_SERVER_BINARY = BACKENDS["llama-cpp"].binary;
 
 export const SERVER_VARIANTS = {
-  standard: {
-    label: "Standard llama.cpp",
-    hint: "shared upstream llama-server on port 8080",
-    providerId: "llama-cpp",
-    binary: LLAMA_SERVER_BINARY,
-    flags: { port: 8080 },
-    extraArgs: []
-  },
-  mtp: {
-    label: "MTP llama.cpp",
-    hint: "shared upstream llama-server with draft-mtp on port 8081",
-    providerId: "llama-cpp-mtp",
-    binary: LLAMA_SERVER_BINARY,
-    flags: { port: 8081 },
-    extraArgs: ["--spec-type", "draft-mtp", "--spec-draft-n-max", "2"]
-  }
+  standard: BACKENDS["llama-cpp"],
+  mtp: BACKENDS["llama-cpp-mtp"]
 };
 
 export function normalizeServerVariantId(value, providerId) {
@@ -26,16 +16,7 @@ export function normalizeServerVariantId(value, providerId) {
 }
 
 export function inferServerVariantId(modelOrProfile) {
-  const haystack = [
-    modelOrProfile?.path,
-    modelOrProfile?.modelPath,
-    modelOrProfile?.label,
-    modelOrProfile?.modelAlias,
-    modelOrProfile?.id,
-    modelOrProfile?.providerId
-  ].filter(Boolean).join(" ").toLowerCase();
-  if (haystack.includes("mtp") || haystack.includes(SERVER_VARIANTS.mtp.providerId)) return "mtp";
-  return "standard";
+  return inferBackendId(modelOrProfile) === "llama-cpp-mtp" ? "mtp" : "standard";
 }
 
 export function serverVariantFor(profile) {
@@ -44,10 +25,11 @@ export function serverVariantFor(profile) {
 }
 
 export function serverBinaryFor(profile) {
-  return profile?.serverBinary ?? serverVariantFor(profile).binary;
+  const backendId = profile?.backend ?? (profile?.serverVariant === "mtp" ? "llama-cpp-mtp" : "llama-cpp");
+  return backendFor(backendId).binary;
 }
 
 export function serverExtraArgsFor(profile) {
-  if (Array.isArray(profile?.serverExtraArgs)) return profile.serverExtraArgs;
-  return serverVariantFor(profile).extraArgs;
+  const backendId = profile?.backend ?? (profile?.serverVariant === "mtp" ? "llama-cpp-mtp" : "llama-cpp");
+  return backendFor(backendId).extraArgs;
 }
