@@ -339,7 +339,8 @@ html[data-theme="dark"] .sync-target-logo { filter: brightness(1.1); }
 .lm-model-table-head, .lm-model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(8rem, 0.7fr) minmax(8rem, 0.7fr); gap: 0.75rem; align-items: center; }
 .lm-model-table-head { color: var(--muted-foreground); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .available-model-list { display: grid; max-height: 24rem; overflow: auto; }
-.lm-model-row { border-top: 1px solid var(--app-border); padding: 0.65rem 0; }
+.lm-model-row { border-top: 1px solid var(--app-border); padding: 0.65rem 0; transition: background-color 0.15s; }
+.lm-model-row:hover { background: var(--subtle-surface); }
 .lm-model-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 
 #runsSurface { width: 100%; min-width: 0; min-height: 0; padding-right: 0.15rem; }
