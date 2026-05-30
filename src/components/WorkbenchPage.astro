@@ -82,10 +82,6 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
               <button type="button" class="kind-tab" data-kind="visual" aria-pressed="true"><span class="ui-icon" aria-hidden="true" style={iconStyle("eye")}></span>Visual Benchmark</button>
               <button type="button" class="kind-tab" data-kind="data-science" aria-pressed="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("chart-bar")}></span>Data Science Benchmark</button>
             </div>
-            <label class="cloud-toggle" id="cloudToggleLabel">
-              <input type="checkbox" id="cloudModelsToggle" />
-              <span class="cloud-toggle-text">Include cloud models</span>
-            </label>
           </div>
 
           <!-- Toolbar -->
@@ -133,13 +129,19 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
           <div class="gallery-summary">
             <div class="min-w-0">
               <div class="flex items-center gap-2">
-              <h2 id="viewTitle" class="text-lg font-semibold tracking-[-0.01em]">Prompt comparison</h2>
+                <h2 id="viewTitle" class="text-lg font-semibold tracking-[-0.01em]">Prompt comparison</h2>
                 <span class="badge-outline" id="runCount">0</span>
               </div>
               <p class="muted-copy mt-0.5 text-sm" id="viewSubtitle">{subtitle}</p>
               <p class="muted-copy text-sm" id="runSummary">Loading saved runs.</p>
             </div>
-            <button type="button" class="btn-sm-outline gallery-reset" id="clearWorkbenchState" data-icon="x" hidden><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span><span id="clearWorkbenchStateLabel">Clear filters</span></button>
+            <div class="summary-actions">
+              <label class="cloud-toggle" id="cloudToggleLabel">
+                <input type="checkbox" id="cloudModelsToggle" />
+                <span class="cloud-toggle-text">Include cloud models</span>
+              </label>
+              <button type="button" class="btn-sm-outline gallery-reset" id="clearWorkbenchState" data-icon="x" hidden><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span><span id="clearWorkbenchStateLabel">Clear filters</span></button>
+            </div>
           </div>
 
           <!-- Surface -->

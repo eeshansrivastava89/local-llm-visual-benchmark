@@ -248,6 +248,7 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; opacity: 0.55; }
 .gallery-summary .flex.items-center { flex: 0 0 auto; }
 .gallery-summary h2 { font-size: 0.98rem; line-height: 1.25; }
 .gallery-summary p { margin: 0; font-size: 0.82rem; line-height: 1.25; }
+.summary-actions { display: inline-flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
 .gallery-reset { flex: 0 0 auto; white-space: nowrap; }
 .gallery-reset[hidden] { display: none; }
 #viewSubtitle { display: none; }
