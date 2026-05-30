@@ -213,9 +213,9 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
           <button type="button" class="btn-sm-outline" id="closeDeleteConfirm"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
         </header>
         <div class="grid gap-4 p-5">
-          <div class="rounded-lg border border-[var(--app-border)] bg-[var(--card)] p-3">
-            <p class="text-sm font-medium text-[var(--red)]">This cannot be undone.</p>
-            <p class="muted-copy mt-1 text-sm leading-5">The whole run folder will be deleted, including metadata, prompt, HTML, preview, and raw response files.</p>
+          <div class="confirm-warning-box">
+            <p class="confirm-warning-title">This cannot be undone.</p>
+            <p class="muted-copy text-sm leading-5">The whole run folder will be deleted, including metadata, prompt, HTML, preview, and raw response files.</p>
           </div>
           <div class="grid gap-1">
             <span class="section-label">Run folder</span>
