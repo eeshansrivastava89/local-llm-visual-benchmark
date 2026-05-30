@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data Science Cards — Mockups (Light + Dark)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f7f8;
+      --surface: #ffffff;
+      --surface-raised: #f9f9f9;
+      --border: #e5e5e5;
+      --border-hover: #d0d0d5;
+      --text: #0d0d0d;
+      --text-secondary: #6b6b6b;
+      --text-tertiary: #9a9a9e;
+      --accent: #10a37f;
+      --accent-dim: rgba(16,163,127,0.10);
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --success: #10a37f;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow: 0 4px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.10);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    html[data-theme="dark"] {
+      --bg: #0c0c0e;
+      --surface: #141418;
+      --surface-raised: #1a1a20;
+      --border: #27272e;
+      --border-hover: #3a3a48;
+      --text: #e8e8ec;
+      --text-secondary: #8a8a96;
+      --text-tertiary: #5a5a66;
+      --accent: #00d4aa;
+      --accent-dim: rgba(0,212,170,0.12);
+      --warning: #f5a623;
+      --error: #ff5f5f;
+      --success: #34d399;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+      --shadow-lg: 0 12px 48px rgba(0,0,0,0.6);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { background: var(--bg); color: var(--text); font-family: var(--font-display); transition: background 0.3s ease; }
+    body { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+
+    .theme-toggle {
+      position: fixed; top: 1.5rem; right: 1.5rem;
+      padding: 0.5rem 1rem; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-family: var(--font-display);
+      font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      box-shadow: var(--shadow); z-index: 100;
+    }
+    .theme-toggle:hover { border-color: var(--accent); }
+
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+    .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2.5rem; }
+    .section-title {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text-tertiary);
+      margin: 3rem 0 1.25rem; padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mockup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    /* ================================================================
+       DS CARD: Cinematic style
+       ================================================================ */
+    .ds-card {
+      display: grid; gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+    }
+    .ds-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--border-hover);
+    }
+
+    .ds-preview {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      display: grid; place-items: center;
+      /* Neutral warm gradient that works in both themes */
+      background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 50%, #dce5f0 100%);
+    }
+    html[data-theme="dark"] .ds-preview {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    }
+
+    .chart-mock {
+      width: 88%; height: 78%;
+      background: var(--surface);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chart-bars {
+      position: absolute; bottom: 26px; left: 26px; right: 26px;
+      display: flex; align-items: flex-end; gap: 6px; height: 58%;
+    }
+    .chart-bar {
+      flex: 1; border-radius: 3px 3px 0 0; min-height: 15%;
+      transition: height 0.3s ease;
+    }
+    .ds-card:hover .chart-bar {
+      height: calc(var(--h) * 1.08);
+    }
+
+    .chart-labels {
+      position: absolute; bottom: 6px; left: 26px; right: 26px;
+      display: flex; justify-content: space-between;
+      font-size: 0.55rem; color: var(--text-tertiary); font-family: var(--font-mono);
+    }
+    .chart-title {
+      position: absolute; top: 10px; left: 14px;
+      font-size: 0.62rem; font-weight: 600;
+      color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    /* Score badge floating on chart */
+    .ds-score {
+      position: absolute;
+      bottom: 12px; right: 12px;
+      display: inline-flex;
+      align-items: center; gap: 0.35rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      box-shadow: var(--shadow-sm);
+      z-index: 2;
+    }
+    html[data-theme="dark"] .ds-score {
+      background: rgba(12,12,14,0.85);
+    }
+    .ds-score[data-tone="great"] { color: var(--success); border-color: rgba(52,211,153,0.3); }
+    .ds-score[data-tone="good"]  { color: var(--accent);  border-color: rgba(0,212,170,0.3); }
+    .ds-score[data-tone="ok"]    { color: var(--warning); border-color: rgba(245,166,35,0.3); }
+    .ds-score[data-tone="low"]   { color: var(--error);   border-color: rgba(255,95,95,0.3); }
+
+    /* Mini sparkline below chart */
+    .sparkline {
+      position: absolute; bottom: 40px; left: 26px; right: 26px;
+      height: 2px; display: flex; gap: 1px; align-items: flex-end;
+      opacity: 0.4;
+    }
+    .spark-seg {
+      flex: 1; border-radius: 1px;
+      min-height: 1px;
+    }
+
+    .ds-card-body {
+      padding: 0.85rem 1rem 1rem;
+      display: grid; gap: 0.5rem;
+    }
+    .ds-title {
+      font-size: 0.95rem; font-weight: 600;
+      line-height: 1.3; letter-spacing: -0.01em;
+    }
+    .ds-meta {
+      display: flex; gap: 0.45rem; flex-wrap: wrap;
+    }
+    .ds-pill {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.2rem 0.5rem; border-radius: 6px;
+      font-size: 0.72rem; font-weight: 500;
+      font-family: var(--font-mono); line-height: 1;
+    }
+    .ds-pill-model   { background: var(--accent-dim); color: var(--accent); }
+    .ds-pill-harness { background: rgba(245,166,35,0.08); color: var(--warning); border: 1px solid rgba(245,166,35,0.15); }
+    .ds-pill-backend { background: rgba(138,138,150,0.08); color: var(--text-secondary); border: 1px solid var(--border); }
+
+    .ds-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 0.25rem; padding-top: 0.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .ds-status {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.72rem; color: var(--text-secondary); font-weight: 500;
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 2px rgba(52,211,153,0.25);
+    }
+    .status-dot[data-state="prepared"] { background: var(--warning); box-shadow: 0 0 0 2px rgba(245,166,35,0.25); }
+    .status-dot[data-state="failed"]   { background: var(--error);   box-shadow: 0 0 0 2px rgba(255,95,95,0.25); }
+    .ds-date {
+      font-size: 0.7rem; color: var(--text-tertiary);
+      font-family: var(--font-mono);
+    }
+
+    /* ================================================================
+       LEGEND
+       ================================================================ */
+    .legend {
+      margin-top: 3rem; padding: 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .legend h3 { font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; }
+    .legend ul { list-style: none; display: grid; gap: 0.5rem; }
+    .legend li { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; }
+    .legend li strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">Toggle dark</button>
+
+  <h1>Data Science Cards</h1>
+  <p class="subtitle">Chart thumbnail as preview, score badge floating on chart, same 3-line metadata structure as visual cards. Toggle dark/light with the button in the top right.</p>
+
+  <div class="section-title">Gallery — Mixed scores and chart types</div>
+  <div class="mockup-grid">
+
+    <!-- Card 1: Great score — Treatment Effect -->
+    <div class="ds-card">
+      <div class="ds-preview">
+        <div class="chart-mock">
+          <div class="chart-title">Treatment Effect</div>
+          <div class="chart-bars">
+            <div class="chart-bar" style="--h:45%;height:45%;background:rgba(16,163,127,0.5)"></div>
+            <div class="chart-bar" style="--h:72%;height:72%;background:rgba(16,163,127,0.8)"></div>
+            <div class="chart-bar" style="--h:55%;height:55%;background:rgba(245,158,11,0.5)"></div>
+            <div class="chart-bar" style="--h:85%;height:85%;background:rgba(245,158,11,0.8)"></div>
+          </div>
+          <div class="chart-labels"><span>Control</span><span>Treatment</span></div>
+        </div>
+        <div class="ds-score" data-tone="great">10/12</div>
+      </div>
+      <div class="ds-card-body">
+        <div class="ds-title">A/B Test Analysis — Qwen3 32B</div>
+        <div class="ds-meta">
+          <span class="ds-pill ds-pill-model">qwen3-32b</span>
+          <span class="ds-pill ds-pill-harness">Pi</span>
+          <span class="ds-pill ds-pill-backend">oMLX</span>
+        </div>
+        <div class="ds-footer">
+          <span class="ds-status"><span class="status-dot"></span>Scored</span>
+          <span class="ds-date">May 29</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Good score — Distribution -->
+    <div class="ds-card">
+      <div class="ds-preview">
+        <div class="chart-mock">
+          <div class="chart-title">Distribution</div>
+          <div class="chart-bars">
+            <div class="chart-bar" style="--h:30%;height:30%;background:rgba(16,163,127,0.4)"></div>
+            <div class="chart-bar" style="--h:55%;height:55%;background:rgba(16,163,127,0.6)"></div>
+            <div class="chart-bar" style="--h:80%;height:80%;background:rgba(16,163,127,0.8)"></div>
+            <div class="chart-bar" style="--h:45%;height:45%;background:rgba(16,163,127,0.5)"></div>
+          </div>
+          <div class="chart-labels"><span>0s</span><span>60s</span></div>
+        </div>
+        <div class="ds-score" data-tone="good">9/12</div>
+      </div>
+      <div class="ds-card-body">
+        <div class="ds-title">A/B Test Analysis — Gemma 4 27B</div>
+        <div class="ds-meta">
+          <span class="ds-pill ds-pill-model">gemma-4-27b</span>
+          <span class="ds-pill ds-pill-harness">OpenCode</span>
+          <span class="ds-pill ds-pill-backend">LM Studio</span>
+        </div>
+        <div class="ds-footer">
+          <span class="ds-status"><span class="status-dot" data-state="prepared"></span>Needs rescore</span>
+          <span class="ds-date">May 27</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Low score — Completion Rates -->
+    <div class="ds-card">
+      <div class="ds-preview">
+        <div class="chart-mock">
+          <div class="chart-title">Completion Rates</div>
+          <div class="chart-bars">
+            <div class="chart-bar" style="--h:70%;height:70%;background:rgba(239,68,68,0.5)"></div>
+            <div class="chart-bar" style="--h:40%;height:40%;background:rgba(239,68,68,0.35)"></div>
+          </div>
+          <div class="chart-labels"><span>Variant A</span><span>Variant B</span></div>
+        </div>
+        <div class="ds-score" data-tone="low">4/12</div>
+      </div>
+      <div class="ds-card-body">
+        <div class="ds-title">A/B Test Analysis — DeepSeek V3</div>
+        <div class="ds-meta">
+          <span class="ds-pill ds-pill-model">deepseek-v3</span>
+          <span class="ds-pill ds-pill-harness">Hermes</span>
+          <span class="ds-pill ds-pill-backend">cloud</span>
+        </div>
+        <div class="ds-footer">
+          <span class="ds-status"><span class="status-dot" data-state="failed"></span>Failed</span>
+          <span class="ds-date">May 25</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: OK score — Mixed charts -->
+    <div class="ds-card">
+      <div class="ds-preview">
+        <div class="chart-mock">
+          <div class="chart-title">Confidence Interval</div>
+          <div class="chart-bars">
+            <div class="chart-bar" style="--h:35%;height:35%;background:rgba(245,158,11,0.4)"></div>
+            <div class="chart-bar" style="--h:50%;height:50%;background:rgba(245,158,11,0.55)"></div>
+            <div class="chart-bar" style="--h:65%;height:65%;background:rgba(245,158,11,0.7)"></div>
+            <div class="chart-bar" style="--h:40%;height:40%;background:rgba(245,158,11,0.45)"></div>
+          </div>
+          <div class="chart-labels"><span>Low</span><span>High</span></div>
+        </div>
+        <div class="ds-score" data-tone="ok">6/12</div>
+      </div>
+      <div class="ds-card-body">
+        <div class="ds-title">A/B Test Analysis — GLM-4 9B</div>
+        <div class="ds-meta">
+          <span class="ds-pill ds-pill-model">glm-4-9b</span>
+          <span class="ds-pill ds-pill-harness">manual</span>
+          <span class="ds-pill ds-pill-backend">oMLX</span>
+        </div>
+        <div class="ds-footer">
+          <span class="ds-status"><span class="status-dot" data-state="prepared"></span>Prepared</span>
+          <span class="ds-date">May 22</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: Great score — SRM check -->
+    <div class="ds-card">
+      <div class="ds-preview">
+        <div class="chart-mock">
+          <div class="chart-title">SRM Test</div>
+          <div class="chart-bars">
+            <div class="chart-bar" style="--h:48%;height:48%;background:rgba(16,163,127,0.6)"></div>
+            <div class="chart-bar" style="--h:52%;height:52%;background:rgba(16,163,127,0.7)"></div>
+            <div class="chart-bar" style="--h:50%;height:50%;background:rgba(16,163,127,0.65)"></div>
+            <div class="chart-bar" style="--h:49%;height:49%;background:rgba(16,163,127,0.62)"></div>
+          </div>
+          <div class="chart-labels"><span>A</span><span>B</span></div>
+        </div>
+        <div class="ds-score" data-tone="great">11/12</div>
+      </div>
+      <div class="ds-card-body">
+        <div class="ds-title">A/B Test Analysis — Qwen3 235B</div>
+        <div class="ds-meta">
+          <span class="ds-pill ds-pill-model">qwen3-235b</span>
+          <span class="ds-pill ds-pill-harness">Pi</span>
+          <span class="ds-pill ds-pill-backend">cloud</span>
+        </div>
+        <div class="ds-footer">
+          <span class="ds-status"><span class="status-dot"></span>Scored</span>
+          <span class="ds-date">May 20</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6: Failed — No charts generated -->
+    <div class="ds-card">
+      <div class="ds-preview">
+        <div class="chart-mock" style="display:grid;place-items:center;">
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem;margin-bottom:0.25rem;">⚠️</div>
+            <div style="font-size:0.72rem;color:var(--text-secondary);font-weight:600;">No output</div>
+          </div>
+        </div>
+      </div>
+      <div class="ds-card-body">
+        <div class="ds-title">A/B Test Analysis — Llama 3.1 8B</div>
+        <div class="ds-meta">
+          <span class="ds-pill ds-pill-model">llama-3.1-8b</span>
+          <span class="ds-pill ds-pill-harness">manual</span>
+          <span class="ds-pill ds-pill-backend">llama.cpp</span>
+        </div>
+        <div class="ds-footer">
+          <span class="ds-status"><span class="status-dot" data-state="failed"></span>Failed</span>
+          <span class="ds-date">May 19</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================================================================ -->
+  <div class="section-title">Empty / Prepared state</div>
+  <div class="mockup-grid">
+
+    <!-- Prepared but not scored yet -->
+    <div class="ds-card">
+      <div class="ds-preview">
+        <div class="chart-mock" style="display:grid;place-items:center;">
+          <div style="text-align:center;">
+            <div style="width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 0.5rem;animation:spin 1s linear infinite;"></div>
+            <div style="font-size:0.72rem;color:var(--text-secondary);font-weight:500;">Analysis in progress</div>
+          </div>
+        </div>
+      </div>
+      <div class="ds-card-body">
+        <div class="ds-title">A/B Test Analysis — Qwen3 32B</div>
+        <div class="ds-meta">
+          <span class="ds-pill ds-pill-model">qwen3-32b</span>
+          <span class="ds-pill ds-pill-harness">Pi</span>
+          <span class="ds-pill ds-pill-backend">oMLX</span>
+        </div>
+        <div class="ds-footer">
+          <span class="ds-status"><span class="status-dot" data-state="prepared"></span>Prepared</span>
+          <span class="ds-date">Just now</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <div class="legend">
+    <h3>Design Notes</h3>
+    <ul>
+      <li><strong>Chart thumbnail:</strong> Uses a warm neutral gradient background + a white card with fake bars. Works in both light and dark themes. Real implementation would render the actual chart PNG.</li>
+      <li><strong>Score badge:</strong> Floats bottom-right of the chart, color-coded by quality (great/good/ok/low). Semi-transparent background with backdrop blur so it never obscures the chart.</li>
+      <li><strong>Card body:></strong> Same 3-line structure as visual cards: title + meta pills + footer. No redundant status pill since the score badge already communicates quality.</li>
+      <li><strong>Empty state:</strong> Shows a warning icon + "No output" text inside the chart area instead of a generic placeholder.</li>
+      <li><strong>Prepared state:</strong> Spinner inside the chart area + "Analysis in progress" label. Communicates activity without needing a separate overlay.</li>
+      <li><strong>Color coding:</strong> Green bars for great scores, orange for ok, red for low. This gives an "at a glance" quality signal before the user even reads the number.</li>
+    </ul>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      html.setAttribute('data-theme', current === 'dark' ? '' : 'dark');
+    }
+  </script>
+</body>
+</html>

@@ -98,30 +98,46 @@ function renderRunCard(run, mode, context) {
       ? { status: "prepared", label: "Scoring" }
       : runCardState(run);
   const identity = runCardIdentity(run, mode);
-  const isScoredDs = runKind(run) === "data-science" && Boolean(run.dsScorecard);
+  const stack = stackAttemptIdentity(run);
+  const kind = runKind(run);
+  const isScoredDs = kind === "data-science" && Boolean(run.dsScorecard);
+  const hasVideo = kind === "visual" && hasCapturedVideo(run);
+
   return (
     '<article class="run-card" data-open-run data-run-id="' + escapeAttribute(run.runId) + '" tabindex="0" role="button" aria-label="' +
     escapeAttribute(run.benchmark?.title ?? "Run") + " " + escapeAttribute(run.model?.id ?? "") + '">' +
-      renderPreview(run, { capturing: isCapturing }) +
+      renderPreview(run, { capturing: isCapturing, scoring: isScoring }) +
       '<span class="run-card-body">' +
         '<span class="run-card-title-row">' +
           '<strong class="truncate-line">' + escapeHtml(identity.primary) + "</strong>" +
-          '<span class="muted-copy truncate-line">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</span>" +
         "</span>" +
-        '<span class="run-card-subtitle">' + renderStackSummary(stackAttemptIdentity(run)) + "</span>" +
-        '<span class="run-card-status-row">' +
-          '<span class="run-state-pill">' +
+        '<span class="run-card-meta">' +
+          renderMetaPills(run, stack) +
+        "</span>" +
+        '<span class="run-card-footer">' +
+          '<span class="status-label">' +
             '<span class="status-dot" data-status="' + escapeAttribute(stateLabel.status) + '"></span>' +
             escapeHtml(stateLabel.label) +
           "</span>" +
+          '<span class="card-date">' + escapeHtml(formatDateShort(run.updatedAt ?? run.createdAt)) + "</span>" +
         "</span>" +
-        (isScoredDs
-          ? renderDsScoreRow(run, isCapturing, isScoring, context)
-          : '<span class="run-card-message truncate-line">' + escapeHtml(runCardMediaMessage(run, isCapturing, isScoring)) + "</span>" + renderRunCaptureAction(run, isCapturing, context)
-        ) +
       "</span>" +
     "</article>"
   );
+}
+
+function renderMetaPills(run, stack) {
+  const model = escapeHtml(run.model?.id ?? run.model?.slug ?? "unknown");
+  const harness = escapeHtml(stack.harness ?? "");
+  const backend = escapeHtml(stack.backend ?? "");
+  let pills = '<span class="meta-pill meta-pill-model">' + model + "</span>";
+  if (harness) {
+    pills += '<span class="meta-pill meta-pill-harness">' + harness + "</span>";
+  }
+  if (backend && backend !== harness) {
+    pills += '<span class="meta-pill meta-pill-backend">' + backend + "</span>";
+  }
+  return pills;
 }
 
 function renderRunCaptureAction(run, isCapturing, context) {
@@ -200,8 +216,18 @@ function renderPreview(run, options = {}) {
     return renderDsPreview(run, options);
   }
   const previewHref = assetHref(run, run.assets?.preview);
+  const hasVideo = hasCapturedVideo(run);
   if (previewHref) {
-    return '<span class="preview"><img src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />' + renderCaptureOverlay(options.capturing) + '</span>';
+    let html = '<span class="preview">' +
+      '<img src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />';
+    if (hasVideo && !options.capturing) {
+      html += '<div class="video-ring"></div>' +
+        '<div class="play-overlay"><div class="play-btn"></div></div>';
+    }
+    html += '<div class="preview-fade"></div>';
+    html += renderCaptureOverlay(options.capturing);
+    html += '</span>';
+    return html;
   }
 
   return (
@@ -216,45 +242,27 @@ function renderPreview(run, options = {}) {
 
 function renderDsPreview(run, options = {}) {
   const thumbnail = assetHref(run, run.assets?.ds?.chartTreatmentEffect ?? run.assets?.ds?.chartDistribution);
+  const isScored = Boolean(run.dsScorecard);
+  let scoreOverlay = "";
+  if (isScored && !options.scoring) {
+    var sc = run.dsScorecard;
+    var pct = sc.pct ?? 0;
+    var tone = pct >= 90 ? 'great' : pct >= 75 ? 'good' : pct >= 50 ? 'ok' : 'low';
+    scoreOverlay = '<div class="ds-score-float" data-tone="' + escapeAttribute(tone) + '">' + String(sc.earned ?? 0) + '/' + String(sc.total ?? 0) + '</div>';
+  }
   if (thumbnail) {
-    return '<span class="preview"><img src="' + escapeAttribute(thumbnail) + '" alt="" loading="lazy" />' + renderCaptureOverlay(options.capturing) + '</span>';
+    return '<span class="preview"><img src="' + escapeAttribute(thumbnail) + '" alt="" loading="lazy" />' + scoreOverlay + renderCaptureOverlay(options.capturing) + '</span>';
   }
   const hasDsOutput = run.assets?.ds?.summary;
   const label = hasDsOutput ? "Analysis in progress" : "No output yet";
   return (
-    '<span class="preview">' + renderCaptureOverlay(options.capturing) +
+    '<span class="preview">' + renderCaptureOverlay(options.capturing) + scoreOverlay +
       '<span class="preview-placeholder">' +
         '<strong>' + escapeHtml(label) + '</strong>' +
         '<span class="muted-copy max-w-60 text-sm leading-5">' + escapeHtml(run.status === "prepared" ? "Paste the prompt into your harness." : displayRunError(run) ?? "Run the analysis to generate charts.") + '</span>' +
       '</span>' +
     '</span>'
   );
-}
-
-function renderDsScoreRow(run, isCapturing, isScoring, context) {
-  var sc = run.dsScorecard;
-  var pct = sc.pct ?? 0;
-  var earned = sc.earned ?? 0;
-  var total = sc.total ?? 0;
-  var tone = pct >= 90 ? 'great' : pct >= 75 ? 'good' : pct >= 50 ? 'ok' : 'low';
-
-  var badge = '<span class="ds-score-badge" data-tone="' + escapeAttribute(tone) + '">' +
-    String(earned) + '/' + String(total) +
-    '</span>';
-
-  var canRescore = context.canOperate && run.runDirectory && run.assets?.ds?.scorecard;
-  if (!canRescore) return '<span class="ds-score-row">' + badge + '</span>';
-
-  var label = "Rescore";
-  var title = run.benchmark?.title ?? run.benchmark?.id ?? "run";
-  var model = run.model?.id ?? "unknown model";
-  var btn = '<button type="button" class="btn-sm-outline run-card-score operational-control" data-score-run-id="' + escapeAttribute(run.runId) + '" ' +
-    'aria-label="' + escapeAttribute(label + " " + title + " on " + model) + '"' +
-    (isScoring || context.scoreBusy ? " disabled" : "") + '>' +
-    icon("check-circle") + escapeHtml(isScoring ? "Scoring..." : label) +
-    '</button>';
-
-  return '<span class="ds-score-row">' + badge + btn + '</span>';
 }
 
 function renderPromptPill(group, mode) {

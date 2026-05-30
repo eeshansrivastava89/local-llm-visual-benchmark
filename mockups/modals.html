@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modals — Prepare Run + Setup Mockups</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f7f8;
+      --surface: #ffffff;
+      --surface-raised: #f9f9f9;
+      --border: #e5e5e5;
+      --border-hover: #d0d0d5;
+      --text: #0d0d0d;
+      --text-secondary: #6b6b6b;
+      --text-tertiary: #9a9a9e;
+      --accent: #10a37f;
+      --accent-dim: rgba(16,163,127,0.10);
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --success: #10a37f;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow: 0 4px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.10);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    html[data-theme="dark"] {
+      --bg: #0c0c0e;
+      --surface: #141418;
+      --surface-raised: #1a1a20;
+      --border: #27272e;
+      --border-hover: #3a3a48;
+      --text: #e8e8ec;
+      --text-secondary: #8a8a96;
+      --text-tertiary: #5a5a66;
+      --accent: #00d4aa;
+      --accent-dim: rgba(0,212,170,0.12);
+      --warning: #f5a623;
+      --error: #ff5f5f;
+      --success: #34d399;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow: 0 4px 24px rgba(0,0,0,0.5);
+      --shadow-lg: 0 12px 48px rgba(0,0,0,0.6);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { background: var(--bg); color: var(--text); font-family: var(--font-display); transition: background 0.3s ease; }
+    body { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+
+    .theme-toggle {
+      position: fixed; top: 1.5rem; right: 1.5rem;
+      padding: 0.5rem 1rem; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-family: var(--font-display);
+      font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      box-shadow: var(--shadow); z-index: 100;
+    }
+    .theme-toggle:hover { border-color: var(--accent); }
+
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+    .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2.5rem; }
+    .section-title {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text-tertiary);
+      margin: 3rem 0 1.25rem; padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ================================================================
+       MODAL SHELL
+       ================================================================ */
+    .modal-backdrop {
+      position: relative;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(4px);
+      padding: 2rem;
+      border-radius: var(--radius);
+      margin-bottom: 2rem;
+    }
+    .modal-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    .modal-shell-wide {
+      max-width: 1180px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .modal-header p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-top: 0.2rem;
+    }
+    .modal-header-actions {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.6rem;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.4rem; min-height: 2.25rem; padding: 0 0.85rem;
+      border: 1px solid var(--accent); border-radius: 8px;
+      background: var(--accent); color: var(--bg);
+      font-size: 0.875rem; font-weight: 600; line-height: 1;
+      cursor: pointer; font-family: var(--font-display);
+      transition: filter 0.15s;
+    }
+    .btn:hover { filter: brightness(0.92); }
+    .btn-outline {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.4rem; min-height: 1.85rem; padding: 0 0.65rem;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface-raised); color: var(--text);
+      font-size: 0.78rem; font-weight: 500; line-height: 1;
+      cursor: pointer; font-family: var(--font-display);
+    }
+    .btn-outline:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .btn-danger {
+      border-color: var(--error); background: rgba(255,95,95,0.1); color: var(--error);
+    }
+    .btn-danger:hover { background: rgba(255,95,95,0.2); }
+
+    /* ================================================================
+       PREPARE RUN — Two column layout
+       ================================================================ */
+    .prep-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.38fr) minmax(0, 1fr);
+      gap: 1rem;
+      padding: 1.25rem;
+    }
+    @media (max-width: 800px) {
+      .prep-layout { grid-template-columns: 1fr; }
+    }
+
+    .prep-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+      padding: 1rem;
+      display: grid;
+      gap: 1rem;
+      align-content: start;
+    }
+    .prep-panel h3 {
+      font-size: 0.85rem; font-weight: 600;
+    }
+    .field-group {
+      display: grid; gap: 0.35rem;
+    }
+    .field-label {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.72rem; font-weight: 650;
+      color: var(--text-secondary); text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .help-pill {
+      display: inline-grid; place-items: center;
+      width: 1.2rem; height: 1.2rem;
+      border: 1px solid var(--border); border-radius: 999px;
+      background: var(--surface); color: var(--text-tertiary);
+      font-size: 0.68rem; font-weight: 700; cursor: help;
+    }
+    .kind-tabs {
+      display: flex; gap: 0.25rem; padding: 0.25rem;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface);
+    }
+    .kind-tab {
+      flex: 1;
+      padding: 0.5rem 0.6rem; border-radius: 7px;
+      border: none; background: transparent;
+      color: var(--text-secondary); font-size: 0.78rem;
+      font-weight: 600; cursor: pointer;
+      font-family: var(--font-display);
+      text-align: center;
+    }
+    .kind-tab.active {
+      background: var(--surface-raised); color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+    .input, .select {
+      width: 100%; min-height: 2.25rem;
+      padding: 0 0.65rem;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text);
+      font-size: 0.85rem; font-family: var(--font-display);
+      outline: none;
+    }
+    .input:focus, .select:focus { border-color: var(--accent); }
+    textarea.input {
+      min-height: 18rem; padding: 0.65rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem; line-height: 1.6;
+      resize: vertical;
+    }
+
+    .artifact-box {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      padding: 0.85rem;
+      display: grid; gap: 0.6rem;
+    }
+    .artifact-head {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .artifact-head .field-label { margin: 0; }
+    .artifact-placeholder {
+      display: grid; place-items: center;
+      padding: 3rem 1rem;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-tertiary);
+      font-size: 0.85rem;
+    }
+
+    .status-rack {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.3rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-raised);
+      font-size: 0.72rem; font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+    .dot-checking { background: var(--warning); box-shadow: 0 0 0 2px rgba(245,166,35,0.25); }
+    .dot-online { background: var(--success); box-shadow: 0 0 0 2px rgba(52,211,153,0.25); }
+    .dot-offline { background: var(--error); box-shadow: 0 0 0 2px rgba(255,95,95,0.25); }
+
+    /* ================================================================
+       SETUP MODAL — Wide layout
+       ================================================================ */
+    .setup-body {
+      padding: 1.25rem;
+      overflow: auto;
+    }
+    .setup-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    @media (max-width: 900px) {
+      .setup-grid { grid-template-columns: 1fr; }
+    }
+
+    .setup-cell {
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--surface-raised); padding: 1rem;
+      display: grid; gap: 0.75rem;
+    }
+    .setup-cell h4 {
+      font-size: 0.9rem; font-weight: 600;
+    }
+    .setup-cell .section-label {
+      margin: 0; padding: 0; border: none;
+      font-size: 0.65rem; letter-spacing: 0.08em;
+    }
+    .url-row {
+      display: flex; gap: 0.5rem;
+    }
+    .url-row .input { flex: 1; }
+    .sync-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+    }
+    .sync-target {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--surface); padding: 0.75rem 1rem;
+    }
+    .sync-info { display: grid; gap: 0.2rem; }
+    .sync-name { font-size: 0.85rem; font-weight: 600; }
+    .sync-path { font-size: 0.7rem; color: var(--text-tertiary); font-family: var(--font-mono); }
+    .sync-status { font-size: 0.72rem; color: var(--text-secondary); }
+
+    .model-table {
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .model-table-head {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 0; padding: 0.6rem 0.9rem;
+      background: var(--surface-raised);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.7rem; font-weight: 700;
+      color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .model-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 0; padding: 0.55rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem; align-items: center;
+    }
+    .model-row:last-child { border-bottom: 0; }
+    .model-row:hover { background: var(--surface-raised); }
+    .model-pill {
+      display: inline-flex; align-items: center;
+      padding: 0.12rem 0.45rem; border-radius: 5px;
+      font-size: 0.68rem; font-weight: 600;
+      font-family: var(--font-mono);
+    }
+
+    .lm-source-heading {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 1rem; margin-bottom: 0.5rem;
+    }
+    .lm-source-heading h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .lm-source-heading p { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; }
+
+    .setup-label {
+      font-size: 0.65rem; font-weight: 650;
+      color: var(--text-tertiary); text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 0.3rem;
+    }
+
+    .op-message {
+      font-size: 0.78rem; color: var(--text-secondary);
+      margin-top: 0.4rem;
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">Toggle dark</button>
+
+  <h1>Modals — Prepare Run + Setup</h1>
+  <p class="subtitle">Modal redesigns using the cinematic card aesthetic. Both light and dark modes supported. Toggle with the button in the top right.</p>
+
+  <!-- ================================================================ -->
+  <div class="section-title">Prepare Run Modal</div>
+  <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 1rem; line-height: 1.5;">
+    Two-column layout: inputs on the left, generated prompt artifact on the right. Kind tabs at the top of the form. Status pills in the header.
+  </p>
+
+  <div class="modal-backdrop">
+    <div class="modal-shell">
+      <header class="modal-header">
+        <div class="min-w-0">
+          <h2>Prepare run slot</h2>
+          <p>Choose a prompt and model to generate a run folder.</p>
+        </div>
+        <div class="modal-header-actions">
+          <div class="status-rack">
+            <span class="status-pill"><span class="status-dot dot-online"></span>oMLX online</span>
+            <span class="status-pill"><span class="status-dot dot-offline"></span>LM Studio offline</span>
+          </div>
+          <button class="btn"><span>▶</span> Prepare slot</button>
+          <button class="btn-outline">✕ Close</button>
+        </div>
+      </header>
+      <div class="prep-layout">
+
+        <!-- Left: Form -->
+        <section class="prep-panel">
+          <div class="field-group">
+            <div class="field-label">
+              <span>Benchmark category</span>
+              <span class="help-pill">?</span>
+            </div>
+            <div class="kind-tabs">
+              <button class="kind-tab active">Visual Benchmark</button>
+              <button class="kind-tab">Data Science</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">
+              <span>Coding harness</span>
+              <span class="help-pill">?</span>
+            </div>
+            <select class="select">
+              <option>Manual chat</option>
+              <option>OpenCode</option>
+              <option selected>Pi</option>
+              <option>Hermes</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">
+              <span>Model source</span>
+              <span class="help-pill">?</span>
+            </div>
+            <select class="select">
+              <option selected>oMLX</option>
+              <option>LM Studio</option>
+              <option>Custom model</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">
+              <span>Prompt</span>
+              <span class="help-pill">?</span>
+            </div>
+            <select class="select">
+              <option>Solar System</option>
+              <option>Snow Globe Village</option>
+              <option selected>Sakura Tree</option>
+              <option>Sunset Ocean Study</option>
+              <option>Macro Wildflower Meadow</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">
+              <span>Discovered model</span>
+              <span class="help-pill">?</span>
+            </div>
+            <select class="select">
+              <option selected>qwen3-32b-a4b@q4_k_m</option>
+              <option>gemma-4-27b-a3b@q4_k_m</option>
+              <option>deepseek-v3-685b@q4_k_m</option>
+            </select>
+            <p style="font-size:0.75rem;color:var(--warning);margin-top:0.25rem;">⚠ No models found at oMLX. Check server.</p>
+          </div>
+        </section>
+
+        <!-- Right: Generated prompt -->
+        <section class="prep-panel">
+          <div class="artifact-head">
+            <div class="field-label">
+              <span>Generated prompt</span>
+              <span class="help-pill">?</span>
+            </div>
+            <div style="display:flex;gap:0.4rem;">
+              <button class="btn-outline" disabled>📋 Copy path</button>
+              <button class="btn-outline" disabled>📋 Copy prompt</button>
+            </div>
+          </div>
+          <div class="artifact-placeholder">
+            Prepare a run slot to generate the prompt for index.html
+          </div>
+          <p style="font-size:0.78rem;color:var(--text-tertiary);margin-top:0.25rem;">
+            No run slot prepared yet.
+          </p>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <div class="section-title">Setup Modal</div>
+  <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 1rem; line-height: 1.5;">
+    Wide layout with oMLX + LM Studio connection cards, config sync targets, and model inventory table.
+  </p>
+
+  <div class="modal-backdrop">
+    <div class="modal-shell modal-shell-wide">
+      <header class="modal-header">
+        <div class="min-w-0">
+          <h2>Setup</h2>
+          <p>Refresh oMLX or LM Studio models, then prepare runs and save generated artifacts.</p>
+        </div>
+        <div class="modal-header-actions">
+          <span style="font-size:0.78rem;color:var(--text-secondary);border:1px solid var(--border);padding:0.25rem 0.6rem;border-radius:999px;">
+            <strong style="color:var(--text);">12</strong> models
+          </span>
+          <button class="btn-outline">✕ Close</button>
+        </div>
+      </header>
+      <div class="setup-body">
+
+        <div class="lm-source-heading">
+          <div>
+            <div class="setup-label">Local model source</div>
+            <h3>Model sources</h3>
+            <p>Discover oMLX and LM Studio models. LM Studio models can still be mirrored into Pi and OpenCode when needed.</p>
+          </div>
+        </div>
+
+        <div class="setup-grid">
+
+          <!-- oMLX card -->
+          <div class="setup-cell">
+            <div class="setup-label">oMLX URL</div>
+            <h4>oMLX</h4>
+            <div class="url-row">
+              <input class="input" value="http://127.0.0.1:8000/v1" />
+              <button class="btn">🔄 Refresh</button>
+            </div>
+            <div class="op-message"><span style="color:var(--success);">●</span> Connected — 3 models found</div>
+          </div>
+
+          <!-- LM Studio card -->
+          <div class="setup-cell">
+            <div class="setup-label">LM Studio URL</div>
+            <h4>LM Studio</h4>
+            <div class="url-row">
+              <input class="input" value="http://localhost:1234/v1" />
+              <button class="btn">🔄 Refresh</button>
+            </div>
+            <div class="op-message"><span style="color:var(--error);">●</span> Waiting for local API</div>
+          </div>
+
+        </div>
+
+        <!-- Config sync -->
+        <div style="margin-top:1.25rem;">
+          <div class="setup-label">Config sync</div>
+          <div class="sync-grid">
+            <div class="sync-target">
+              <div class="sync-info">
+                <div class="sync-name">Pi config</div>
+                <div class="sync-status">✅ In sync</div>
+                <div class="sync-path">~/.pi/agent/models.json</div>
+              </div>
+              <button class="btn-outline">🔄 Sync Pi</button>
+            </div>
+            <div class="sync-target">
+              <div class="sync-info">
+                <div class="sync-name">OpenCode config</div>
+                <div class="sync-status">⚠️ 2 models behind</div>
+                <div class="sync-path">~/.config/opencode/opencode.json</div>
+              </div>
+              <button class="btn-outline">🔄 Sync OpenCode</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model inventory -->
+        <div style="margin-top:1.5rem;">
+          <div class="setup-label">Model inventory</div>
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Live models + saved history</h3>
+
+          <div class="model-table">
+            <div class="model-table-head">
+              <div>Model</div>
+              <div>Source</div>
+              <div>Config status</div>
+            </div>
+            <div class="model-row">
+              <div><strong>qwen3-32b-a4b@q4_k_m</strong></div>
+              <div><span class="model-pill" style="background:rgba(16,163,127,0.1);color:var(--success);border:1px solid rgba(16,163,127,0.2);">oMLX</span></div>
+              <div><span style="color:var(--success);">✓ Pi, OpenCode</span></div>
+            </div>
+            <div class="model-row">
+              <div><strong>gemma-4-27b-a3b@q4_k_m</strong></div>
+              <div><span class="model-pill" style="background:rgba(16,163,127,0.1);color:var(--success);border:1px solid rgba(16,163,127,0.2);">oMLX</span></div>
+              <div><span style="color:var(--success);">✓ Pi</span> · <span style="color:var(--text-tertiary);">OpenCode</span></div>
+            </div>
+            <div class="model-row">
+              <div><strong>llama-3.1-8b@q4_k_m</strong></div>
+              <div><span class="model-pill" style="background:rgba(37,99,235,0.1);color:#2563eb;border:1px solid rgba(37,99,235,0.2);">LM Studio</span></div>
+              <div><span style="color:var(--text-tertiary);">Not synced</span></div>
+            </div>
+            <div class="model-row">
+              <div><strong>deepseek-v3-685b@q4_k_m</strong></div>
+              <div><span class="model-pill" style="background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.2);">Saved run</span></div>
+              <div><span style="color:var(--text-tertiary);">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      html.setAttribute('data-theme', current === 'dark' ? '' : 'dark');
+    }
+  </script>
+</body>
+</html>
