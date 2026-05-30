@@ -48,6 +48,8 @@ function exportButtonAttrs(selectedRuns, context) {
 
 function renderComparePreviewCard(run) {
   const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
+function renderComparePreviewCard(run) {
+  const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
   const model = run.model?.id ?? "Unknown model";
   const stack = stackAttemptIdentity(run);
   const kind = run.kind ?? "visual";
@@ -56,30 +58,53 @@ function renderComparePreviewCard(run) {
   const previewHref = isDs
     ? assetHref(run, run.assets?.ds?.chartTreatmentEffect ?? run.assets?.ds?.chartDistribution)
     : assetHref(run, run.assets?.preview);
-  let media;
+
+  let mediaHtml = '';
+  let overlayHtml = '';
   if (videoHref) {
-    media = '<video class="h-full w-full object-cover" data-managed-loop-video autoplay muted playsinline preload="auto" ' +
+    mediaHtml = '<video class="h-full w-full object-cover" data-managed-loop-video autoplay muted playsinline preload="auto" ' +
       (previewHref ? 'poster="' + escapeAttribute(previewHref) + '" ' : '') +
       'src="' + escapeAttribute(videoHref) + '"></video>';
+    overlayHtml = '<div class="video-ring"></div><div class="play-overlay"><div class="play-btn"></div></div>';
   } else if (previewHref) {
-    media = '<img class="' + (isDs ? 'h-full w-full object-contain' : 'h-full w-full object-cover') + '" src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />';
+    const objectFit = isDs ? 'object-contain' : 'object-cover';
+    mediaHtml = '<img class="h-full w-full ' + objectFit + '" src="' + escapeAttribute(previewHref) + '" alt="" loading="lazy" />';
   } else {
-    media = '<div class="preview-placeholder"><strong>No captured media</strong></div>';
+    mediaHtml = '<div class="preview-placeholder"><strong>No captured media</strong></div>';
   }
+
+  // DS score badge overlay
+  let scoreOverlay = '';
+  if (isDs && run.dsScorecard) {
+    var sc = run.dsScorecard;
+    var pct = sc.pct ?? 0;
+    var tone = pct >= 90 ? 'great' : pct >= 75 ? 'good' : pct >= 50 ? 'ok' : 'low';
+    scoreOverlay = '<div class="ds-score-float" data-tone="' + escapeAttribute(tone) + '">' + String(sc.earned ?? 0) + '/' + String(sc.total ?? 0) + '</div>';
+  }
+
+  // Compact meta pills
+  var pills = '<span class="meta-pill meta-pill-model">' + escapeHtml(model) + '</span>';
+  if (stack.harness) {
+    pills += '<span class="meta-pill meta-pill-harness">' + escapeHtml(stack.harness) + '</span>';
+  }
+  if (stack.backend && stack.backend !== stack.harness) {
+    pills += '<span class="meta-pill meta-pill-backend">' + escapeHtml(stack.backend) + '</span>';
+  }
+
   const ribbon = isDs && run.dsSummary ? renderCompareRibbon(run.dsSummary) : '';
+
   return (
     '<article class="compare-card" data-compare-run>' +
-      '<div class="compare-media">' + media + "</div>" +
+      '<div class="compare-media">' + mediaHtml + overlayHtml + scoreOverlay + '</div>' +
       (ribbon ? '<div class="compare-card-ribbon">' + ribbon + '</div>' : '') +
-      '<div class="grid min-w-0 gap-0.5">' +
-        '<strong class="truncate-line">' + escapeHtml(model) + "</strong>" +
-        '<span class="compare-prompt truncate-line">' + escapeHtml(title) + "</span>" +
-        renderStackSummary(stack) +
-      "</div>" +
-    "</article>"
+      '<div class="compare-card-meta">' +
+        '<strong class="compare-card-title truncate-line">' + escapeHtml(title) + '</strong>' +
+        '<span class="compare-card-prompt truncate-line">' + escapeHtml(model) + '</span>' +
+        '<div class="compare-card-pills">' + pills + '</div>' +
+      '</div>' +
+    '</article>'
   );
 }
-
 function renderCompareRibbon(summary) {
   const tone = summary.status === 'significant'
     ? (summary.recommended_variant === 'B' ? 'safe' : 'danger')
