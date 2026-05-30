@@ -280,7 +280,8 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; opacity: 0.55; }
 .step-num { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 999px; background: var(--muted); color: var(--foreground); font-size: 0.7rem; font-weight: 800; }
 .onboarding-steps li[data-onboarding-step-completed="true"] .step-num { background: var(--green); color: white; }
 
-.prep-shell, .confirm-shell { width: min(980px, calc(100vw - 2rem)); max-height: min(900px, calc(100dvh - 2rem)); display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); overflow: hidden; border: 1px solid var(--app-border); border-radius: 1rem; background: var(--card); box-shadow: 0 24px 70px rgb(0 0 0 / 0.16); }
+.prep-shell, .confirm-shell { width: min(980px, calc(100vw - 2rem)); max-height: min(900px, calc(100dvh - 2rem)); display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); overflow: hidden; border: 1px solid var(--app-border); border-radius: 1rem; background: var(--card); box-shadow: 0 24px 70px rgb(0 0 0 / 0.16); transition: border-color 0.2s ease; }
+.prep-shell:hover, .confirm-shell:hover { border-color: color-mix(in srgb, var(--primary), var(--app-border) 50%); }
 .confirm-shell { width: min(560px, calc(100vw - 2rem)); }
 .lm-studio-shell { width: min(1180px, calc(100vw - 2rem)); }
 .prep-body { min-height: 0; overflow: auto; }
@@ -313,14 +314,16 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; opacity: 0.55; }
 .lm-source-heading p, .lm-model-section-head p { margin-top: 0.25rem; color: var(--muted-foreground); font-size: 0.84rem; line-height: 1.4; }
 .lm-operations-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
 .lm-sync-cells { display: contents; }
-.lm-op-cell { display: grid; gap: 0.65rem; padding: 0.85rem; }
+.lm-op-cell { display: grid; gap: 0.65rem; padding: 0.85rem; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.lm-op-cell:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: color-mix(in srgb, var(--primary), var(--app-border) 60%); }
 .lm-op-head { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; }
 .lm-op-title, .sync-target-name { font-weight: 700; }
 .lm-op-control { display: flex; gap: 0.5rem; }
 .lm-connect-control .input { min-width: 0; }
 .lm-op-message, .lm-sync-message { color: var(--muted-foreground); font-size: 0.8rem; line-height: 1.4; }
 .lm-sync-message { margin: 0; }
-.sync-target { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; overflow: hidden; padding: 0.85rem; }
+.sync-target { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; overflow: hidden; padding: 0.85rem; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.sync-target:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: color-mix(in srgb, var(--primary), var(--app-border) 60%); }
 .sync-target-main { display: grid; min-width: 0; gap: 0.25rem; }
 .sync-target-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted-foreground); font-family: var(--font-mono); font-size: 0.72rem; }
 .sync-target-logo { width: 2.4rem; height: 2.4rem; object-fit: contain; opacity: 0.8; }
