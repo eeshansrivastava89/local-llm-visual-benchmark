@@ -233,7 +233,7 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; opacity: 0.55; }
 .view-tab:hover, .view-tab[aria-pressed="true"] { background: var(--muted); color: var(--foreground); }
 .toolbar-filters { display: flex; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.45rem; }
 .toolbar-filter-group { display: contents; }
-.toolbar-filters .dropdown-wrap { flex: 0 1 11rem; min-width: 8.5rem; }
+.toolbar-filters .dropdown-wrap { flex: 0 1 9rem; min-width: 8.5rem; }
 .toolbar-filters .dropdown-wrap .input, .toolbar-filters #runsSearch { width: 100%; min-height: 2rem; font-size: 0.8rem; }
 .toolbar-filters #runsSearch { flex: 1 1 14rem; min-width: 10rem; }
 .toolbar-filters #refreshRuns { flex: 0 0 auto; }

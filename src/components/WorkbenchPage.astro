@@ -82,6 +82,10 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
               <button type="button" class="kind-tab" data-kind="visual" aria-pressed="true"><span class="ui-icon" aria-hidden="true" style={iconStyle("eye")}></span>Visual Benchmark</button>
               <button type="button" class="kind-tab" data-kind="data-science" aria-pressed="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("chart-bar")}></span>Data Science Benchmark</button>
             </div>
+            <label class="cloud-toggle" id="cloudToggleLabel">
+              <input type="checkbox" id="cloudModelsToggle" />
+              <span class="cloud-toggle-text">Include cloud models</span>
+            </label>
           </div>
 
           <!-- Toolbar -->
@@ -90,12 +94,6 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
               <button type="button" class="view-tab" data-mode="model" aria-pressed="true"><span class="ui-icon" aria-hidden="true" style={iconStyle("boxes")}></span>By model</button>
               <button type="button" class="view-tab" data-mode="benchmark" aria-pressed="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("panels-top-left")}></span>By prompt</button>
               <button type="button" class="view-tab" data-mode="compare" aria-pressed="false"><span class="ui-icon" aria-hidden="true" style={iconStyle("table-2")}></span>Compare</button>
-            </div>
-            <div class="toolbar-right">
-              <label class="cloud-toggle" id="cloudToggleLabel">
-                <input type="checkbox" id="cloudModelsToggle" />
-                <span class="cloud-toggle-text">Include cloud models</span>
-              </label>
             </div>
             <div class="toolbar-filters">
               <button type="button" class="btn-sm-outline filters-toggle" id="filtersToggle" aria-expanded="false" aria-controls="toolbarFilterGroup">
