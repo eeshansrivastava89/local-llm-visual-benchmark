@@ -53,7 +53,6 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
               <span id="themeIcon" aria-hidden="true">☾</span>
               <span class="sr-only" id="themeLabel">Dark</span>
             </button>
-            <button type="button" class="btn-sm-outline operational-control" id="setupToggle"><span class="ui-icon" aria-hidden="true" style={iconStyle("settings")}></span>Setup</button>
             <button type="button" class="btn operational-control" id="runToggle"><span class="ui-icon" aria-hidden="true" style={iconStyle("plus")}></span>Prepare run</button>
           </div>
         </div>
@@ -64,15 +63,13 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
           <!-- Onboarding -->
           <div id="onboardingPanel" class="onboarding-panel" hidden>
             <div class="onboarding-header">
-              <h2 class="text-sm font-semibold">Welcome — 5 steps to your first benchmark</h2>
+              <h2 class="text-sm font-semibold">Welcome — 3 steps to your first benchmark</h2>
               <button type="button" class="btn-sm-ghost" id="dismissOnboarding">Dismiss</button>
             </div>
             <ol class="onboarding-steps">
-              <li data-onboarding-step="1"><span class="step-num">1</span>Start oMLX or LM Studio</li>
-              <li data-onboarding-step="2"><span class="step-num">2</span>Load a model</li>
-              <li data-onboarding-step="3"><span class="step-num">3</span>Pick a prompt</li>
-              <li data-onboarding-step="4"><span class="step-num">4</span>Generate with your tool</li>
-              <li data-onboarding-step="5"><span class="step-num">5</span>Capture preview</li>
+              <li data-onboarding-step="1"><span class="step-num">1</span><code>local-llm setup</code> — create a model profile</li>
+              <li data-onboarding-step="2"><span class="step-num">2</span><code>local-llm prepare</code> — pick a benchmark and harness</li>
+              <li data-onboarding-step="3"><span class="step-num">3</span>Generate and capture your result</li>
             </ol>
           </div>
 
@@ -238,227 +235,41 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
       <p class="chart-lightbox-label" id="chartLightboxLabel"></p>
     </div>
 
-    <!-- Prepare Run Modal -->
+    <!-- How to Prepare a Run -->
     <div class="detail-backdrop" id="prepBackdrop">
-      <article class="prep-shell" role="dialog" aria-modal="true" aria-label="Prepare run">
-        <header class="detail-header">
-          <div class="prep-header-copy min-w-0">
-            <h2 class="truncate-line text-lg font-semibold">Prepare run slot</h2>
-            <p class="muted-copy truncate-line mt-1 text-sm" id="prepSubtitle">Choose a prompt and model to generate a run folder.</p>
-          </div>
-          <div class="prep-header-actions">
-            <div class="source-status-rack operational-control" aria-label="Local model source status">
-              <span
-                class="source-status-pill"
-                id="omlxStatusPill"
-                role="status"
-                data-source="omlx"
-                data-status="checking"
-                data-tooltip="Checking oMLX model server."
-              >
-                <span id="omlxStatusDot" class="status-dot" data-state="checking"></span>
-                <span id="omlxStatusText">oMLX checking</span>
-              </span>
-              <span
-                class="source-status-pill"
-                id="lmStudioStatusPill"
-                role="status"
-                data-source="lmstudio"
-                data-status="checking"
-                data-tooltip="Checking LM Studio model server."
-              >
-                <span id="lmStudioStatusDot" class="status-dot" data-state="checking"></span>
-                <span id="lmStudioStatusText">LM Studio checking</span>
-              </span>
-            </div>
-            <button class="btn" type="button" id="prepareRun" data-icon="play"><span class="ui-icon" aria-hidden="true" style={iconStyle("play")}></span>Prepare slot</button>
-            <button type="button" class="btn-sm-outline" id="closePrep"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
-          </div>
-        </header>
-        <div class="prep-body p-5">
-          <div class="prep-layout" id="prepLayout">
-            <section class="prep-form-panel" aria-label="Run slot inputs">
-              <div class="field-group" id="prepKindGroup">
-                <div class="field-label-row">
-                  <label>Benchmark category</label>
-                  <button type="button" class="help-pill" data-tooltip="Choose whether this is a visual HTML benchmark or a data-science analysis benchmark. This decides which prompts appear below.">?</button>
-                </div>
-                <div class="kind-tabs kind-tabs-sm">
-                  <button type="button" class="kind-tab" data-prep-kind="visual" aria-pressed="true">Visual Benchmark</button>
-                  <button type="button" class="kind-tab" data-prep-kind="data-science" aria-pressed="false">Data Science Benchmark</button>
-                </div>
-              </div>
-              <div class="field-group" id="prepBackendHelperGroup">
-                <div class="field-label-row">
-                  <label for="prepRunner">Coding harness</label>
-                  <button type="button" class="help-pill" data-tooltip="The tool you plan to paste the generated prompt into. The harness is recorded because tool calling and file writes affect run quality.">?</button>
-                </div>
-                <select id="prepRunner" class="input">
-                  <option value="manual">Manual chat</option>
-                  <option value="opencode">OpenCode</option>
-                  <option value="pi">Pi</option>
-                  <option value="hermes">Hermes</option>
-                </select>
-              </div>
-              <div class="field-group" id="prepModelSourceGroup">
-                <div class="field-label-row">
-                  <label for="prepModelSource">Model source</label>
-                  <button type="button" class="help-pill" data-tooltip="Choose whether the model label comes from oMLX or LM Studio. oMLX is the primary Apple Silicon daily-driver lane.">?</button>
-                </div>
-                <select id="prepModelSource" class="input">
-                  <option value="omlx">oMLX</option>
-                  <option value="lmstudio">LM Studio</option>
-                  <option value="custom">Custom model</option>
-                </select>
-              </div>
-              <div class="field-group" id="prepVisualPromptGroup">
-                <div class="field-label-row">
-                  <label for="prepBenchmark">Prompt</label>
-                  <button type="button" class="help-pill" data-tooltip="Visual benchmark prompt. Run your external tool from the prepared run folder; the generated prompt only asks it to write index.html in the current directory.">?</button>
-                </div>
-                <select id="prepBenchmark" class="input"></select>
-              </div>
-              <div class="field-group" id="prepModelSelectGroup">
-                <div class="field-label-row">
-                  <label for="prepModelSelect" id="prepModelSelectLabel">Discovered model</label>
-                  <button type="button" class="help-pill" data-tooltip="Model discovered from the selected local source. The app records this label and source in prepared run metadata.">?</button>
-                </div>
-                <select id="prepModelSelect" class="input"></select>
-                <p id="prepModelWarning" class="prep-source-warning" hidden></p>
-              </div>
-              <div class="field-group" id="prepCustomBackendGroup" hidden>
-                <div class="field-label-row">
-                  <label for="prepCustomBackend">Custom backend</label>
-                  <button type="button" class="help-pill" data-tooltip="Free-form source label for manually run models, for example cloud, ChatGPT, Claude, OpenRouter, or browser.">?</button>
-                </div>
-                <input id="prepCustomBackend" class="input" value="cloud" placeholder="cloud" />
-              </div>
-              <div class="field-group" id="prepCustomModelGroup" hidden>
-                <div class="field-label-row">
-                  <label for="prepCustomModel">Custom model</label>
-                  <button type="button" class="help-pill" data-tooltip="Free-form model label to record in metadata and use for the run folder, for example ChatGPT or GPT-5.1.">?</button>
-                </div>
-                <input id="prepCustomModel" class="input" placeholder="ChatGPT" />
-              </div>
-            </section>
-
-            <section id="prepResult" class="next-step-panel prep-prompt-panel" aria-label="Generated prompt">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <h3 class="text-sm font-medium" id="prepResultTitle">Generated prompt</h3>
-                  <p class="muted-copy mt-0.5 text-xs" id="prepResultHint">Copy this into your external tool after preparing the slot.</p>
-                </div>
-              </div>
-              <div class="prep-artifact prep-output-artifact" id="prepOutputGroup">
-                <div class="prep-artifact-head">
-                  <div>
-                    <div class="field-label-row">
-                      <label for="preparedPrompt" id="prepOutputLabel">Visual prompt</label>
-                      <button type="button" class="help-pill" data-tooltip="Generated prompt for this visual run. Copy it after preparing the slot, then run your tool from the prepared run folder.">?</button>
-                    </div>
-                  </div>
-                  <div class="section-actions">
-                    <button type="button" class="btn-sm-outline" id="copyPreparedPath" data-icon="copy" disabled><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span>Copy path</button>
-                    <button type="button" class="btn-sm-outline" id="copyPrompt" data-icon="copy" disabled><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span>Copy prompt</button>
-                  </div>
-                </div>
-                <div class="prep-artifact-placeholder" id="prepOutputPlaceholder">
-                  <span>Prepare a run slot to generate the prompt for index.html</span>
-                </div>
-                <textarea id="preparedPrompt" class="input font-mono text-[0.82rem] leading-5" placeholder="Prepare a run slot to generate the prompt for index.html." hidden></textarea>
-              </div>
-              <p class="muted-copy text-sm" id="preparedPaths">No run slot prepared yet.</p>
-            </section>
-          </div>
-        </div>
-      </article>
-    </div>
-
-    <!-- Setup Modal -->
-    <div class="detail-backdrop" id="setupBackdrop">
-      <article class="prep-shell lm-studio-shell" role="dialog" aria-modal="true" aria-label="Setup">
+      <article class="prep-shell" role="dialog" aria-modal="true" aria-label="How to prepare a run">
         <header class="detail-header">
           <div class="min-w-0">
-            <h2 class="truncate-line text-lg font-semibold">Setup</h2>
-            <p class="muted-copy truncate-line mt-1 text-sm">Refresh oMLX or LM Studio models, then prepare runs and save generated artifacts.</p>
+            <h2 class="truncate-line text-lg font-semibold">How to prepare a run</h2>
+            <p class="muted-copy truncate-line mt-1 text-sm">Use the CLI to set up models, prepare run directories, and launch benchmarks.</p>
           </div>
-          <button type="button" class="btn-sm-outline" id="closeSetup"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
+          <button type="button" class="btn-sm-outline" id="closePrep"><span class="ui-icon" aria-hidden="true" style={iconStyle("x")}></span>Close</button>
         </header>
-        <div class="prep-body setup-body">
-          <div class="setup-console-layout">
-            <section class="lm-source-panel" aria-labelledby="lmStudioHeading">
-              <div class="lm-source-heading">
-                <div class="min-w-0">
-                  <span class="section-label">Local model source</span>
-                  <h3 id="lmStudioHeading">Model sources</h3>
-                  <p>Discover oMLX and LM Studio models. LM Studio models can still be mirrored into Pi and OpenCode when needed.</p>
-                </div>
-                <span class="badge-outline lm-count-badge"><span id="availableModelCount">0</span> models</span>
+        <div class="prep-body p-5">
+          <div class="deprecation-notice">
+            <div class="cli-commands mt-0">
+              <div class="cli-command">
+                <div class="cli-cmd-row"><code class="cli-cmd">local-llm setup</code><button type="button" class="cli-copy-btn" data-copy="local-llm setup" title="Copy command"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span></button></div>
+                <span class="muted-copy text-sm">Create a model profile — llama.cpp, Ollama, or oMLX</span>
               </div>
-
-              <div class="lm-operations-grid">
-                <div id="lmStepOmlx" class="lm-op-cell lm-connect-cell">
-                  <span class="section-label">oMLX URL</span>
-                  <h4 class="lm-op-title">oMLX</h4>
-                  <div class="lm-op-control lm-connect-control">
-                    <input id="omlxBaseUrl" class="input flex-1" aria-label="oMLX base URL" value="http://127.0.0.1:8000/v1" />
-                    <button type="button" class="btn" id="refreshOmlx" data-icon="refresh-cw"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Refresh</button>
-                  </div>
-                  <p class="lm-op-message" id="omlxConnectionMessage" aria-live="polite">Waiting for local API.</p>
-                </div>
-
-                <div id="lmStep1" class="lm-op-cell lm-connect-cell">
-                  <span class="section-label">LM Studio URL</span>
-                  <h4 class="lm-op-title">LM Studio</h4>
-                  <div class="lm-op-control lm-connect-control">
-                    <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
-                    <button type="button" class="btn" id="refreshConnection" data-icon="refresh-cw"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Refresh</button>
-                  </div>
-                  <p class="lm-op-message" id="connectionMessage" aria-live="polite">Waiting for local API.</p>
-                </div>
+              <div class="cli-command">
+                <div class="cli-cmd-row"><code class="cli-cmd">local-llm prepare</code><button type="button" class="cli-copy-btn" data-copy="local-llm prepare" title="Copy command"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span></button></div>
+                <span class="muted-copy text-sm">Pick a benchmark, model source, and harness → creates the run directory with prompt</span>
               </div>
-
-              <section id="lmStep3" class="setup-sync-section" aria-labelledby="syncConfigHeading">
-                <span class="section-label">Config sync</span>
-                <h3 id="syncConfigHeading" class="sr-only">Config sync</h3>
-                <div class="setup-sync-grid">
-                  <div class="lm-op-cell sync-target" id="lmConfigPi">
-                    <div class="sync-target-main">
-                      <span class="sync-target-name">Pi config</span>
-                      <span class="lm-config-indicator" id="lmConfigPiStatus">Checking…</span>
-                      <span class="sync-target-path" id="lmConfigPiPath">~/.pi/agent/models.json</span>
-                    </div>
-                    <img class="sync-target-logo sync-target-logo-pi" src={`${basePath}assets/pi-logo.svg`} alt="" aria-hidden="true" />
-                    <button type="button" class="btn-sm-outline" id="syncPiBtn"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Sync Pi</button>
-                  </div>
-                  <div class="lm-op-cell sync-target" id="lmConfigOpenCode">
-                    <div class="sync-target-main">
-                      <span class="sync-target-name">OpenCode config</span>
-                      <span class="lm-config-indicator" id="lmConfigOpenCodeStatus">Checking…</span>
-                      <span class="sync-target-path" id="lmConfigOpenCodePath">~/.config/opencode/opencode.json</span>
-                    </div>
-                    <img class="sync-target-logo sync-target-logo-opencode" src={`${basePath}assets/opencode-logo.svg`} alt="" aria-hidden="true" />
-                    <button type="button" class="btn-sm-outline" id="syncOpenCodeBtn"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Sync OpenCode</button>
-                  </div>
-                </div>
-              </section>
-              <p class="lm-sync-message" id="syncMessage" aria-live="polite">Start LM Studio, refresh its model list, then sync discovered LM Studio models to your tool configs.</p>
-
-              <section id="lmStep2" class="lm-model-section" aria-labelledby="modelInventoryHeading">
-                <div class="lm-model-section-head">
-                  <div>
-                    <h3 id="modelInventoryHeading">Model inventory</h3>
-                    <p>Live oMLX and LM Studio models plus saved run history.</p>
-                  </div>
-                </div>
-                <div class="lm-model-table-head" id="lmModelHeader">
-                  <span>Model</span>
-                  <span>Source</span>
-                  <span>Config status</span>
-                </div>
-                <div class="available-model-list" id="availableModelChoices"></div>
-              </section>
-            </section>
+              <div class="cli-command">
+                <div class="cli-cmd-row"><code class="cli-cmd">local-llm run &lt;profile&gt; --with pi</code><button type="button" class="cli-copy-btn" data-copy="local-llm run <profile> --with pi" title="Copy command"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span></button></div>
+                <span class="muted-copy text-sm">Start the model server and launch your harness</span>
+              </div>
+            </div>
+            <div class="cli-flow mt-5">
+              <h4 class="text-sm font-semibold">Typical flow</h4>
+              <ol class="cli-steps mt-2">
+                <li><strong>Setup</strong> — <code>local-llm setup</code> — pick a backend and model, save a profile</li>
+                <li><strong>Prepare</strong> — <code>local-llm prepare</code> — choose benchmark + model source + harness, get a run directory and prompt</li>
+                <li><strong>Run</strong> — <code>local-llm run &lt;profile&gt; --with pi</code> — starts the server and fires up your coding tool</li>
+              </ol>
+            </div>
+            <a class="btn mt-5" href="https://github.com/eeshansrivastava89/local-llm-visual-benchmark#local-llm-cli" target="_blank" rel="noopener noreferrer"><span class="ui-icon" aria-hidden="true" style={iconStyle("github")}></span>CLI docs</a>
           </div>
         </div>
       </article>

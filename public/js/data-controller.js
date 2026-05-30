@@ -5,12 +5,10 @@ import { setButtonLabel } from "./icons.js";
 import { startHtmlPolling } from "./polling.js";
 import { currentModal } from "./modals.js";
 import { findRunByDirectoryOrId } from "./runs.js";
-import { setSourceStatus, updateConfigPresence, updateLmStepStates, updateSyncButtons } from "./setup-ui.js";
 import { updateOnboarding, showHtmlDetectToast } from "./ui.js";
 import { renderMachineProfile } from "./machine-profile.js";
 import { renderBenchmarks, renderHarnesses, renderKindTabs, renderModelSources, renderModels, renderRuns } from "./workbench-controller.js";
-import { renderPrepOptions } from "./prepare-controller.js";
-import { loadConnection, loadModelSyncState, loadOmlxModels, setConnectionMessage } from "./model-source-controller.js";
+import { loadConnection, loadModelSyncState, loadOmlxModels } from "./model-source-controller.js";
 import { captureMissingMedia } from "./capture-controller.js";
 import { renderDetail, updateDetailActions } from "./detail-actions.js";
 import { updateWriteControls } from "./operational-controls.js";
@@ -35,7 +33,6 @@ export async function loadLocalData() {
     renderHarnesses();
     renderModelSources();
     renderRuns();
-    renderPrepOptions();
     startHtmlPolling({
       onRefresh: refreshRunsForPolling,
       onDetect: showHtmlDetectToast
@@ -59,22 +56,16 @@ export async function enterStaticMode(reason) {
     state.omlxConnected = false;
     state.lmConnected = false;
     state.writesEnabled = false;
-    setSourceStatus("omlx", "static", 0, "oMLX status requires the local dev server.");
-    setSourceStatus("lmstudio", "static", 0, "LM Studio status requires the local dev server.");
-    setConnectionMessage("Browsing exported runs. Sync requires the local dev server.");
     renderMachineProfile(state.machineProfile);
     renderKindTabs();
     renderBenchmarks();
     renderModels();
     renderHarnesses();
     renderModelSources();
-    renderPrepOptions();
     renderRuns();
     updateOnboarding();
-    updateLmStepStates();
     updateWriteControls();
   } catch (staticError) {
-    setConnectionMessage((reason?.message ?? "Local API unavailable.") + " " + staticError.message);
     els.statsDot.dataset.state = "offline";
     els.statsCompact.textContent = "Unavailable";
     els.runsSurface.innerHTML = '<div class="empty">No local API or static export was found.</div>';
@@ -112,7 +103,6 @@ export async function refreshRuns() {
     renderModels();
     renderHarnesses();
     renderModelSources();
-    renderPrepOptions();
     renderRuns();
     return true;
   } catch (error) {

@@ -11,7 +11,6 @@ import { copyTextToClipboard } from "./clipboard.js";
 import { setButtonLabel } from "./icons.js";
 import { scoreDsRun } from "./score-controller.js";
 import { renderHarnesses, renderModelSources, renderModels, renderRuns } from "./workbench-controller.js";
-import { renderPrepOptions } from "./prepare-controller.js";
 
 export async function copyDetailPrompt() {
   const text = els.detailPrompt.textContent ?? "";
@@ -46,7 +45,6 @@ export async function confirmDeleteSelectedRun() {
     renderModels();
     renderHarnesses();
     renderModelSources();
-    renderPrepOptions();
     renderRuns();
   } catch (error) {
     window.alert("Delete failed: " + error.message);
@@ -201,7 +199,6 @@ async function saveMetadataEditor(run, form) {
     state.selectedRun = nextRun;
     renderHarnesses();
     renderModelSources();
-    renderPrepOptions();
     renderRuns();
     renderDetail(nextRun);
     document.querySelector("#detailMetadataEditorStatus").textContent = "Saved.";

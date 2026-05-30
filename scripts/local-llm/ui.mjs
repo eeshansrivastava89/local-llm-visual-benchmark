@@ -14,11 +14,20 @@ export const colors = {
 export function printHelp() {
   console.log(`${colors.bold("local-llm")} - local LLM profile runner\n`);
   console.log("Usage:");
-  console.log("  scripts/local-llm.mjs list [profile-id]");
-  console.log("  scripts/local-llm.mjs setup [profile]");
-  console.log("  scripts/local-llm.mjs run [profile] [--with pi|opencode] [--reuse-existing] [--keep-server]");
-  console.log("  scripts/local-llm.mjs stop [profile|--all]");
-  console.log("  scripts/local-llm.mjs remove [profile] [--force] [--keep-logs]");
+  console.log("  local-llm list [profile-id]");
+  console.log("  local-llm setup [profile]");
+  console.log("  local-llm prepare [--benchmarks <dir>] [--runs <dir>]");
+  console.log("  local-llm run [profile] [--with pi|opencode] [--reuse-existing] [--keep-server]");
+  console.log("  local-llm stop [profile|--all]");
+  console.log("  local-llm remove [profile] [--force] [--keep-logs]");
+  console.log("");
+  console.log(colors.bold("Commands:"));
+  console.log("  list      List profiles, models, and discovered backends");
+  console.log("  setup     Create or edit a profile (interactive)");
+  console.log("  prepare   Prepare a run directory with prompt and metadata");
+  console.log("  run       Start server + launch harness for a profile");
+  console.log("  stop      Stop a tracked llama-server process");
+  console.log("  remove    Delete a profile and its harness configs");
 }
 
 export function formatBytes(bytes) {

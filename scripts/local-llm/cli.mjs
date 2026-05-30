@@ -12,6 +12,7 @@ import { isProfileRunning, profileRuntimeStatus, serverReady, startServer, stopP
 import { tailFriendly } from "./logs.mjs";
 import { backendFor, BACKENDS, backendChoices, inferBackendId } from "./backends.mjs";
 import { SERVER_VARIANTS, serverBinaryFor } from "./server-variants.mjs";
+import { prepareCommand } from "./prepare.mjs";
 
 export async function runCli(argv) {
   const [command = "help", ...args] = argv;
@@ -19,6 +20,7 @@ export async function runCli(argv) {
   if (command === "list") return listCommand(args);
   if (command === "setup") return setupCommand(args);
   if (command === "show") return showCommand(args); // Backward-compatible alias; prefer: list <profile>
+  if (command === "prepare" || command === "prep") return prepareCommand(args);
   if (command === "run") return runCommand(args);
   if (command === "stop") return stopCommand(args);
   if (command === "remove" || command === "rm") return removeCommand(args);

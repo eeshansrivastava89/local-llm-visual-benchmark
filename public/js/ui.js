@@ -37,11 +37,9 @@ export function updateOnboarding() {
 
 function onboardingCompletedStep() {
   let step = 0;
-  if (state.omlxConnected || state.lmConnected) step = 1;
-  if (state.discoveredModels.length > 0) step = 2;
-  if (state.runs.some((r) => r.status === "prepared")) step = 3;
-  if (state.runs.some((r) => r.assets?.html)) step = 4;
-  if (state.runs.some((r) => hasCapturedVideo(r))) step = 5;
+  if (state.runs.length > 0) step = 1;
+  if (state.runs.some((r) => r.status === "prepared")) step = 2;
+  if (state.runs.some((r) => r.assets?.html)) step = 3;
   return step;
 }
 

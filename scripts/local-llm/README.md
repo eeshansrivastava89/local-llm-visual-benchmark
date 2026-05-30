@@ -49,6 +49,26 @@ local-llm list
 
 Shows saved profiles with backend badges (`[Ollama]`, `[oMLX]`), then unprofiled GGUF models, then Ollama and oMLX models. 🟢 = server responding. Pick a number to inspect details.
 
+### Prepare
+
+```bash
+local-llm prepare
+n```
+
+Interactive walkthrough that creates a benchmark run directory with prompt and metadata. Picks a benchmark category (visual or data-science), selects a prompt, chooses a model source, and writes `metadata.json` + `prompt.md` into `runs/<benchmark>/<model-slug>/<timestamp>/`.
+
+Model source options:
+- **Use existing profile** — pick from saved local-llm profiles
+- **Ollama (managed)** — pick a model from the running Ollama service
+- **oMLX (managed)** — pick a model from the running oMLX service
+- **llama.cpp (unprofiled)** — pick a GGUF file (does not create a profile)
+- **Custom / cloud** — free-form model label for cloud runs
+
+The prepared directory contains:
+- `metadata.json` — run metadata with model, source, harness, and asset info
+- `prompt.md` — the generated tool prompt
+- `supabase.json` — (data-science only) Supabase config for live data
+
 ### Run
 
 ```bash

@@ -6,7 +6,6 @@ import { setButtonLabel } from "./icons.js";
 import { findRunByDirectoryOrId } from "./runs.js";
 import { canUseOperationalControls, updateWriteControls } from "./operational-controls.js";
 import { renderHarnesses, renderModelSources, renderModels, renderRuns } from "./workbench-controller.js";
-import { renderPrepOptions } from "./prepare-controller.js";
 import { renderDetail } from "./detail-actions.js";
 import { updateOnboarding } from "./ui.js";
 
@@ -42,7 +41,6 @@ export async function scoreDsRun(run) {
     renderModels();
     renderHarnesses();
     renderModelSources();
-    renderPrepOptions();
     renderRuns();
     updateOnboarding();
     if (wasSelected) {

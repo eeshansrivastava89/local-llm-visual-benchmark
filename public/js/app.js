@@ -1,7 +1,6 @@
 import { els } from "./dom.js";
 import { state } from "./state.js";
 import { loadLocalData, refreshAndCaptureMissing, refreshRunsForPolling } from "./data-controller.js";
-import { loadConnection, loadModelSyncState, loadModels, loadOmlxModels, syncModels } from "./model-source-controller.js";
 import { captureMissingMedia, captureRunMedia, captureSelectedRunMedia } from "./capture-controller.js";
 import { initChartLightbox } from "./chart-lightbox.js";
 import { scoreDsRun } from "./score-controller.js";
@@ -15,15 +14,6 @@ import {
   resetRunPage
 } from "./workbench-controller.js";
 import {
-  copyPreparedPrompt,
-  copyPreparedRunPath,
-  prepareRunSlot,
-  renderPrepKindTabs,
-  renderPrepOptions,
-  resetPrepareRunModal,
-  updatePrepareMode
-} from "./prepare-controller.js";
-import {
   confirmDeleteSelectedRun,
   copyDetailPrompt,
   copySelectedRunPath,
@@ -35,12 +25,12 @@ import {
 } from "./detail-actions.js";
 import { closeModal, handleModalKeydown, openModal } from "./modals.js";
 import { applyStoredTheme, toggleTheme } from "./theme.js";
-import { initSourceStatuses } from "./setup-ui.js";
 import { wireHelpTooltips } from "./tooltips.js";
 import { renderViewTabs, updateOnboarding } from "./ui.js";
 import { canUseOperationalControls, configureOperationalControls } from "./operational-controls.js";
 import { runKind } from "./runs.js";
 import { loadMachineProfile } from "./machine-profile.js";
+import { copyTextToClipboard } from "./clipboard.js";
 
 init();
 
@@ -49,24 +39,11 @@ function init() {
   configureControllers();
   applyStoredTheme();
   wireEvents();
-  initSourceStatuses();
   initChartLightbox();
   renderViewTabs();
   updateOnboarding();
   void loadLocalData();
   void loadMachineProfile();
-  setInterval(() => {
-    if (!state.staticMode) {
-      void loadOmlxModels();
-      if (state.lmConnected) void loadModels();
-      else void loadConnection();
-    }
-  }, 60000);
-  setInterval(() => {
-    if (!state.staticMode) {
-      void loadModelSyncState();
-    }
-  }, 12000);
 }
 
 function initWorkspaceState() {
@@ -96,52 +73,30 @@ function configureControllers() {
   });
 }
 
-function refreshModelSources() {
-  if (state.staticMode) {
-    return;
-  }
-
-  void refreshRunsForPolling();
-  void loadOmlxModels();
-  void loadConnection();
-}
-
 function wireEvents() {
-  els.refreshOmlx.addEventListener("click", () => loadOmlxModels({ manual: true }));
-  els.refreshConnection.addEventListener("click", () => loadConnection({ manual: true }));
   els.refreshRuns.addEventListener("click", () => refreshAndCaptureMissing());
-  els.syncPiBtn.addEventListener("click", () => syncModels(["pi"]));
-  els.syncOpenCodeBtn.addEventListener("click", () => syncModels(["opencode"]));
 
   els.themeToggle.addEventListener("click", () => toggleTheme());
-  els.setupToggle.addEventListener("click", () => {
-    openModal("setup");
-    refreshModelSources();
-  });
   els.runToggle.addEventListener("click", () => {
     openModal("prep");
-    renderPrepKindTabs();
-    resetPrepareRunModal();
-    refreshModelSources();
   });
 
   els.closeDetail.addEventListener("click", () => closeModal("detail"));
-  els.closePrep.addEventListener("click", () => closeModal("prep"));
-  els.closeSetup.addEventListener("click", () => closeModal("setup"));
+  els.closePrep?.addEventListener("click", () => closeModal("prep"));
   els.closeDeleteConfirm.addEventListener("click", () => closeModal("deleteConfirm"));
   els.cancelDeleteRun.addEventListener("click", () => closeModal("deleteConfirm"));
   els.confirmDeleteRun.addEventListener("click", () => confirmDeleteSelectedRun());
   document.addEventListener("keydown", handleModalKeydown);
   wireHelpTooltips();
+  document.querySelectorAll(".cli-copy-btn").forEach((btn) => {
+    btn.addEventListener("click", () => copyTextToClipboard(btn.dataset.copy, btn, "Copy"));
+  });
 
   els.detailBackdrop.addEventListener("click", (event) => {
     if (event.target === els.detailBackdrop) closeModal("detail");
   });
-  els.prepBackdrop.addEventListener("click", (event) => {
+  els.prepBackdrop?.addEventListener("click", (event) => {
     if (event.target === els.prepBackdrop) closeModal("prep");
-  });
-  els.setupBackdrop.addEventListener("click", (event) => {
-    if (event.target === els.setupBackdrop) closeModal("setup");
   });
   els.deleteConfirmBackdrop.addEventListener("click", (event) => {
     if (event.target === els.deleteConfirmBackdrop) closeModal("deleteConfirm");
@@ -208,21 +163,6 @@ function wireEvents() {
     renderModels();
     renderRuns();
   });
-  els.prepareRun.addEventListener("click", () => prepareRunSlot());
-  els.copyPreparedPath.addEventListener("click", () => copyPreparedRunPath());
-  els.copyPrompt.addEventListener("click", () => copyPreparedPrompt());
-  els.prepRunner.addEventListener("change", () => updatePrepareMode());
-  els.prepModelSource.addEventListener("change", () => {
-    state.selectedModelSource = els.prepModelSource.value;
-    renderPrepOptions();
-  });
-  els.prepBenchmark.addEventListener("change", () => updatePrepareMode());
-  els.prepModelSelect.addEventListener("change", () => {
-    updatePrepareMode();
-  });
-  els.prepCustomBackend.addEventListener("input", () => updatePrepareMode());
-  els.prepCustomModel.addEventListener("input", () => updatePrepareMode());
-
   els.viewTabs.forEach((button) => {
     button.addEventListener("click", () => {
       state.mode = button.dataset.mode;
@@ -246,15 +186,6 @@ function wireEvents() {
       renderModels();
       renderHarnesses();
       renderRuns();
-    });
-  });
-
-  els.prepKindTabs.forEach((button) => {
-    button.addEventListener("click", () => {
-      state.selectedPrepKind = button.dataset.prepKind;
-      renderPrepKindTabs();
-      renderPrepOptions();
-      updatePrepareMode();
     });
   });
 

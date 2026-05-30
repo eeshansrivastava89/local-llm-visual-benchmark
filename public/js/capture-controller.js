@@ -6,7 +6,6 @@ import { setButtonLabel } from "./icons.js";
 import { findRunByDirectoryOrId, needsMediaCapture } from "./runs.js";
 import { canUseOperationalControls, updateWriteControls } from "./operational-controls.js";
 import { renderHarnesses, renderModelSources, renderModels, renderRuns } from "./workbench-controller.js";
-import { renderPrepOptions } from "./prepare-controller.js";
 import { renderDetail } from "./detail-actions.js";
 import { updateOnboarding } from "./ui.js";
 
@@ -52,7 +51,6 @@ export async function captureMissingMedia(options = {}) {
     renderModels();
     renderHarnesses();
     renderModelSources();
-    renderPrepOptions();
     renderRuns();
     els.runSummary.textContent =
       "Captured " + String(captured) +
@@ -107,7 +105,6 @@ export async function captureRunMedia(run, options = {}) {
     renderModels();
     renderHarnesses();
     renderModelSources();
-    renderPrepOptions();
     renderRuns();
     updateOnboarding();
     if (wasSelected) {

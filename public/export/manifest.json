@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-30T20:15:51.706Z",
+  "generatedAt": "2026-05-30T22:07:44.104Z",
   "benchmarks": [
     {
       "id": "ab-test-analysis",
@@ -3796,7 +3796,7 @@
     }
   ],
   "machineProfile": {
-    "collectedAt": "2026-05-30T20:15:51.707Z",
+    "collectedAt": "2026-05-30T22:07:44.105Z",
     "platform": {
       "node": "v26.0.0",
       "platform": "darwin",
@@ -3806,7 +3806,7 @@
       "type": "Darwin",
       "release": "25.5.0",
       "hostname": "Eeshans-MacBook-Pro-16.local",
-      "uptimeSeconds": 913363
+      "uptimeSeconds": 920077
     },
     "cpu": {
       "model": "Apple M4 Pro",
@@ -3815,10 +3815,10 @@
     },
     "memory": {
       "totalBytes": 51539607552,
-      "availableBytes": 26313261056,
-      "freeBytes": 6915702784,
-      "usedBytes": 25226346496,
-      "pressurePercent": 48.9,
+      "availableBytes": 25479593984,
+      "freeBytes": 4168237056,
+      "usedBytes": 26060013568,
+      "pressurePercent": 50.6,
       "pressureLabel": "low",
       "source": "macOS VM stats, cached and purgeable memory excluded"
     },

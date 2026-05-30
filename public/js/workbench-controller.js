@@ -6,7 +6,6 @@ import { exportSelectedComparisonVideo } from "./comparison-export-controller.js
 import { syncManagedCompareVideos } from "./compare-ui.js";
 import { filteredRuns, groupRuns, harnessesFromRuns, modelsFromRuns, benchmarkMatchesKind, runKind, runSummaryText } from "./runs.js";
 import { renderGroupedRuns as renderGroupedRunsMarkup, renderRunsTable as renderRunsTableMarkup } from "./workbench-ui.js";
-import { renderModelInventory } from "./setup-ui.js";
 import { openModal } from "./modals.js";
 
 let captureRunMediaHandler = () => {};
@@ -95,7 +94,7 @@ export function renderHarnesses() {
 }
 
 export function renderModelSources() {
-  renderModelInventory();
+  // Model inventory is now handled by the CLI; no longer rendered in web UI.
 }
 
 export function resetRunPage() {
