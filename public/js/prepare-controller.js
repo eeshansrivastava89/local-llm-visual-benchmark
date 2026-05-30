@@ -13,6 +13,9 @@ export function resetPrepareRunModal() {
   state.preparedPrompt = "";
   state.preparedRunDirectory = "";
   els.preparedPrompt.value = "";
+  els.preparedPrompt.hidden = true;
+  els.prepOutputPlaceholder.hidden = false;
+  els.prepOutputPlaceholder.textContent = "Prepare a run slot to generate the prompt for index.html.";
   els.preparedPaths.textContent = "No run slot prepared yet.";
   els.copyPrompt.disabled = true;
   els.copyPreparedPath.disabled = true;
@@ -55,6 +58,8 @@ export function updatePrepareMode() {
   els.prepModelSelectLabel.textContent = modelSourceLabel(state.selectedModelSource) + " model";
   if (!state.preparedPrompt) {
     els.preparedPrompt.value = "";
+    els.preparedPrompt.hidden = true;
+    els.prepOutputPlaceholder.hidden = false;
     updatePreparedCopyState();
   }
 
@@ -64,6 +69,9 @@ export function updatePrepareMode() {
     : "Choose a prompt, model source, model, and harness to generate a run folder.";
   els.prepResultHint.textContent = "Copy this into your selected harness after preparing the slot.";
   els.preparedPrompt.placeholder = isDs
+    ? "Prepare a run slot to generate the data-science analysis prompt."
+    : "Prepare a run slot to generate the prompt for index.html.";
+  els.prepOutputPlaceholder.textContent = isDs
     ? "Prepare a run slot to generate the data-science analysis prompt."
     : "Prepare a run slot to generate the prompt for index.html.";
   els.prepOutputLabel.textContent = isDs ? "Data science prompt" : "Visual prompt";
@@ -116,6 +124,8 @@ export async function prepareRunSlot() {
     const statusText = "Run slot prepared for " + sourceLabel + " via " + harnessLabel(runner) + ". Run folder: " + runDirectory;
     state.preparedPrompt = output;
     state.preparedRunDirectory = runDirectory;
+    els.prepOutputPlaceholder.hidden = true;
+    els.preparedPrompt.hidden = false;
     els.preparedPrompt.value = output;
     els.preparedPaths.textContent = statusText;
     els.copyPrompt.disabled = !output;
@@ -129,6 +139,8 @@ export async function prepareRunSlot() {
     renderRuns();
   } catch (error) {
     els.preparedPrompt.value = "";
+    els.preparedPrompt.hidden = true;
+    els.prepOutputPlaceholder.hidden = false;
     els.preparedPaths.textContent = "Prepare failed: " + error.message;
     state.preparedRunDirectory = "";
     els.copyPrompt.disabled = true;

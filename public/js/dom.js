@@ -93,6 +93,7 @@ export const els = {
   prepLayout: document.querySelector("#prepLayout"),
   prepResult: document.querySelector("#prepResult"),
   prepResultTitle: document.querySelector("#prepResultTitle"),
+  prepOutputPlaceholder: document.querySelector("#prepOutputPlaceholder"),
   prepResultHint: document.querySelector("#prepResultHint"),
   prepOutputLabel: document.querySelector("#prepOutputLabel"),
   preparedPrompt: document.querySelector("#preparedPrompt"),

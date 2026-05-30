@@ -278,7 +278,7 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
         <div class="prep-body p-5">
           <div class="prep-layout" id="prepLayout">
             <section class="prep-form-panel" aria-label="Run slot inputs">
-              <div class="grid gap-2" id="prepKindGroup">
+              <div class="field-group" id="prepKindGroup">
                 <div class="field-label-row">
                   <label>Benchmark category</label>
                   <button type="button" class="help-pill" data-tooltip="Choose whether this is a visual HTML benchmark or a data-science analysis benchmark. This decides which prompts appear below.">?</button>
@@ -288,7 +288,7 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                   <button type="button" class="kind-tab" data-prep-kind="data-science" aria-pressed="false">Data Science Benchmark</button>
                 </div>
               </div>
-              <div class="grid gap-2" id="prepBackendHelperGroup">
+              <div class="field-group" id="prepBackendHelperGroup">
                 <div class="field-label-row">
                   <label for="prepRunner">Coding harness</label>
                   <button type="button" class="help-pill" data-tooltip="The tool you plan to paste the generated prompt into. The harness is recorded because tool calling and file writes affect run quality.">?</button>
@@ -300,7 +300,7 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                   <option value="hermes">Hermes</option>
                 </select>
               </div>
-              <div class="grid gap-2" id="prepModelSourceGroup">
+              <div class="field-group" id="prepModelSourceGroup">
                 <div class="field-label-row">
                   <label for="prepModelSource">Model source</label>
                   <button type="button" class="help-pill" data-tooltip="Choose whether the model label comes from oMLX or LM Studio. oMLX is the primary Apple Silicon daily-driver lane.">?</button>
@@ -311,14 +311,14 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                   <option value="custom">Custom model</option>
                 </select>
               </div>
-              <div class="grid gap-2" id="prepVisualPromptGroup">
+              <div class="field-group" id="prepVisualPromptGroup">
                 <div class="field-label-row">
                   <label for="prepBenchmark">Prompt</label>
                   <button type="button" class="help-pill" data-tooltip="Visual benchmark prompt. Run your external tool from the prepared run folder; the generated prompt only asks it to write index.html in the current directory.">?</button>
                 </div>
                 <select id="prepBenchmark" class="input"></select>
               </div>
-              <div class="grid gap-2" id="prepModelSelectGroup">
+              <div class="field-group" id="prepModelSelectGroup">
                 <div class="field-label-row">
                   <label for="prepModelSelect" id="prepModelSelectLabel">Discovered model</label>
                   <button type="button" class="help-pill" data-tooltip="Model discovered from the selected local source. The app records this label and source in prepared run metadata.">?</button>
@@ -326,14 +326,14 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                 <select id="prepModelSelect" class="input"></select>
                 <p id="prepModelWarning" class="prep-source-warning" hidden></p>
               </div>
-              <div class="grid gap-2" id="prepCustomBackendGroup" hidden>
+              <div class="field-group" id="prepCustomBackendGroup" hidden>
                 <div class="field-label-row">
                   <label for="prepCustomBackend">Custom backend</label>
                   <button type="button" class="help-pill" data-tooltip="Free-form source label for manually run models, for example cloud, ChatGPT, Claude, OpenRouter, or browser.">?</button>
                 </div>
                 <input id="prepCustomBackend" class="input" value="cloud" placeholder="cloud" />
               </div>
-              <div class="grid gap-2" id="prepCustomModelGroup" hidden>
+              <div class="field-group" id="prepCustomModelGroup" hidden>
                 <div class="field-label-row">
                   <label for="prepCustomModel">Custom model</label>
                   <button type="button" class="help-pill" data-tooltip="Free-form model label to record in metadata and use for the run folder, for example ChatGPT or GPT-5.1.">?</button>
@@ -362,7 +362,10 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                     <button type="button" class="btn-sm-outline" id="copyPrompt" data-icon="copy" disabled><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span>Copy prompt</button>
                   </div>
                 </div>
-                <textarea id="preparedPrompt" class="input font-mono text-[0.82rem] leading-5" placeholder="Prepare a run slot to generate the prompt for index.html."></textarea>
+                <div class="prep-artifact-placeholder" id="prepOutputPlaceholder">
+                  <span>Prepare a run slot to generate the prompt for index.html</span>
+                </div>
+                <textarea id="preparedPrompt" class="input font-mono text-[0.82rem] leading-5" placeholder="Prepare a run slot to generate the prompt for index.html." hidden></textarea>
               </div>
               <p class="muted-copy text-sm" id="preparedPaths">No run slot prepared yet.</p>
             </section>
@@ -395,10 +398,8 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
 
               <div class="lm-operations-grid">
                 <div id="lmStepOmlx" class="lm-op-cell lm-connect-cell">
-                  <div class="lm-op-head">
-                    <span class="lm-op-title">oMLX</span>
-                    <span class="section-label">oMLX URL</span>
-                  </div>
+                  <span class="section-label">oMLX URL</span>
+                  <h4 class="lm-op-title">oMLX</h4>
                   <div class="lm-op-control lm-connect-control">
                     <input id="omlxBaseUrl" class="input flex-1" aria-label="oMLX base URL" value="http://127.0.0.1:8000/v1" />
                     <button type="button" class="btn" id="refreshOmlx" data-icon="refresh-cw"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Refresh</button>
@@ -407,19 +408,20 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                 </div>
 
                 <div id="lmStep1" class="lm-op-cell lm-connect-cell">
-                  <div class="lm-op-head">
-                    <span class="lm-op-title">LM Studio</span>
-                    <span class="section-label">LM Studio URL</span>
-                  </div>
+                  <span class="section-label">LM Studio URL</span>
+                  <h4 class="lm-op-title">LM Studio</h4>
                   <div class="lm-op-control lm-connect-control">
                     <input id="baseUrl" class="input flex-1" aria-label="LM Studio base URL" value="http://localhost:1234/v1" />
                     <button type="button" class="btn" id="refreshConnection" data-icon="refresh-cw"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Refresh</button>
                   </div>
                   <p class="lm-op-message" id="connectionMessage" aria-live="polite">Waiting for local API.</p>
                 </div>
+              </div>
 
-                <section id="lmStep3" class="lm-sync-cells" aria-labelledby="syncConfigHeading">
-                  <h3 id="syncConfigHeading" class="sr-only">Config sync</h3>
+              <section id="lmStep3" class="setup-sync-section" aria-labelledby="syncConfigHeading">
+                <span class="section-label">Config sync</span>
+                <h3 id="syncConfigHeading" class="sr-only">Config sync</h3>
+                <div class="setup-sync-grid">
                   <div class="lm-op-cell sync-target" id="lmConfigPi">
                     <div class="sync-target-main">
                       <span class="sync-target-name">Pi config</span>
@@ -438,8 +440,8 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
                     <img class="sync-target-logo sync-target-logo-opencode" src={`${basePath}assets/opencode-logo.svg`} alt="" aria-hidden="true" />
                     <button type="button" class="btn-sm-outline" id="syncOpenCodeBtn"><span class="ui-icon" aria-hidden="true" style={iconStyle("refresh-cw")}></span>Sync OpenCode</button>
                   </div>
-                </section>
-              </div>
+                </div>
+              </section>
               <p class="lm-sync-message" id="syncMessage" aria-live="polite">Start LM Studio, refresh its model list, then sync discovered LM Studio models to your tool configs.</p>
 
               <section id="lmStep2" class="lm-model-section" aria-labelledby="modelInventoryHeading">
