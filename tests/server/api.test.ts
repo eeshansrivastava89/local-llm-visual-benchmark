@@ -3,8 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { assertTrustedWriteRequest, createLocalApi } from "../../src/server/api";
-import type { BenchmarkRecord, LMStudioModel, OmlxModel, PreparedRun, RunMetadata } from "../../src/lib/types";
-import type { MirrorModelsResult } from "../../src/lib/model-sync";
+import type { BenchmarkRecord, RunMetadata } from "../../src/lib/types";
 
 const benchmarks: BenchmarkRecord[] = [
   {
@@ -21,37 +20,9 @@ const benchmarks: BenchmarkRecord[] = [
   }
 ];
 
-const models: LMStudioModel[] = [{ id: "model-a" }, { id: "model-b" }];
-const omlxModels: OmlxModel[] = [{ id: "Qwen3.6-35B-A3B-4bit" }];
+
 
 describe("createLocalApi", () => {
-  it("returns status with passive LM Studio connection shape", async () => {
-    const checkLmStudioConnection = vi.fn(async () => ({
-      ok: true,
-      baseUrl: "http://example.test/v1"
-    }));
-    const api = createLocalApi({
-      checkLmStudioConnection
-    });
-
-    await expect(api.getStatus({ baseUrl: "http://example.test" })).resolves.toEqual({
-      app: {
-        status: "ok",
-        writesEnabled: true
-      },
-      lmStudio: {
-        baseUrl: "http://example.test/v1",
-        connection: {
-          ok: true,
-          baseUrl: "http://example.test/v1"
-        }
-      }
-    });
-    expect(checkLmStudioConnection).toHaveBeenCalledWith("http://example.test", {
-      timeoutMs: 2000
-    });
-  });
-
   it("loads benchmark definitions through the benchmark loader", async () => {
     const loadBenchmarks = vi.fn(async () => benchmarks);
     const api = createLocalApi({
@@ -63,36 +34,6 @@ describe("createLocalApi", () => {
       benchmarks
     });
     expect(loadBenchmarks).toHaveBeenCalledWith("/benchmarks");
-  });
-
-  it("lists LM Studio models through the passive client", async () => {
-    const listLmStudioModels = vi.fn(async () => models);
-    const api = createLocalApi({
-      listLmStudioModels
-    });
-
-    await expect(api.getLmStudioModels({ baseUrl: "http://localhost:1234" })).resolves.toEqual({
-      baseUrl: "http://localhost:1234/v1",
-      models
-    });
-    expect(listLmStudioModels).toHaveBeenCalledWith("http://localhost:1234", {
-      timeoutMs: 10000
-    });
-  });
-
-  it("lists oMLX models through the passive client", async () => {
-    const listOmlxModels = vi.fn(async () => omlxModels);
-    const api = createLocalApi({
-      listOmlxModels
-    });
-
-    await expect(api.getOmlxModels({ baseUrl: "http://127.0.0.1:8000" })).resolves.toEqual({
-      baseUrl: "http://127.0.0.1:8000/v1",
-      models: omlxModels
-    });
-    expect(listOmlxModels).toHaveBeenCalledWith("http://127.0.0.1:8000", {
-      timeoutMs: 10000
-    });
   });
 
   it("returns an empty saved run list when the runs directory is missing", async () => {
@@ -134,127 +75,6 @@ describe("createLocalApi", () => {
     const response = await api.getSavedRuns();
 
     expect(response.runs.map((run) => run.runId)).toEqual(["run-new", "run-old"]);
-  });
-
-  it("prepares a run slot from a benchmark and model ID", async () => {
-    const preparedRun: PreparedRun = {
-      run: {
-        runId: "run-1",
-        benchmark: benchmarks[0],
-        model: {
-          id: "model-a",
-          slug: "model-a"
-        },
-        status: "prepared",
-        createdAt: "2026-05-07T00:00:00.000Z",
-        updatedAt: "2026-05-07T00:00:00.000Z",
-        preparedAt: "2026-05-07T00:00:00.000Z",
-        runDirectory: "/runs/sakura/model-a/run-1",
-        assets: {
-          metadata: "metadata.json",
-          prompt: "prompt.md",
-          html: "index.html",
-          preview: "preview.png"
-        }
-      },
-      prompt: "prompt",
-      paths: {
-        runDirectory: "/runs/sakura/model-a/run-1",
-        promptPath: "/runs/sakura/model-a/run-1/prompt.md",
-        commandPath: "/runs/sakura/model-a/run-1/command.txt",
-        htmlPath: "/runs/sakura/model-a/run-1/index.html",
-        metadataPath: "/runs/sakura/model-a/run-1/metadata.json",
-        previewPath: "/runs/sakura/model-a/run-1/preview.png"
-      }
-    };
-    const prepareRun = vi.fn(async () => preparedRun);
-    const api = createLocalApi({
-      runsRoot: "/runs",
-      loadBenchmarks: vi.fn(async () => benchmarks),
-      prepareRun
-    });
-
-    await expect(
-      api.prepareRun({
-        benchmarkId: "sakura",
-        modelId: "model-a",
-        modelSource: "omlx",
-        runner: "opencode",
-        baseUrl: "http://127.0.0.1:8000/v1"
-      })
-    ).resolves.toEqual({
-      preparedRun
-    });
-    expect(prepareRun).toHaveBeenCalledWith({
-      benchmark: benchmarks[0],
-      modelId: "model-a",
-      modelSource: "omlx",
-      runner: "opencode",
-      kind: "visual",
-      baseUrl: "http://127.0.0.1:8000/v1",
-      backendLabel: undefined,
-      runsRoot: "/runs"
-    });
-  });
-
-  it("forwards custom model metadata when preparing manual cloud runs", async () => {
-    const preparedRun = {
-      run: {} as RunMetadata,
-      prompt: "prompt",
-      paths: {
-        runDirectory: "/runs/sakura/chatgpt/run-1",
-        promptPath: "/runs/sakura/chatgpt/run-1/prompt.md",
-        commandPath: "/runs/sakura/chatgpt/run-1/command.txt",
-        htmlPath: "/runs/sakura/chatgpt/run-1/index.html",
-        metadataPath: "/runs/sakura/chatgpt/run-1/metadata.json",
-        previewPath: "/runs/sakura/chatgpt/run-1/preview.png"
-      }
-    };
-    const prepareRun = vi.fn(async () => preparedRun);
-    const api = createLocalApi({
-      runsRoot: "/runs",
-      loadBenchmarks: vi.fn(async () => benchmarks),
-      prepareRun
-    });
-
-    await expect(
-      api.prepareRun({
-        benchmarkId: "sakura",
-        modelId: "ChatGPT",
-        modelSource: "custom",
-        backendLabel: "cloud",
-        runner: "manual"
-      })
-    ).resolves.toEqual({ preparedRun });
-    expect(prepareRun).toHaveBeenCalledWith({
-      benchmark: benchmarks[0],
-      modelId: "ChatGPT",
-      modelSource: "custom",
-      runner: "manual",
-      kind: "visual",
-      baseUrl: undefined,
-      backendLabel: "cloud",
-      runsRoot: "/runs"
-    });
-  });
-
-  it("rejects deprecated non-visual run preparation", async () => {
-    const prepareRun = vi.fn();
-    const api = createLocalApi({
-      runsRoot: "/runs",
-      loadBenchmarks: vi.fn(async () => benchmarks),
-      prepareRun
-    });
-
-    await expect(
-      api.prepareRun({
-        benchmarkId: "sakura",
-        modelId: "local-model",
-        kind: "lighteval",
-        runner: "lighteval"
-      })
-    ).rejects.toThrow(/kind must be visual or data-science/);
-    expect(prepareRun).not.toHaveBeenCalled();
   });
 
   it("captures missing run media through the configured dependency", async () => {
@@ -500,20 +320,6 @@ describe("createLocalApi", () => {
     ).rejects.toThrow(/Write actions are only available in dev server mode/);
   });
 
-  it("rejects preparing run slots when writes are disabled", async () => {
-    const api = createLocalApi({
-      enableWrites: false,
-      loadBenchmarks: vi.fn(async () => benchmarks)
-    });
-
-    await expect(
-      api.prepareRun({
-        benchmarkId: "sakura",
-        modelId: "model-a"
-      })
-    ).rejects.toThrow(/Write actions are only available in dev server mode/);
-  });
-
   it("rejects deleting saved runs when writes are disabled", async () => {
     const api = createLocalApi({ enableWrites: false });
 
@@ -591,111 +397,11 @@ describe("createLocalApi", () => {
       api.openRunHtml({ runDirectory, asset: "preview.png" })
     ).rejects.toThrow(/Only generated HTML files can be opened/);
   });
-
-  it("rejects unknown benchmark IDs while preparing a run", async () => {
-    const api = createLocalApi({
-      loadBenchmarks: vi.fn(async () => benchmarks)
-    });
-
-    await expect(
-      api.prepareRun({
-        benchmarkId: "missing",
-        modelId: "model-a"
-      })
-    ).rejects.toThrow(/Unknown benchmark ID: missing/);
-  });
-
-  it("returns model sync state from the configured dependency", async () => {
-    const getModelSyncState = vi.fn(async () => ({
-      enabled: true,
-      paths: {
-        opencode: "/tmp/opencode.json",
-        pi: "/tmp/models.json"
-      },
-      files: {
-        opencode: { exists: true, modelIds: ["model-a"] },
-        pi: { exists: false, modelIds: [] }
-      }
-    }));
-    const api = createLocalApi({
-      getModelSyncState
-    });
-
-    await expect(api.getModelSyncState()).resolves.toEqual({
-      sync: {
-        enabled: true,
-        paths: {
-          opencode: "/tmp/opencode.json",
-          pi: "/tmp/models.json"
-        },
-        files: {
-          opencode: { exists: true, modelIds: ["model-a"] },
-          pi: { exists: false, modelIds: [] }
-        }
-      }
-    });
-  });
-
-  it("mirrors models through the model-sync dependency", async () => {
-    const mirrorModelsToConfigs = vi.fn(async (): Promise<MirrorModelsResult> => ({
-      updated: ["opencode", "pi"],
-      mirroredModelCount: 2,
-      state: {
-        enabled: true,
-        paths: {
-          opencode: "/tmp/opencode.json",
-          pi: "/tmp/models.json"
-        },
-        files: {
-          opencode: { exists: true, modelIds: ["model-a", "model-b"] },
-          pi: { exists: true, modelIds: ["model-a", "model-b"] }
-        }
-      }
-    }));
-    const api = createLocalApi({
-      mirrorModelsToConfigs
-    });
-
-    await expect(
-      api.mirrorModels({
-        baseUrl: "http://localhost:1234",
-        modelIds: ["model-a", "model-b"],
-        targets: ["opencode", "pi"]
-      })
-    ).resolves.toEqual({
-      updated: ["opencode", "pi"],
-      mirroredModelCount: 2,
-      sync: {
-        enabled: true,
-        paths: {
-          opencode: "/tmp/opencode.json",
-          pi: "/tmp/models.json"
-        },
-        files: {
-          opencode: { exists: true, modelIds: ["model-a", "model-b"] },
-          pi: { exists: true, modelIds: ["model-a", "model-b"] }
-        }
-      }
-    });
-
-    expect(mirrorModelsToConfigs).toHaveBeenCalledWith(
-      {
-        baseUrl: "http://localhost:1234",
-        modelIds: ["model-a", "model-b"],
-        targets: ["opencode", "pi"]
-      },
-      {
-        enabled: true,
-        opencodePath: undefined,
-        piPath: undefined
-      }
-    );
-  });
 });
 
 describe("assertTrustedWriteRequest", () => {
   it("allows same-origin browser write requests", () => {
-    const request = new Request("http://localhost:4321/api/prepare-run", {
+    const request = new Request("http://localhost:4321/api/runs", {
       method: "POST",
       headers: {
         origin: "http://localhost:4321",
@@ -709,7 +415,7 @@ describe("assertTrustedWriteRequest", () => {
   });
 
   it("rejects cross-origin browser write requests", () => {
-    const request = new Request("http://localhost:4321/api/prepare-run", {
+    const request = new Request("http://localhost:4321/api/runs", {
       method: "POST",
       headers: {
         origin: "https://evil.example",
@@ -725,7 +431,7 @@ describe("assertTrustedWriteRequest", () => {
   });
 
   it("rejects write requests without JSON content type", () => {
-    const request = new Request("http://localhost:4321/api/prepare-run", {
+    const request = new Request("http://localhost:4321/api/runs", {
       method: "POST",
       headers: {
         origin: "http://localhost:4321",

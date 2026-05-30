@@ -10,22 +10,6 @@ import {
 } from "../lib/capture-media";
 import { assertSafeRunAssetPath, isPathInside, resolveRunAssetPath } from "../lib/asset-paths";
 import { loadBenchmarks as defaultLoadBenchmarks } from "../lib/benchmarks";
-import {
-  checkLmStudioConnection as defaultCheckLmStudioConnection,
-  listLmStudioModels as defaultListLmStudioModels,
-  normalizeLmStudioBaseUrl
-} from "../lib/lmstudio";
-import {
-  listOmlxModels as defaultListOmlxModels,
-  normalizeOmlxBaseUrl
-} from "../lib/omlx";
-import {
-  getModelSyncState as defaultGetModelSyncState,
-  mirrorModelsToConfigs as defaultMirrorModelsToConfigs,
-  type ModelSyncState,
-  type ModelSyncTarget
-} from "../lib/model-sync";
-import { prepareRun as defaultPrepareRun } from "../lib/prompt-prep";
 import { scoreDsRun as defaultScoreDsRun } from "../lib/score-ds-run";
 import { slugModelId } from "../lib/paths";
 import { exportComparisonVideo as defaultExportComparisonVideo } from "../lib/comparison-video";
@@ -34,53 +18,22 @@ import {
   listRunMetadata as defaultListRunMetadata
 } from "../lib/runs";
 import { getSystemStats as defaultGetSystemStats } from "../lib/system-stats";
-import type { BenchmarkRecord, LMStudioModel, OmlxModel, PreparedRun, RunMetadata, RunRunnerMetadata } from "../lib/types";
+import type { BenchmarkRecord, RunMetadata, RunRunnerMetadata } from "../lib/types";
 import {
   ApiRequestError,
   assertWritesEnabled,
   harnessLabel,
-  readModelSource,
-  readModelSyncTargets,
   readOptionalBoolean,
   readOptionalString,
-  readPrepareRunner,
   readRequiredString,
   readRunBackend,
   readRunHarness,
-  readRunKind,
   readStringArray,
-  selectBenchmark,
   type EditableRunBackend,
   type EditableRunHarness
 } from "./api-helpers";
 
-const STATUS_TIMEOUT_MS = 2000;
-const MODEL_LIST_TIMEOUT_MS = 10000;
 const execFileAsync = promisify(execFile);
-
-export interface StatusRequest {
-  baseUrl?: string;
-}
-
-export interface ModelsRequest {
-  baseUrl?: string;
-}
-
-export interface PrepareRunRequest {
-  benchmarkId?: string;
-  modelId?: string;
-  modelSource?: string;
-  kind?: string;
-  runner?: string;
-  baseUrl?: string;
-  backendLabel?: string;
-}
-
-export interface MirrorModelsRequest {
-  baseUrl?: string;
-  modelIds?: unknown;
-  targets?: unknown;
-}
 
 export interface DeleteRunRequest {
   runDirectory?: string;
@@ -115,21 +68,12 @@ export interface ExportComparisonVideoRequest {
 export interface LocalApiDependencies {
   benchmarkDirectory?: string;
   runsRoot?: string;
-  enableModelSync?: boolean;
   enableWrites?: boolean;
-  opencodePath?: string;
-  piModelsPath?: string;
   loadBenchmarks?: (benchmarkDirectory: string) => Promise<BenchmarkRecord[]>;
-  checkLmStudioConnection?: typeof defaultCheckLmStudioConnection;
-  listLmStudioModels?: typeof defaultListLmStudioModels;
-  listOmlxModels?: typeof defaultListOmlxModels;
   listRunMetadata?: (runsRoot?: string) => Promise<RunMetadata[]>;
   deleteRunDirectory?: typeof defaultDeleteRunDirectory;
   getSystemStats?: typeof defaultGetSystemStats;
-  prepareRun?: typeof defaultPrepareRun;
   scoreDsRun?: typeof defaultScoreDsRun;
-  getModelSyncState?: typeof defaultGetModelSyncState;
-  mirrorModelsToConfigs?: typeof defaultMirrorModelsToConfigs;
   captureMissingRunMedia?: typeof defaultCaptureMissingRunMedia;
   captureSingleRunMedia?: typeof defaultCaptureSingleRunMedia;
   openFile?: (path: string) => Promise<void>;
@@ -137,17 +81,11 @@ export interface LocalApiDependencies {
 }
 
 export interface LocalApi {
-  getStatus(request?: StatusRequest): Promise<StatusResponse>;
   getBenchmarks(): Promise<BenchmarksResponse>;
-  getLmStudioModels(request?: ModelsRequest): Promise<ModelsResponse>;
-  getOmlxModels(request?: ModelsRequest): Promise<OmlxModelsResponse>;
   getSystemStats(): Promise<SystemStatsResponse>;
   getSavedRuns(): Promise<SavedRunsResponse>;
   deleteSavedRun(request: DeleteRunRequest): Promise<DeleteRunResponse>;
   updateSavedRunMetadata(request: UpdateRunMetadataRequest): Promise<UpdateRunMetadataResponse>;
-  prepareRun(request: PrepareRunRequest): Promise<PrepareRunResponse>;
-  getModelSyncState(): Promise<ModelSyncStateResponse>;
-  mirrorModels(request: MirrorModelsRequest): Promise<MirrorModelsResponse>;
   scoreDsRun(request: ScoreDsRunRequest): Promise<ScoreDsRunResponse>;
   captureMissingMedia(request?: CaptureMediaRequest): Promise<CaptureMissingRunMediaResult>;
   openRunHtml(request: OpenRunHtmlRequest): Promise<OpenRunHtmlResponse>;
@@ -155,29 +93,8 @@ export interface LocalApi {
   exportComparisonVideo(request: ExportComparisonVideoRequest): Promise<ExportComparisonVideoResponse>;
 }
 
-export interface StatusResponse {
-  app: {
-    status: "ok";
-    writesEnabled: boolean;
-  };
-  lmStudio: {
-    baseUrl: string;
-    connection: Awaited<ReturnType<typeof defaultCheckLmStudioConnection>>;
-  };
-}
-
 export interface BenchmarksResponse {
   benchmarks: BenchmarkRecord[];
-}
-
-export interface ModelsResponse {
-  baseUrl: string;
-  models: LMStudioModel[];
-}
-
-export interface OmlxModelsResponse {
-  baseUrl: string;
-  models: OmlxModel[];
 }
 
 export interface SystemStatsResponse {
@@ -186,10 +103,6 @@ export interface SystemStatsResponse {
 
 export interface SavedRunsResponse {
   runs: RunMetadata[];
-}
-
-export interface PrepareRunResponse {
-  preparedRun: PreparedRun;
 }
 
 export interface DeleteRunResponse {
@@ -209,16 +122,6 @@ export interface ScoreDsRunResponse {
   scored: true;
   run: RunMetadata;
   runs: RunMetadata[];
-}
-
-export interface ModelSyncStateResponse {
-  sync: ModelSyncState;
-}
-
-export interface MirrorModelsResponse {
-  updated: ModelSyncTarget[];
-  mirroredModelCount: number;
-  sync: ModelSyncState;
 }
 
 export interface OpenRunHtmlResponse {
@@ -244,25 +147,12 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
     dependencies.benchmarkDirectory ?? join(process.cwd(), "benchmarks");
   const runsRoot = dependencies.runsRoot ?? join(process.cwd(), "runs");
   const isDevMode = process.env.NODE_ENV !== "production";
-  const enableModelSync = dependencies.enableModelSync ?? isDevMode;
   const enableWrites = dependencies.enableWrites ?? isDevMode;
-  const opencodePath = dependencies.opencodePath;
-  const piModelsPath = dependencies.piModelsPath;
   const loadBenchmarks = dependencies.loadBenchmarks ?? defaultLoadBenchmarks;
-  const checkLmStudioConnection =
-    dependencies.checkLmStudioConnection ?? defaultCheckLmStudioConnection;
-  const listLmStudioModels =
-    dependencies.listLmStudioModels ?? defaultListLmStudioModels;
-  const listOmlxModels =
-    dependencies.listOmlxModels ?? defaultListOmlxModels;
   const listRunMetadata = dependencies.listRunMetadata ?? defaultListRunMetadata;
   const deleteRunDirectory = dependencies.deleteRunDirectory ?? defaultDeleteRunDirectory;
   const getSystemStats = dependencies.getSystemStats ?? defaultGetSystemStats;
-  const prepareRun = dependencies.prepareRun ?? defaultPrepareRun;
   const scoreDsRunFn = dependencies.scoreDsRun ?? defaultScoreDsRun;
-  const getModelSyncState = dependencies.getModelSyncState ?? defaultGetModelSyncState;
-  const mirrorModelsToConfigs =
-    dependencies.mirrorModelsToConfigs ?? defaultMirrorModelsToConfigs;
   const captureMissingRunMedia =
     dependencies.captureMissingRunMedia ?? defaultCaptureMissingRunMedia;
   const captureSingleRunMedia =
@@ -271,44 +161,9 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
   const exportComparisonVideo = dependencies.exportComparisonVideo ?? defaultExportComparisonVideo;
 
   return {
-    async getStatus(request = {}) {
-      const connection = await checkLmStudioConnection(request.baseUrl, {
-        timeoutMs: STATUS_TIMEOUT_MS
-      });
-
-      return {
-        app: {
-          status: "ok",
-          writesEnabled: enableWrites
-        },
-        lmStudio: {
-          baseUrl: connection.baseUrl,
-          connection
-        }
-      };
-    },
-
     async getBenchmarks() {
       return {
         benchmarks: await loadBenchmarks(benchmarkDirectory)
-      };
-    },
-
-    async getLmStudioModels(request = {}) {
-      return {
-        baseUrl: normalizeLmStudioBaseUrl(request.baseUrl),
-        models: await listLmStudioModels(request.baseUrl, {
-          timeoutMs: MODEL_LIST_TIMEOUT_MS
-        })
-      };
-    },
-
-    async getOmlxModels(request = {}) {
-      return {
-        baseUrl: normalizeOmlxBaseUrl(request.baseUrl),
-        models: await listOmlxModels(request.baseUrl, {
-          timeoutMs: MODEL_LIST_TIMEOUT_MS
-        })
       };
     },
 
@@ -345,28 +200,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
           customBackend: readOptionalString(request.customBackend, "customBackend"),
           harness: readRunHarness(request.harness),
           modelId: readOptionalString(request.modelId, "modelId")
-        })
-      };
-    },
-
-    async prepareRun(request) {
-      assertWritesEnabled(enableWrites);
-      readRunKind(request.kind);
-      const benchmark = selectBenchmark(
-        await loadBenchmarks(benchmarkDirectory),
-        readRequiredString(request.benchmarkId, "benchmarkId")
-      );
-
-      return {
-        preparedRun: await prepareRun({
-          benchmark,
-          modelId: readRequiredString(request.modelId, "modelId"),
-          modelSource: readModelSource(request.modelSource),
-          runner: readPrepareRunner(request.runner),
-          kind: readRunKind(request.kind),
-          baseUrl: readOptionalString(request.baseUrl, "baseUrl"),
-          backendLabel: readOptionalString(request.backendLabel, "backendLabel"),
-          runsRoot
         })
       };
     },
@@ -436,40 +269,6 @@ export function createLocalApi(dependencies: LocalApiDependencies = {}): LocalAp
       const runDirectories = readStringArray(request.runDirectories, "runDirectories");
       return exportComparisonVideo({ runsRoot, runDirectories });
     },
-
-    async getModelSyncState() {
-      return {
-        sync: await getModelSyncState({
-          enabled: enableModelSync,
-          opencodePath,
-          piPath: piModelsPath
-        })
-      };
-    },
-
-    async mirrorModels(request) {
-      const modelIds = readStringArray(request.modelIds, "modelIds");
-      const targets = readModelSyncTargets(request.targets);
-
-      const result = await mirrorModelsToConfigs(
-        {
-          baseUrl: request.baseUrl,
-          modelIds,
-          targets
-        },
-        {
-          enabled: enableModelSync,
-          opencodePath,
-          piPath: piModelsPath
-        }
-      );
-
-      return {
-        updated: result.updated,
-        mirroredModelCount: result.mirroredModelCount,
-        sync: result.state
-      };
-    }
   };
 }
 

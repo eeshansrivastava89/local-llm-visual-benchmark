@@ -1,6 +1,3 @@
-import type { ModelSourceId, RunKind } from "../lib/types";
-import type { ModelSyncTarget } from "../lib/model-sync";
-import type { PrepareRunRunner } from "../lib/prompt-prep";
 
 export class ApiRequestError extends Error {
   readonly status: number;
@@ -62,44 +59,6 @@ export function readStringArray(value: unknown, field: string): string[] {
   return result;
 }
 
-export function readRunKind(value: unknown): RunKind {
-  if (value === undefined || value === null || value === "") {
-    return "visual";
-  }
-  if (value === "visual" || value === "data-science") {
-    return value;
-  }
-  throw new ApiRequestError(400, "kind must be visual or data-science.");
-}
-
-export function readPrepareRunner(value: unknown): PrepareRunRunner {
-  if (value === undefined || value === null || value === "") {
-    return "manual";
-  }
-  if (
-    value === "manual" ||
-    value === "pi" ||
-    value === "opencode" ||
-    value === "hermes"
-  ) {
-    return value;
-  }
-  throw new ApiRequestError(400, "runner must be manual, pi, opencode, or hermes.");
-}
-
-export function readModelSource(value: unknown): ModelSourceId | undefined {
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
-  if (value === "omlx" || value === "lmstudio") {
-    return value;
-  }
-  if (value === "custom") {
-    return value;
-  }
-  throw new ApiRequestError(400, "modelSource must be omlx, lmstudio, or custom.");
-}
-
 export function readRunBackend(value: unknown): EditableRunBackend {
   if (value === undefined || value === null || value === "") {
     return "unrecorded";
@@ -128,24 +87,6 @@ export function readRunHarness(value: unknown): EditableRunHarness {
   throw new ApiRequestError(400, "harness must be manual, pi, opencode, or hermes.");
 }
 
-export function readModelSyncTargets(value: unknown): ModelSyncTarget[] {
-  const targets = value ?? ["opencode", "pi"];
-  if (!Array.isArray(targets)) {
-    throw new ApiRequestError(400, "targets must be an array.");
-  }
-  const normalized = Array.from(
-    new Set(
-      targets
-        .map((item) => (typeof item === "string" ? item.trim() : ""))
-        .filter((item): item is ModelSyncTarget => item === "opencode" || item === "pi")
-    )
-  );
-  if (normalized.length === 0) {
-    throw new ApiRequestError(400, "targets must include pi, opencode, or both.");
-  }
-  return normalized;
-}
-
 export function harnessLabel(harness: EditableRunHarness): string {
   if (harness === "pi") return "Pi";
   if (harness === "opencode") return "OpenCode";
@@ -157,13 +98,4 @@ export function assertWritesEnabled(enableWrites: boolean): void {
   if (!enableWrites) {
     throw new ApiRequestError(403, "Write actions are only available in dev server mode.");
   }
-}
-
-export function selectBenchmark<T extends { id: string }>(benchmarks: T[], requestedId: string): T {
-  const byId = new Map(benchmarks.map((benchmark) => [benchmark.id, benchmark]));
-  const selected = byId.get(requestedId);
-  if (!selected) {
-    throw new ApiRequestError(400, `Unknown benchmark ID: ${requestedId}.`);
-  }
-  return selected;
 }

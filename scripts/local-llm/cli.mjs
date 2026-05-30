@@ -1,11 +1,11 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { ensureLocalDirs } from "./paths.mjs";
 import { PRESETS } from "./presets.mjs";
 import { scanGgufModels } from "./scan.mjs";
 import { ensureProfileCommand, loadProfiles, profileExists, readProfile, saveProfile, profilePath, profileTimestamp, sanitizeProfileId, slugFromLabel, normalizeProfile, readState, deleteProfile } from "./profiles.mjs";
 import { buildPrettyCommand } from "./command.mjs";
-import { renderEstimate, renderEstimateExplanation } from "./estimate.mjs";
+import { estimateMemory } from "./estimate.mjs";
 import { colors, createPrompt, formatBytes, printHelp, relativeTime, renderRows, startInteractive } from "./ui.mjs";
 import { hasOpenCodeModel, hasPiModel, launchHarness, syncOpenCodeConfig, syncPiConfig, removeFromPiConfig, removeFromOpenCodeConfig } from "./harnesses.mjs";
 import { isProfileRunning, profileRuntimeStatus, serverReady, startServer, stopProfile, waitForReady } from "./process.mjs";
@@ -17,21 +17,19 @@ import { prepareCommand } from "./prepare.mjs";
 export async function runCli(argv) {
   const [command = "help", ...args] = argv;
   if (["help", "--help", "-h"].includes(command)) return printHelp();
-  if (command === "list") return listCommand(args);
+  if (command === "models") return modelsCommand(args);
   if (command === "setup") return setupCommand(args);
-  if (command === "show") return showCommand(args); // Backward-compatible alias; prefer: list <profile>
   if (command === "prepare" || command === "prep") return prepareCommand(args);
   if (command === "run") return runCommand(args);
   if (command === "stop") return stopCommand(args);
   if (command === "remove" || command === "rm") return removeCommand(args);
-  throw new Error(`Unknown command: ${command}. Run scripts/local-llm.mjs help`);
+  throw new Error(`Unknown command: ${command}. Run local-llm help`);
 }
 
-async function listCommand(argv) {
+async function modelsCommand(argv) {
   const what = argv[0];
-  if (!what || what === "profiles") return listAll();
-  if (what === "models") return listAll({ onlyModels: true }); // Hidden compatibility alias.
-  return listProfile(what);
+  if (what && what !== "profiles" && !what.startsWith("-")) return listProfile(what);
+  return listAll();
 }
 
 async function listProfile(id) {
@@ -39,8 +37,8 @@ async function listProfile(id) {
   console.log(await renderFullProfile(profile));
 }
 
-async function listAll(options = {}) {
-  if (process.stdin.isTTY) startInteractive("local-llm list");
+async function listAll() {
+  if (process.stdin.isTTY) startInteractive("local-llm models");
   await ensureLocalDirs();
   const profiles = await Promise.all((await loadProfiles()).map(async (profile) => {
     const backend = backendFor(profile.backend);
@@ -51,29 +49,69 @@ async function listAll(options = {}) {
   const unprofiledGguf = ggufModels.filter((model) => !profiledModelPaths.has(model.path));
   const items = [];
 
-  if (!options.onlyModels) {
-    console.log(colors.bold("Saved profiles"));
+  console.log(colors.bold("Saved profiles"));
     if (profiles.length === 0) {
-      console.log(colors.yellow("  None yet. Download a model, then run: local-llm setup"));
+      console.log(colors.yellow("  None yet. Download a model, then choose Set up from local-llm models"));
     } else {
+      const backendColors = {
+        "llama-cpp": colors.yellow,
+        "llama-cpp-mtp": colors.blue,
+        "ollama": colors.magenta,
+        "omlx": colors.cyan
+      };
+      // Group profiles by backend
+      const backendOrder = ["llama-cpp", "llama-cpp-mtp", "ollama", "omlx"];
+      const groups = new Map();
+      for (const beId of backendOrder) groups.set(beId, []);
       for (const profile of profiles) {
-        const index = items.push({ type: "profile", profile });
-        const running = await isProfileRunning(profile);
-        const timestamp = await profileTimestamp(profile.id);
-        const backend = backendFor(profile.backend);
-        const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
-        const badge = backend.type === "managed-server" ? ` ${colors.magenta(`[${backend.label}]`)}` : "";
-        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)}${badge} ${colors.dim(relativeTime(timestamp))}`);
-        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${missing ? ` · ${colors.red(missing)}` : ""}`);
+        const beId = profile.backend ?? "llama-cpp";
+        if (!groups.has(beId)) groups.set(beId, []);
+        groups.get(beId).push(profile);
+      }
+      let firstGroup = true;
+      for (const beId of backendOrder) {
+        const group = groups.get(beId);
+        if (!group || group.length === 0) continue;
+        const backend = backendFor(beId);
+        const colorFn = backendColors[beId] ?? colors.magenta;
+        if (!firstGroup) console.log("");
+        firstGroup = false;
+        console.log(colorFn(colors.bold(backend.label)));
+        for (const profile of group) {
+          const index = items.push({ type: "profile", profile });
+          const running = await isProfileRunning(profile);
+          const timestamp = await profileTimestamp(profile.id);
+          const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
+          const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
+          console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
+          console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
+        }
+      }
+      // Print any backend groups not in the standard order
+      for (const [beId, group] of groups) {
+        if (backendOrder.includes(beId) || group.length === 0) continue;
+        const backend = backendFor(beId);
+        const colorFn = backendColors[beId] ?? colors.magenta;
+        console.log("");
+        console.log(colorFn(colors.bold(backend.label)));
+        for (const profile of group) {
+          const index = items.push({ type: "profile", profile });
+          const running = await isProfileRunning(profile);
+          const timestamp = await profileTimestamp(profile.id);
+          const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
+          const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
+          console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
+          console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
+        }
       }
     }
-    console.log("");
+  console.log("");
   }
 
-  console.log(colors.bold(options.onlyModels ? `Downloaded GGUF models under ~/.lmstudio/models` : "Downloaded models not set up yet"));
-  const visibleModels = options.onlyModels ? ggufModels : unprofiledGguf;
+  console.log(colors.bold("Downloaded models not set up yet"));
+  const visibleModels = unprofiledGguf;
   if (visibleModels.length === 0) {
-    console.log(options.onlyModels ? colors.yellow("  No GGUF models found.") : colors.dim("  None. Every downloaded GGUF has a profile."));
+    console.log(colors.dim("  None. Every downloaded GGUF has a profile."));
   } else {
     for (const model of visibleModels) {
       const index = items.push({ type: "model", model });
@@ -103,8 +141,9 @@ async function listAll(options = {}) {
     } else {
       for (const model of unprofiled) {
         const index = items.push({ type: "managed", model, backendId: beId });
-        console.log(`${String(index).padStart(2, " ")}. ${colors.cyan(model.label)} ${colors.magenta(`[${be.label}]`)}`);
-        console.log(`    id: ${colors.cyan(model.id)}`);
+        const badgeColor = {ollama: colors.magenta, omlx: colors.cyan}[beId] ?? colors.magenta;
+        console.log(`${String(index).padStart(2, " ")}. ${colors.cyan(model.label)} ${badgeColor(`[${be.label}]`)}${model.sizeBytes ? ` · ${colors.dim(formatBytes(model.sizeBytes))}` : ""}`);
+        console.log(`    id: ${colors.cyan(model.id)}${model.quant ? ` · quant: ${colors.dim(model.quant)}` : ""}${model.family ? ` · family: ${colors.dim(model.family)}` : ""}`);
       }
     }
   }
@@ -112,23 +151,56 @@ async function listAll(options = {}) {
   if (process.stdin.isTTY && items.length > 0) {
     const prompt = createPrompt();
     try {
-      const selected = await prompt.choice("Inspect", [
-        ...items.map((item, index) => ({
-          value: String(index),
-          label: item.type === "profile" ? item.profile.label : item.model.label,
-          hint: item.type === "profile" ? `${item.profile.id} · ${item.profile.modelAlias}` : item.type === "managed" ? `${BACKENDS[item.backendId].label} · id: ${item.model.id}` : `alias: ${item.model.aliasSuggestion}`
-        })),
-        { value: "__done", label: "Done" }
-      ], "__done");
-      if (selected === "__done") return;
-      const item = items[Number(selected)];
+      const input = await prompt.text("Select a number (Enter to skip)", "");
+      if (!input) return;
+      const index = Number(input) - 1;
+      if (Number.isNaN(index) || index < 0 || index >= items.length) {
+        console.log(colors.yellow(`No item ${input}.`));
+        return;
+      }
+      const item = items[index];
       if (item.type === "profile") {
         const backend = backendFor(item.profile.backend);
-        console.log("\n" + await renderFullProfile(backend.needsCommandFile ? await ensureProfileCommand(item.profile) : item.profile));
+        const action = await prompt.choice("Action", [
+          { value: "inspect", label: "Inspect" },
+          { value: "setup", label: "Re-sync harness" },
+          { value: "remove", label: "Remove" },
+          { value: "cancel", label: "Cancel" }
+        ], "inspect");
+        if (action === "cancel") return;
+        if (action === "inspect") {
+          console.log("\n" + await renderFullProfile(backend.needsCommandFile ? await ensureProfileCommand(item.profile) : item.profile));
+        } else if (action === "setup") {
+          await syncHarnessConfigs(item.profile, await prompt.choice("Sync", syncChoices(), "both"));
+        } else if (action === "remove") {
+          await removeProfile(item.profile.id, {});
+        }
       } else if (item.type === "managed") {
-        console.log("\n" + renderManagedModelDetails(item.model, BACKENDS[item.backendId]));
+        const action = await prompt.choice("Action", [
+          { value: "inspect", label: "Inspect" },
+          { value: "setup", label: "Set up" },
+          { value: "cancel", label: "Cancel" }
+        ], "setup");
+        if (action === "cancel") return;
+        if (action === "inspect") {
+          console.log("\n" + renderManagedModelDetails(item.model, BACKENDS[item.backendId]));
+        } else if (action === "setup") {
+          const suggestedId = slugFromLabel(item.model.label);
+          await setupCommand([suggestedId]);
+        }
       } else {
-        console.log("\n" + renderModelDetails(item.model));
+        const action = await prompt.choice("Action", [
+          { value: "inspect", label: "Inspect" },
+          { value: "setup", label: "Set up" },
+          { value: "cancel", label: "Cancel" }
+        ], "setup");
+        if (action === "cancel") return;
+        if (action === "inspect") {
+          console.log("\n" + renderModelDetails(item.model));
+        } else if (action === "setup") {
+          const suggestedId = slugFromLabel(item.model.label);
+          await setupCommand([suggestedId]);
+        }
       }
     } finally {
       prompt.close();
@@ -325,7 +397,14 @@ async function setupCommand(argv) {
       }
     });
 
-    console.log("\n" + renderEstimate(profile));
+    const est = estimateMemory(profile);
+    console.log();
+    console.log(renderSection("Memory", renderRows([
+      ["Estimated total", colors.bold(`~${formatBytes(est.totalBytes)}`)],
+      ["Model", formatBytes(est.modelBytes)],
+      ["KV cache", est.kvBytes ? `~${formatBytes(est.kvBytes)} (ctx ${profile.flags.ctxSize}, ${profile.flags.parallel ?? 1} slot, ${profile.flags.cacheTypeK}/${profile.flags.cacheTypeV})` : "unknown"],
+      ...(est.note ? [["Note", colors.yellow(est.note)]] : [])
+    ])));
     console.log("\n" + colors.bold("Command"));
     console.log(buildPrettyCommand(profile));
 
@@ -342,11 +421,7 @@ async function setupCommand(argv) {
   }
 }
 
-async function showCommand(argv) {
-  const profile = await ensureProfileCommand(await readProfileArg(argv));
-  console.log(colors.yellow("`show` still works, but the simpler command is: local-llm list <profile>\n"));
-  console.log(await renderFullProfile(profile));
-}
+
 
 async function runCommand(argv) {
   await ensureLocalDirs();
@@ -651,30 +726,42 @@ async function renderFullProfile(profile) {
   const piConfigured = await hasPiModel(profile);
   const openCodeConfigured = await hasOpenCodeModel(profile);
   const missing = isManaged ? "" : missingProfileFiles(profile);
+  const backendColors = {
+    "llama-cpp": colors.yellow,
+    "llama-cpp-mtp": colors.blue,
+    "ollama": colors.magenta,
+    "omlx": colors.cyan
+  };
+  const colorFn = backendColors[profile.backend] ?? colors.magenta;
   const sections = [
     colors.bold(colors.cyan(profile.label)),
     "",
     renderSection("Profile", renderRows([
       ["ID", colors.cyan(profile.id)],
       ["Endpoint", colors.green(profile.baseUrl)],
-      ["Backend", colors.magenta(backend.label)],
+      ["Backend", colorFn(backend.label)],
       ["Provider", colors.cyan(profile.providerId)],
       ...(!isManaged ? [
         ["Server", colors.dim(serverBinaryFor(profile))],
         ["Model", renderPathStatus(profile.modelPath, "missing --model")],
-        ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")]
+        ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")],
+        ["Size", profile.modelPath && existsSync(profile.modelPath) ? formatBytes(statSync(profile.modelPath).size) : colors.dim("unknown")]
       ] : [
-        ...(backendId === "ollama" ? [["Ollama model", colors.cyan(profile.ollamaModel ?? profile.modelAlias)]] : []),
-        ...(backendId === "omlx" ? [["oMLX model", colors.cyan(profile.omlxModel ?? profile.modelAlias)]] : [])
+        ...(profile.backend === "ollama" ? [["Ollama model", colors.cyan(profile.ollamaModel ?? profile.modelAlias)]] : []),
+        ...(profile.backend === "omlx" ? [["oMLX model", colors.cyan(profile.omlxModel ?? profile.modelAlias)]] : [])
       ]),
       ["Alias", colors.cyan(profile.modelAlias)]
     ])),
     ""
   ];
   if (!isManaged && !missing) {
-    sections.push(renderSection("Memory", renderEstimate(profile)));
-    sections.push("");
-    sections.push(renderSection("How estimate works", withoutFirstLine(renderEstimateExplanation(profile))));
+    const est = estimateMemory(profile);
+    sections.push(renderSection("Memory", renderRows([
+      ["Estimated total", colors.bold(`~${formatBytes(est.totalBytes)}`)],
+      ["Model", formatBytes(est.modelBytes)],
+      ["KV cache", est.kvBytes ? `~${formatBytes(est.kvBytes)} (ctx ${profile.flags.ctxSize}, ${profile.flags.parallel ?? 1} slot${(profile.flags.parallel ?? 1) !== 1 ? "s" : ""}, ${profile.flags.cacheTypeK}/${profile.flags.cacheTypeV})` : "unknown"],
+      ...(est.note ? [["Note", colors.yellow(est.note)]] : [])
+    ])));
     sections.push("");
   } else if (isManaged) {
     sections.push(renderSection("Memory", colors.dim(`${backend.label} manages its own memory. No local estimate needed.`)));
@@ -685,17 +772,13 @@ async function renderFullProfile(profile) {
     ["OpenCode", `${configBadge(openCodeConfigured)} ${colors.cyan(profile.harnesses.opencode.model)}`]
   ])));
   if (!isManaged && commandText) {
+    const withoutComments = commandText.trim().split("\n").filter((line) => !line.startsWith("#")).join("\n").replace(/^\n+/, "");
     sections.push("");
-    sections.push(renderSection("Editable command file", colors.dim(profile.commandPath)));
-    sections.push("");
-    sections.push(renderSection("Command", highlightShell(commandText.trim())));
+    sections.push(renderSection("Command", colors.dim(profile.commandPath)));
+    sections.push(highlightShell(withoutComments));
   }
   sections.push("");
-  sections.push(renderSection("Next", [
-    `${colors.green("Run:")}  local-llm run ${profile.id} --with pi`,
-    ...(!isManaged ? [`${colors.cyan("Edit:")} ${profile.commandPath}`] : []),
-    colors.dim(`Metadata: ${profilePath(profile.id)}`)
-  ].join("\n")));
+  sections.push(renderSection("Next", `${colors.green("Run:")} local-llm run ${profile.id} --with pi`));
   return sections.join("\n");
 }
 
@@ -705,12 +788,20 @@ function backendId(profile) {
 
 function renderProfileSummary(profile) {
   const backend = backendFor(profile.backend);
-  const badge = backend.type === "managed-server" ? ` ${colors.magenta(`[${backend.label}]`)}` : "";
+  const backendColors = {
+    "llama-cpp": colors.yellow,
+    "llama-cpp-mtp": colors.blue,
+    "ollama": colors.magenta,
+    "omlx": colors.cyan
+  };
+  const colorFn = backendColors[profile.backend] ?? colors.magenta;
+  const badge = ` ${colorFn(`[${backend.label}]`)}`;
+  const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
   return renderSection("Profile", renderRows([
     ["ID", colors.cyan(profile.id)],
     ["Label", colors.bold(profile.label) + badge],
     ["Endpoint", colors.green(profile.baseUrl)],
-    ["Backend", colors.magenta(backend.label)],
+    ["Backend", colorFn(backend.label)],
     ["Provider", colors.cyan(profile.providerId)],
     ...(!backend.needsCommandFile ? [] : [
       ["Server", colors.dim(serverBinaryFor(profile))],
@@ -719,6 +810,7 @@ function renderProfileSummary(profile) {
     ...(backend.needsModelFile ? [
       ["Model", renderPathStatus(profile.modelPath, "missing --model")],
       ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")],
+      ["Size", profile.modelPath && existsSync(profile.modelPath) ? formatBytes(statSync(profile.modelPath).size) : colors.dim("unknown")],
     ] : [
       ...(profile.backend === "ollama" ? [["Ollama model", colors.cyan(profile.ollamaModel ?? profile.modelAlias)]] : []),
       ...(profile.backend === "omlx" ? [["oMLX model", colors.cyan(profile.omlxModel ?? profile.modelAlias)]] : []),
@@ -773,9 +865,7 @@ function configBadge(configured) {
   return configured ? colors.green("configured") : colors.yellow("missing");
 }
 
-function withoutFirstLine(text) {
-  return text.split("\n").slice(1).join("\n");
-}
+
 
 function highlightShell(text) {
   return text

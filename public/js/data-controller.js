@@ -8,7 +8,7 @@ import { findRunByDirectoryOrId } from "./runs.js";
 import { updateOnboarding, showHtmlDetectToast } from "./ui.js";
 import { renderMachineProfile } from "./machine-profile.js";
 import { renderBenchmarks, renderHarnesses, renderKindTabs, renderModelSources, renderModels, renderRuns } from "./workbench-controller.js";
-import { loadConnection, loadModelSyncState, loadOmlxModels } from "./model-source-controller.js";
+
 import { captureMissingMedia } from "./capture-controller.js";
 import { renderDetail, updateDetailActions } from "./detail-actions.js";
 import { updateWriteControls } from "./operational-controls.js";
@@ -37,7 +37,7 @@ export async function loadLocalData() {
       onRefresh: refreshRunsForPolling,
       onDetect: showHtmlDetectToast
     });
-    await Promise.allSettled([loadOmlxModels(), loadConnection(), loadModelSyncState()]);
+
   } catch (error) {
     await enterStaticMode(error);
   }
@@ -50,11 +50,6 @@ export async function enterStaticMode(reason) {
     state.benchmarks = manifest.benchmarks ?? [];
     state.runs = manifest.runs ?? [];
     state.machineProfile = manifest.machineProfile ?? null;
-    state.discoveredModels = [];
-    state.omlxModels = [];
-    state.lmStudioModels = [];
-    state.omlxConnected = false;
-    state.lmConnected = false;
     state.writesEnabled = false;
     renderMachineProfile(state.machineProfile);
     renderKindTabs();

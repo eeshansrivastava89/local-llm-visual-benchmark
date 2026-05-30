@@ -24,20 +24,5 @@ export const state = {
   scoreBusy: false,
   scoreRunDirectory: "",
   onboardingDismissed: false,
-  htmlPollInterval: null,
-
-  // Internal state for model discovery polling (no longer rendered to UI)
-  discoveredModels: [],
-  omlxModels: [],
-  lmStudioModels: [],
-  omlxConnected: false,
-  lmConnected: false,
-  modelSync: {
-    enabled: false,
-    paths: { opencode: "", pi: "" },
-    files: {
-      opencode: { exists: false, modelIds: [] },
-      pi: { exists: false, modelIds: [] }
-    }
-  }
+  htmlPollInterval: null
 };

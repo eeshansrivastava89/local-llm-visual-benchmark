@@ -14,7 +14,7 @@ export const colors = {
 export function printHelp() {
   console.log(`${colors.bold("local-llm")} - local LLM profile runner\n`);
   console.log("Usage:");
-  console.log("  local-llm list [profile-id]");
+  console.log("  local-llm models");
   console.log("  local-llm setup [profile]");
   console.log("  local-llm prepare [--benchmarks <dir>] [--runs <dir>]");
   console.log("  local-llm run [profile] [--with pi|opencode] [--reuse-existing] [--keep-server]");
@@ -22,7 +22,7 @@ export function printHelp() {
   console.log("  local-llm remove [profile] [--force] [--keep-logs]");
   console.log("");
   console.log(colors.bold("Commands:"));
-  console.log("  list      List profiles, models, and discovered backends");
+  console.log("  models    List all profiles and models; inspect, set up, or remove");
   console.log("  setup     Create or edit a profile (interactive)");
   console.log("  prepare   Prepare a run directory with prompt and metadata");
   console.log("  run       Start server + launch harness for a profile");

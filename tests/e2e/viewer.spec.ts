@@ -26,12 +26,6 @@ const models = [
   }
 ];
 
-const omlxModels = [
-  {
-    id: "Qwen3.6-35B-A3B-4bit"
-  }
-];
-
 const sampleMachineProfile = {
   collectedAt: "2026-05-06T19:12:00.000Z",
   platform: {
@@ -157,7 +151,7 @@ const sampleUnsupportedRun = {
 };
 
 test("renders the visual workbench with prompt/model/table modes", async ({ page }) => {
-  await mockApi(page, { lmStudioOnline: true });
+  await mockApi(page, {});
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
@@ -292,7 +286,7 @@ test("compares selected visual runs side by side", async ({ page }) => {
     }
   ];
   const exportPayloads: unknown[] = [];
-  await mockApi(page, { lmStudioOnline: true, runs: compareRuns, onExportComparison: (payload) => { exportPayloads.push(payload); } });
+  await mockApi(page, {  runs: compareRuns, onExportComparison: (payload) => { exportPayloads.push(payload); } });
 
   await page.goto("/");
   await page.getByRole("button", { name: "Table" }).click();
@@ -339,7 +333,7 @@ test("paginates the table mode at 10 records", async ({ page }) => {
       : { id: models[1].id, slug: "local-qwen2-5-vl" },
     runDirectory: `/tmp/runs/page/${index}`
   }));
-  await mockApi(page, { lmStudioOnline: true, runs: manyRuns });
+  await mockApi(page, {  runs: manyRuns });
 
   await page.goto("/");
   await page.getByRole("button", { name: "Table" }).click();
@@ -357,7 +351,7 @@ test("paginates the table mode at 10 records", async ({ page }) => {
 });
 
 test("toggles and persists the dark theme", async ({ page }) => {
-  await mockApi(page, { lmStudioOnline: true });
+  await mockApi(page, {});
 
   await page.goto("/");
   await expect(page.locator("html")).not.toHaveAttribute("data-theme", "dark");
@@ -373,161 +367,6 @@ test("toggles and persists the dark theme", async ({ page }) => {
   await page.getByRole("button", { name: "Use light theme" }).click();
   await expect(page.locator("html")).not.toHaveAttribute("data-theme", "dark");
   await expect.poll(() => page.evaluate(() => localStorage.getItem("theme"))).toBe("light");
-});
-
-test("prepares a run slot via modal and shows the generated prompt", async ({ page }) => {
-  let preparePayload: unknown;
-  await mockApi(page, {
-    lmStudioOnline: true,
-    onPrepare: (payload) => {
-      preparePayload = payload;
-    }
-  });
-
-  await page.goto("/");
-  await page.getByRole("button", { name: "Prepare run" }).click();
-
-  await expect(page.locator("#prepBackdrop[open]")).toBeVisible();
-  await expect(page.locator(".prep-header-actions #omlxStatusPill")).toHaveCount(1);
-  await expect(page.locator(".prep-header-actions #lmStudioStatusPill")).toHaveCount(1);
-  await expect(page.locator("#omlxStatusPill")).toHaveAttribute("data-status", "online");
-  await expect(page.locator("#omlxStatusPill")).toContainText("oMLX 1");
-  await expect(page.locator("#omlxStatusPill")).not.toHaveAttribute("tabindex", "0");
-  await expect(page.locator("#lmStudioStatusPill")).toHaveAttribute("data-status", "online");
-  await expect(page.locator("#lmStudioStatusPill")).toContainText("LM Studio 2");
-  await expect(page.locator("#helpTooltip")).toBeHidden();
-  await expect(page.locator("#prepModel")).toHaveCount(0);
-  await page.locator("#prepBackdrop").locator("#prepBenchmark").selectOption("solar-system");
-  await page.locator("#prepBackdrop").locator("#prepModelSource").selectOption("omlx");
-  await page.locator("#prepBackdrop").locator("#prepModelSelect").selectOption("Qwen3.6-35B-A3B-4bit");
-  await expect(page.locator("label", { hasText: "Model label" })).toHaveCount(0);
-  await page.locator("#prepBackdrop").getByRole("button", { name: "Prepare slot" }).click();
-
-  await expect.poll(() => preparePayload).toMatchObject({
-    benchmarkId: "solar-system",
-    modelId: "Qwen3.6-35B-A3B-4bit",
-    modelSource: "omlx",
-    runner: "manual"
-  });
-  await expect(page.locator("#prepBackdrop").locator("#preparedPrompt")).toHaveValue(
-    /Write the file as `index\.html` in the current working directory/
-  );
-  await expect(page.getByText("Run slot prepared")).toBeVisible();
-
-  const layoutColumns = await page.locator("#prepLayout").evaluate((el) =>
-    getComputedStyle(el).gridTemplateColumns
-  );
-  expect(layoutColumns.split(" ").length).toBeGreaterThanOrEqual(2);
-
-  const promptBox = await page.locator("#preparedPrompt").boundingBox();
-  expect(promptBox?.height ?? 0).toBeGreaterThanOrEqual(300);
-
-  await page.locator("#closePrep").click();
-  await expect(page.locator("[data-run-id]").first()).toBeVisible();
-
-  await page.getByRole("button", { name: "Prepare run" }).click();
-  await expect(page.locator("#preparedPrompt")).toHaveValue("");
-  await expect(page.locator("#preparedPaths")).toContainText("No run slot prepared yet.");
-  await expect(page.locator("#copyPrompt")).toBeDisabled();
-});
-
-test("prepares LM Studio runs without exposing llama.cpp command controls", async ({ page }) => {
-  const preparePayloads: unknown[] = [];
-  await mockApi(page, {
-    lmStudioOnline: true,
-    onPrepare: (payload) => {
-      preparePayloads.push(payload);
-    }
-  });
-
-  await page.goto("/");
-  await page.getByRole("button", { name: "Prepare run" }).click();
-
-  await expect(page.locator("#prepKind")).toHaveCount(0);
-  await expect(page.locator("#prepLightEvalFields")).toHaveCount(0);
-  await expect(page.locator("#prepRunner option[value='llama-cpp']")).toHaveCount(0);
-  await expect(page.locator("#prepBaseUrl")).toHaveCount(0);
-  await expect(page.locator("#prepCommand")).toHaveCount(0);
-  await page.locator("#prepRunner").selectOption("opencode");
-  await page.locator("#prepModelSource").selectOption("lmstudio");
-  await page.locator("#prepModelSelect").selectOption(models[1].id);
-  await page.locator("#prepBackdrop").getByRole("button", { name: "Prepare slot" }).click();
-
-  await expect.poll(() => preparePayloads.at(-1)).toMatchObject({
-    kind: "visual",
-    runner: "opencode",
-    modelSource: "lmstudio",
-    baseUrl: "http://localhost:1234/v1",
-    modelId: models[1].id
-  });
-  await expect(page.locator("#preparedPaths")).toContainText("Run slot prepared");
-  await expect(page.locator("#preparedPaths")).not.toContainText("command.txt");
-});
-
-test("prepares custom cloud model run slots", async ({ page }) => {
-  let preparePayload: unknown;
-  await mockApi(page, {
-    lmStudioOnline: false,
-    onPrepare: (payload) => {
-      preparePayload = payload;
-    }
-  });
-
-  await page.goto("/");
-  await page.getByRole("button", { name: "Prepare run" }).click();
-  await page.locator("#prepModelSource").selectOption("custom");
-
-  await expect(page.locator("#prepModelSelectGroup")).toBeHidden();
-  await expect(page.locator("#prepCustomBackendGroup")).toBeVisible();
-  await expect(page.locator("#prepCustomModelGroup")).toBeVisible();
-  await page.locator("#prepCustomBackend").fill("cloud");
-  await page.locator("#prepCustomModel").fill("ChatGPT");
-  await page.locator("#prepRunner").selectOption("manual");
-  await page.locator("#prepBackdrop").getByRole("button", { name: "Prepare slot" }).click();
-
-  await expect.poll(() => preparePayload).toMatchObject({
-    modelSource: "custom",
-    backendLabel: "cloud",
-    modelId: "ChatGPT",
-    runner: "manual"
-  });
-  await expect(page.locator("#preparedPaths")).toContainText("Run slot prepared for cloud");
-});
-
-
-test("warns in the prepare modal when the selected model source is offline", async ({ page }) => {
-  await mockApi(page, { lmStudioOnline: false });
-
-  await page.goto("/");
-  await page.getByRole("button", { name: "Prepare run" }).click();
-
-  await expect(page.locator("#prepBackdrop[open]")).toBeVisible();
-  await expect(page.locator("#omlxStatusPill")).toHaveAttribute("data-status", "online");
-  await expect(page.locator("#lmStudioStatusPill")).toHaveAttribute("data-status", "offline");
-  await expect(page.locator("#lmStudioStatusPill")).toContainText("LM Studio off");
-
-  await page.locator("#prepModelSource").selectOption("lmstudio");
-
-  await expect(page.locator("#prepModelSelect option").first()).toHaveText("LM Studio offline");
-  await expect(page.locator("#prepModelWarning")).toBeVisible();
-  await expect(page.locator("#prepModelWarning")).toContainText("LM Studio is not reachable");
-  await expect(page.locator("#prepareRun")).toBeDisabled();
-});
-
-test("refreshes oMLX status when opening the prepare modal", async ({ page }) => {
-  let omlxOnline = false;
-  await mockApi(page, { lmStudioOnline: false, omlxOnline: () => omlxOnline });
-
-  await page.goto("/");
-  await expect(page.locator("#omlxStatusPill")).toHaveAttribute("data-status", "offline");
-
-  omlxOnline = true;
-  await page.getByRole("button", { name: "Prepare run" }).click();
-
-  await expect(page.locator("#prepBackdrop[open]")).toBeVisible();
-  await expect(page.locator("#omlxStatusPill")).toHaveAttribute("data-status", "online");
-  await expect(page.locator("#lmStudioStatusPill")).toHaveAttribute("data-status", "offline");
-  await expect(page.locator("#prepModelSelect option").first()).not.toHaveText("oMLX offline");
 });
 
 test("supports prompt comparison and video-only run details", async ({ page }) => {
@@ -548,7 +387,7 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
     });
   });
   await mockApi(page, {
-    lmStudioOnline: true,
+    
     onOpenHtml: (payload) => {
       openHtmlPayload = payload;
     },
@@ -606,7 +445,7 @@ test("supports prompt comparison and video-only run details", async ({ page }) =
 
 test("hides unsupported non-visual runs from visual workspaces", async ({ page }) => {
   await mockApi(page, {
-    lmStudioOnline: true,
+    
     runs: [sampleRun, sampleUnsupportedRun]
   });
 
@@ -627,7 +466,7 @@ test("recaptures media for the open run detail", async ({ page }) => {
   let capturePayload: unknown;
   let runsResponse: unknown[] = [sampleRunWithVideo];
   await mockApi(page, {
-    lmStudioOnline: true,
+    
     runs: () => runsResponse,
     onCapture: (payload) => {
       capturePayload = payload;
@@ -682,7 +521,7 @@ test("grouped views scroll as one surface and avoid duplicate card labels", asyn
       : { id: models[1].id, slug: "local-qwen2-5-vl" },
     runDirectory: `/tmp/runs/${index}`
   }));
-  await mockApi(page, { lmStudioOnline: true, runs: manyRuns });
+  await mockApi(page, {  runs: manyRuns });
 
   await page.goto("/");
   await page.waitForSelector("[data-run-id]", { timeout: 5000 });
@@ -713,7 +552,7 @@ test("uses dense Sidequests-style gallery geometry on desktop", async ({ page })
       : { id: models[1].id, slug: "local-qwen2-5-vl" },
     runDirectory: `/tmp/runs/dense/${index}`
   }));
-  await mockApi(page, { lmStudioOnline: true, runs: manyRuns });
+  await mockApi(page, {  runs: manyRuns });
   await page.setViewportSize({ width: 1600, height: 900 });
 
   await page.goto("/");
@@ -752,7 +591,7 @@ test("scrolls grouped views from the page margins instead of trapping the grid",
       : { id: models[1].id, slug: "local-qwen2-5-vl" },
     runDirectory: `/tmp/runs/group-scroll/${index}`
   }));
-  await mockApi(page, { lmStudioOnline: true, runs: manyRuns });
+  await mockApi(page, {  runs: manyRuns });
   await page.setViewportSize({ width: 1600, height: 900 });
 
   await page.goto("/");
@@ -775,7 +614,7 @@ test("captures missing run media with per-card progress", async ({ page }) => {
   });
   let runsResponse: unknown[] = [sampleRun];
   await mockApi(page, {
-    lmStudioOnline: true,
+    
     runs: () => runsResponse,
     onCapture: async (payload) => {
       expect(payload).toMatchObject({ runDirectory: sampleRun.runDirectory });
@@ -818,7 +657,7 @@ test("auto-detects newly saved HTML and starts capture from the toast", async ({
   });
 
   await mockApi(page, {
-    lmStudioOnline: true,
+    
     runs: () => runsResponse,
     onCapture: (payload) => {
       capturePayload = payload;
@@ -852,7 +691,7 @@ test("auto-detects newly saved HTML and starts capture from the toast", async ({
 
 test("shows capture quality failures instead of hiding them behind capture prompts", async ({ page }) => {
   await mockApi(page, {
-    lmStudioOnline: true,
+    
     runs: [
       {
         ...sampleRun,
@@ -891,7 +730,7 @@ test("refresh reloads prompt files and saved runs", async ({ page }) => {
   let benchmarkResponse = benchmarks;
   let runsResponse: unknown[] = [sampleRun];
   await mockApi(page, {
-    lmStudioOnline: true,
+    
     benchmarks: () => benchmarkResponse,
     runs: () => runsResponse
   });
@@ -920,7 +759,7 @@ test("refresh reloads prompt files and saved runs", async ({ page }) => {
 test("deletes a run folder from the visual detail after confirmation", async ({ page }) => {
   let deletePayload: unknown;
   await mockApi(page, {
-    lmStudioOnline: true,
+    
     onDelete: (payload) => {
       deletePayload = payload;
     }
@@ -951,7 +790,7 @@ test("deletes a run folder from the visual detail after confirmation", async ({ 
 });
 
 test("keeps the viewer usable on mobile widths", async ({ page }) => {
-  await mockApi(page, { lmStudioOnline: false, runs: [] });
+  await mockApi(page, { runs: [] });
   await page.setViewportSize({ width: 390, height: 900 });
 
   await page.goto("/");
@@ -977,7 +816,7 @@ test("keeps visual detail prompt usable on mobile widths", async ({ page }) => {
       prompt: longPrompt
     }
   };
-  await mockApi(page, { lmStudioOnline: true, runs: [mobileRun] });
+  await mockApi(page, {  runs: [mobileRun] });
   await page.setViewportSize({ width: 390, height: 900 });
 
   await page.goto("/");
@@ -1002,7 +841,7 @@ test("keeps visual detail prompt usable on mobile widths", async ({ page }) => {
 });
 
 test("hides operational chrome when writes are disabled", async ({ page }) => {
-  await mockApi(page, { lmStudioOnline: true, writesEnabled: false });
+  await mockApi(page, {  writesEnabled: false });
 
   await page.goto("/");
   await expect(page.locator("[data-run-id]").first()).toBeVisible();
@@ -1098,11 +937,8 @@ test("falls back to exported static data without prepare controls", async ({ pag
 async function mockApi(
   page: Page,
   options: {
-    lmStudioOnline: boolean;
-    omlxOnline?: boolean | (() => boolean);
     benchmarks?: () => typeof benchmarks;
     runs?: unknown[] | (() => unknown[]);
-    onPrepare?: (payload: unknown) => void;
     onDelete?: (payload: unknown) => void;
     onCapture?: (payload: unknown) => void | Promise<void>;
     onOpenHtml?: (payload: unknown) => void | Promise<void>;
@@ -1142,71 +978,7 @@ async function mockApi(
     });
   });
 
-  await page.route("**/api/status**", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        app: { status: "ok", writesEnabled: options.writesEnabled ?? true },
-        lmStudio: {
-          baseUrl: "http://localhost:1234/v1",
-          connection: options.lmStudioOnline
-            ? { ok: true, baseUrl: "http://localhost:1234/v1" }
-            : {
-                ok: false,
-                baseUrl: "http://localhost:1234/v1",
-                error: "LM Studio checking connection network error: failed to fetch"
-              }
-        }
-      })
-    });
-  });
 
-  await page.route("**/api/lmstudio/models**", async (route) => {
-    if (!options.lmStudioOnline) {
-      await route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({
-          error: {
-            message: "LM Studio listing models network error: failed to fetch"
-          }
-        })
-      });
-      return;
-    }
-
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        baseUrl: "http://localhost:1234/v1",
-        models
-      })
-    });
-  });
-
-  await page.route("**/api/omlx/models**", async (route) => {
-    const omlxOnline = typeof options.omlxOnline === "function" ? options.omlxOnline() : options.omlxOnline;
-    if (omlxOnline === false) {
-      await route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({
-          error: {
-            message: "oMLX listing models network error: failed to fetch"
-          }
-        })
-      });
-      return;
-    }
-
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        baseUrl: "http://127.0.0.1:8000/v1",
-        models: omlxModels
-      })
-    });
-  });
 
   await page.route("**/api/capture-media", async (route) => {
     const payload = route.request().postDataJSON();
@@ -1254,78 +1026,6 @@ async function mockApi(
     });
   });
 
-  await page.route("**/api/model-sync", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        sync: {
-          enabled: true,
-          paths: {
-            opencode: "/home/.config/opencode/opencode.json",
-            pi: "/home/.pi/agent/models.json"
-          },
-          files: {
-            opencode: {
-              exists: true,
-              modelIds: [models[1].id]
-            },
-            pi: {
-              exists: true,
-              modelIds: [models[1].id]
-            }
-          }
-        }
-      })
-    });
-  });
-
-  await page.route("**/api/prepare-run", async (route) => {
-    const payload = route.request().postDataJSON();
-    options.onPrepare?.(payload);
-    const runDirectory =
-      "/tmp/runs/solar-system/google-gemma-4-e4b/2026-05-07T04-00-32-122Z";
-    const benchmark = benchmarks.find((item) => item.id === payload.benchmarkId);
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        preparedRun: {
-          run: {
-            runId: "2026-05-07T04-00-32-122Z",
-            benchmark,
-            model: {
-              id: payload.modelId,
-              slug: "google-gemma-4-e4b"
-            },
-            kind: "visual",
-            runner: {
-              mode: payload.runner === "manual" ? "manual" : "external",
-              modelSource: payload.modelSource,
-              intendedRunner: payload.runner ?? "manual",
-              backendLabel: payload.modelSource === "custom" ? payload.backendLabel : payload.modelSource === "omlx" ? "oMLX" : "LM Studio",
-              baseUrl: payload.baseUrl
-            },
-            status: "prepared",
-            createdAt: "2026-05-07T04:00:32.122Z",
-            updatedAt: "2026-05-07T04:00:32.122Z",
-            runDirectory,
-            assets: {
-              metadata: "metadata.json",
-              prompt: "prompt.md"
-            }
-          },
-          prompt: "Create a complete, self-contained HTML file. Write the file as `index.html` in the current working directory.",
-          paths: {
-            runDirectory,
-            promptPath: runDirectory + "/prompt.md",
-            commandPath: runDirectory + "/command.txt",
-            htmlPath: runDirectory + "/index.html",
-            metadataPath: runDirectory + "/metadata.json",
-            previewPath: runDirectory + "/preview.png"
-          }
-        }
-      })
-    });
-  });
 }
 
 // --- Data-science run E2E tests ---
