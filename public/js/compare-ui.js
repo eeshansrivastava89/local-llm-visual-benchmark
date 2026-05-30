@@ -48,8 +48,6 @@ function exportButtonAttrs(selectedRuns, context) {
 
 function renderComparePreviewCard(run) {
   const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
-function renderComparePreviewCard(run) {
-  const title = run.benchmark?.title ?? run.benchmark?.id ?? "Untitled run";
   const model = run.model?.id ?? "Unknown model";
   const stack = stackAttemptIdentity(run);
   const kind = run.kind ?? "visual";

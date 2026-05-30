@@ -2,7 +2,7 @@ import { assetHref } from "./assets.js";
 import { compareRunKey, selectedCompareRuns } from "./compare.js";
 import { renderComparePreviewGrid } from "./compare-ui.js";
 import { icon } from "./icons.js";
-import { displayRunError, needsDsScoring, needsMediaCapture, runCardIdentity, runCardMediaMessage, runCardState, runKind, stackAttemptIdentity } from "./runs.js";
+import { displayRunError, hasCapturedVideo, needsDsScoring, needsMediaCapture, runCardIdentity, runCardMediaMessage, runCardState, runKind, stackAttemptIdentity } from "./runs.js";
 import { renderStackSummary } from "./stack-pills.js";
 import { escapeAttribute, escapeHtml, formatDateShort } from "./utils.js";
 
