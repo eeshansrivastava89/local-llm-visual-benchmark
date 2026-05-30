@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-30T04:22:02.171Z",
+  "generatedAt": "2026-05-30T05:14:58.813Z",
   "benchmarks": [
     {
       "id": "ab-test-analysis",
@@ -54,13 +54,16 @@
         "id": "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive",
         "slug": "qwen3-6-35b-a3b-uncensored-hauhaucs-aggressive-cbf05e65ee"
       },
-      "status": "prepared",
+      "status": "completed",
       "createdAt": "2026-05-30T04:17:59.111Z",
-      "updatedAt": "2026-05-30T04:17:59.111Z",
+      "updatedAt": "2026-05-30T04:39:17.709Z",
       "preparedAt": "2026-05-30T04:17:59.111Z",
+      "completedAt": "2026-05-30T04:39:17.709Z",
       "runDirectory": "export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-uncensored-hauhaucs-aggressive-cbf05e65ee/2026-05-30T04-17-59-111Z",
       "assets": {
-        "metadata": "metadata.json"
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
       },
       "runner": {
         "mode": "external",
@@ -69,6 +72,26 @@
         "backendLabel": "LM Studio",
         "model": "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive",
         "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-30T04:39:17.709Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-30T04:39:17.709Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
       }
     },
     {
@@ -3773,7 +3796,7 @@
     }
   ],
   "machineProfile": {
-    "collectedAt": "2026-05-30T04:22:02.176Z",
+    "collectedAt": "2026-05-30T05:14:58.814Z",
     "platform": {
       "node": "v26.0.0",
       "platform": "darwin",
@@ -3783,7 +3806,7 @@
       "type": "Darwin",
       "release": "25.5.0",
       "hostname": "Eeshans-MacBook-Pro-16.local",
-      "uptimeSeconds": 856134
+      "uptimeSeconds": 859310
     },
     "cpu": {
       "model": "Apple M4 Pro",
@@ -3792,11 +3815,11 @@
     },
     "memory": {
       "totalBytes": 51539607552,
-      "availableBytes": 8736129024,
-      "freeBytes": 60325888,
-      "usedBytes": 42803478528,
-      "pressurePercent": 83,
-      "pressureLabel": "medium",
+      "availableBytes": 26387185664,
+      "freeBytes": 2364243968,
+      "usedBytes": 25152421888,
+      "pressurePercent": 48.8,
+      "pressureLabel": "low",
       "source": "macOS VM stats, cached and purgeable memory excluded"
     },
     "hardware": {
