@@ -492,8 +492,10 @@ html[data-theme="dark"] .sync-target-logo { filter: brightness(1.1); }
 
 .detail-backdrop { --modal-gutter: clamp(1rem, 2vmin, 1.75rem); position: fixed; inset: 0; z-index: 50; display: none; place-content: center; place-items: center; min-height: 100dvh; padding: var(--modal-gutter); background: var(--modal-backdrop); }
 .detail-backdrop[open] { display: grid; }
-.detail-shell { width: min(1480px, calc(100vw - (var(--modal-gutter) * 2))); height: min(940px, calc(100dvh - (var(--modal-gutter) * 2))); max-height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); overflow: hidden; border: 1px solid var(--app-border); border-radius: 1rem; background: var(--card); box-shadow: 0 24px 70px rgb(0 0 0 / 0.16); }
+.detail-shell { width: min(1480px, calc(100vw - (var(--modal-gutter) * 2))); height: min(940px, calc(100dvh - (var(--modal-gutter) * 2))); max-height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); overflow: hidden; border: 1px solid var(--app-border); border-radius: 1rem; background: var(--card); box-shadow: 0 24px 70px rgb(0 0 0 / 0.16); transition: border-color 0.2s ease; }
+.detail-shell:hover { border-color: color-mix(in srgb, var(--primary), var(--app-border) 50%); }
 .detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--app-border); padding: 0.85rem 1.1rem; flex-wrap: wrap; }
+.detail-header h2 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
 .detail-body { min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) minmax(320px, 0.34fr); gap: 0.9rem; overflow: hidden; }
 .detail-body > * { min-width: 0; }
 .detail-body > .grid { grid-template-rows: minmax(0, 1fr); }
