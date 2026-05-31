@@ -247,6 +247,7 @@ function profileForJson(profile) {
   };
   if (profile.modelPath) base.modelPath = profile.modelPath;
   if (profile.mmprojPath) base.mmprojPath = profile.mmprojPath;
+  if (profile.draftModelPath) base.draftModelPath = profile.draftModelPath;
   // For managed backends, save host/port for baseUrl
   if (backend.type === "managed-server") {
     base.flags = { host: profile.flags?.host, port: profile.flags?.port };

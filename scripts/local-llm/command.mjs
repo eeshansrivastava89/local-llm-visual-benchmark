@@ -11,6 +11,7 @@ export function buildArgvFromFlags(profile) {
   const argv = [];
   argv.push("--model", profile.modelPath);
   if (profile.mmprojPath) argv.push("--mmproj", profile.mmprojPath);
+  if (profile.draftModelPath) argv.push("--spec-draft-model", profile.draftModelPath);
   argv.push("--alias", profile.modelAlias);
   argv.push("--host", String(f.host));
   argv.push("--port", String(f.port));
@@ -91,6 +92,7 @@ export function applyCommandArgv(profile, argv) {
   const modelPath = optionValue(argv, "--model") ?? optionValue(argv, "-m") ?? profile.modelPath;
   const modelAlias = optionValue(argv, "--alias") ?? profile.modelAlias ?? (modelPath ? basename(modelPath).replace(/\.gguf$/iu, "") : undefined);
   const mmprojValue = optionValue(argv, "--mmproj");
+  const draftModelValue = optionValue(argv, "--spec-draft-model") ?? optionValue(argv, "-md") ?? optionValue(argv, "--model-draft");
   const host = optionValue(argv, "--host");
   const port = numberOption(argv, "--port");
   const ctxSize = numberOption(argv, "--ctx-size");
@@ -119,6 +121,7 @@ export function applyCommandArgv(profile, argv) {
     modelPath,
     modelAlias,
     mmprojPath: mmprojValue ?? null,
+    draftModelPath: draftModelValue ?? null,
     flags,
     harnesses: {
       ...(profile.harnesses ?? {}),

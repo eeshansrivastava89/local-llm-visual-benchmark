@@ -269,6 +269,15 @@ async function setupGgufProfile(model) {
     const presencePenalty = await prompt.number("Presence penalty - reduces repetition; coding default 0, general often 1.5", defaults.presencePenalty, -2, 2);
     const repeatPenalty = await prompt.number("Repeat penalty - 1 disables; keep 1 unless repetition is bad", defaults.repeatPenalty, 0, 2);
 
+    let draftModelPath;
+    if (serverVariantId === "mtp") {
+      draftModelPath = await prompt.text("Draft model path (speculative decoding drafter .gguf, or leave empty for built-in MTP)", "");
+      if (draftModelPath && !existsSync(draftModelPath)) {
+        console.log(colors.yellow(`Draft model not found: ${draftModelPath}`));
+        draftModelPath = undefined;
+      }
+    }
+
     const flags = { ...defaults, ctxSize, cacheTypeK, cacheTypeV, temperature, topP, topK, minP, presencePenalty, repeatPenalty };
     const profile = normalizeProfile({
       id,
@@ -278,6 +287,7 @@ async function setupGgufProfile(model) {
       modelAlias,
       modelPath: model.path,
       mmprojPath: model.mmprojPath,
+      ...(draftModelPath ? { draftModelPath } : {}),
       preset: presetId,
       flags,
       harnesses: {
@@ -930,6 +940,7 @@ async function renderFullProfile(profile) {
         ["Server", colors.dim(serverBinaryFor(profile))],
         ["Model", renderPathStatus(profile.modelPath, "missing --model")],
         ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")],
+        ...(profile.draftModelPath ? [["Drafter", renderPathStatus(profile.draftModelPath, "missing drafter")]] : []),
         ["Size", profile.modelPath && existsSync(profile.modelPath) ? formatBytes(statSync(profile.modelPath).size) : colors.dim("unknown")]
       ] : [
         ...(profile.backend === "ollama" ? [["Ollama model", colors.cyan(profile.ollamaModel ?? profile.modelAlias)]] : []),
@@ -991,6 +1002,7 @@ function renderProfileSummary(profile) {
     ...(backend.needsModelFile ? [
       ["Model", renderPathStatus(profile.modelPath, "missing --model")],
       ["MMProj", profile.mmprojPath ? renderPathStatus(profile.mmprojPath, "missing mmproj") : colors.yellow("none")],
+      ...(profile.draftModelPath ? [["Drafter", renderPathStatus(profile.draftModelPath, "missing drafter")]] : []),
       ["Size", profile.modelPath && existsSync(profile.modelPath) ? formatBytes(statSync(profile.modelPath).size) : colors.dim("unknown")],
     ] : [
       ...(profile.backend === "ollama" ? [["Ollama model", colors.cyan(profile.ollamaModel ?? profile.modelAlias)]] : []),

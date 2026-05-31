@@ -5,6 +5,7 @@ import { colors, formatBytes, renderRows } from "./ui.mjs";
 export function estimateMemory(profile) {
   const modelBytes = statSync(profile.modelPath).size;
   const mmprojBytes = profile.mmprojPath && existsSync(profile.mmprojPath) ? statSync(profile.mmprojPath).size : 0;
+  const draftBytes = profile.draftModelPath && existsSync(profile.draftModelPath) ? statSync(profile.draftModelPath).size : 0;
   const metadata = readGgufMetadata(profile.modelPath);
   const architecture = metadata["general.architecture"];
   const prefix = typeof architecture === "string" ? architecture : null;
@@ -36,9 +37,10 @@ export function estimateMemory(profile) {
   return {
     modelBytes,
     mmprojBytes,
+    draftBytes,
     kvBytes: kv.bytes,
     overheadBytes,
-    totalBytes: modelBytes + mmprojBytes + kv.bytes + overheadBytes,
+    totalBytes: modelBytes + mmprojBytes + draftBytes + kv.bytes + overheadBytes,
     note: kv.note,
     details: { architecture, layers, headKv, keyLength, valueLength, slidingWindow, slidingWindowPattern, keyLengthSwa, valueLengthSwa, bytesK, bytesV, kvMode: kv.mode }
   };
@@ -49,6 +51,7 @@ export function renderEstimate(profile) {
   const rows = [
     ["Model file", formatBytes(estimate.modelBytes)],
     ["MMProj file", profile.mmprojPath ? formatBytes(estimate.mmprojBytes) : "none"],
+    ...(profile.draftModelPath ? [["Drafter file", formatBytes(estimate.draftBytes)]] : []),
     ["KV cache", estimate.kvBytes ? `~${formatBytes(estimate.kvBytes)}` : "unknown"],
     ["Runtime overhead", `~${formatBytes(estimate.overheadBytes)}`],
     [colors.bold("Estimated total"), colors.bold(`~${formatBytes(estimate.totalBytes)}`)],
