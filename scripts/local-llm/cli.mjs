@@ -902,7 +902,9 @@ async function syncHarnessConfigs(profile, sync) {
   if (!["none", "pi", "opencode", "both"].includes(sync)) {
     throw new Error("sync must be none, pi, opencode, or both.");
   }
-  if (sync !== "none" && (!profile.modelPath || !existsSync(profile.modelPath))) {
+  const backend = backendFor(profile.backend);
+  const isManaged = backend.type === "managed-server";
+  if (sync !== "none" && !isManaged && (!profile.modelPath || !existsSync(profile.modelPath))) {
     throw new Error(`Model file is missing, so config was not synced yet: ${profile.modelPath ?? "unknown"}`);
   }
   if (["pi", "both"].includes(sync)) await syncPiConfig(profile);
