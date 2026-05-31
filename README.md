@@ -15,14 +15,12 @@
 <img width="1467" height="897" alt="image" src="https://github.com/user-attachments/assets/6499b82d-1cba-402e-b2c6-eca3f3b6076e" />
 
 
-> **Requirements:** [Node.js 24+](https://nodejs.org/) and an Apple Silicon local model source such as [oMLX](https://omlx.ai/) or [LM Studio](https://lmstudio.ai/). OpenCode, Pi, Hermes, LM Studio chat, or another local coding harness can run the generated prompts.
-
+> **Requirements:** [Node.js 24+](https://nodejs.org/) and a local model source: [oMLX](https://omlx.ai/), [LM Studio](https://lmstudio.ai/), [Ollama](https://ollama.com/), or any OpenAI-compatible API. Run benchmarks with Pi, OpenCode, or manual chat.
 
 ```bash
 npm install
 npm run dev
 ```
-
 
 </div>
 
@@ -30,11 +28,11 @@ npm run dev
 
 Model benchmarks are usually abstract: scores, tokens, leaderboards, and tiny deltas that do not always explain what a model can actually do.
 
-This project takes a more practical route. It gives local models small visual build tasks like a solar system, a sakura tree, a macro wildflower scene, or a sunset ocean study. The model has to produce a working HTML artifact. The app captures a screenshot and 20-second preview video, then lets you compare outputs by model or by prompt.
+This project takes a more practical route. It gives models small visual build tasks like a solar system, a sakura tree, a macro wildflower scene, or a sunset ocean study. The model has to produce a working HTML artifact. The app captures a screenshot and 20-second preview video, then lets you compare outputs by model or by prompt.
 
 If a model understands layout, animation, visual hierarchy, browser APIs, and instruction-following, the result usually looks better. If it struggles, you can see exactly where it falls apart.
 
-The point of view is intentionally narrow: this is an Apple Silicon daily-driver stack benchmark, not a universal local-inference leaderboard. The project is about finding which combination of MLX/oMLX or LM Studio, model artifact, coding harness, and prompt workflow is usable enough for real local work.
+The point of view is intentionally narrow: this is an Apple Silicon daily-driver stack benchmark, not a universal local-inference leaderboard. The project is about finding which combination of model source (oMLX, LM Studio, Ollama, cloud), model artifact (GGUF quant, MLOX format, API), coding harness (Pi, OpenCode, manual chat), and prompt workflow is usable enough for real local work.
 
 ## What it tests
 
@@ -49,16 +47,40 @@ The point of view is intentionally narrow: this is an Apple Silicon daily-driver
 
 ## How it works
 
-1. Start oMLX or LM Studio and load the models you want to test.
-2. Open this app locally with `npm run dev`.
-3. Use **Setup** to refresh discovered models and optionally sync LM Studio models into Pi or OpenCode.
-4. Click **Prepare run**, choose a benchmark, model source, model, and harness, then copy the generated prompt.
-5. Paste the prompt into OpenCode, Pi, Hermes, LM Studio chat, or another local tool.
-6. The tool writes `index.html` into the prepared run folder.
-7. Click **Refresh** to reload saved runs and capture missing preview media.
-8. Browse results in the workbench using **By prompt**, **By model**, or **Table**. In **Table**, select rows to compare visual runs side by side.
+### Running benchmarks
+
+Use the CLI to prepare, run, and manage benchmarks:
+
+```bash
+local-llm models          # interactive: inspect, set up, run, benchmark, remove
+local-llm run <profile>   # start server + launch harness
+local-llm stop [profile]  # stop tracked servers
+```
+
+The `local-llm models` flow is action-first: pick what you want to do (inspect, set up, run, benchmark, remove), then pick the item. It discovers GGUF models from LM Studio, live models from Ollama and oMLX, and cloud models from past benchmark runs.
+
+### Using the workbench
+
+1. Open the app locally with `npm run dev`.
+2. Browse results in the workbench using **By prompt**, **By model**, or **Table** views.
+3. Toggle cloud models on/off with the **Include cloud models** checkbox.
+4. In **Table**, select rows to compare visual runs side by side.
 
 The live site is the same workbench as a static export of captured results. The local app is where run preparation, capture, deletion, folder-opening, and config sync happen.
+
+### Cloud model benchmarks
+
+Cloud models (GPT, Claude, Gemini, DeepSeek, etc.) are benchmarked the same way: `local-llm models` → Benchmark → choose "New cloud model" or a previously used cloud model. The prompt is copied into your cloud tool of choice. No local server needed.
+
+## Supported backends
+
+| Backend | Type | Model source | Setup |
+|---|---|---|---|
+| **llama.cpp** | Local server | `~/.lmstudio/models/` GGUF | `local-llm models` → Set up |
+| **llama.cpp MTP** | Local server (speculative decoding) | `~/.lmstudio/models/` GGUF | `local-llm models` → Set up → MTP variant |
+| **Ollama** | Managed server | Ollama API (`localhost:11434`) | `local-llm models` → Set up |
+| **oMLX** | Managed server | oMLX API (`127.0.0.1:8000`) | `local-llm models` → Set up |
+| **Cloud** | No server | Any OpenAI-compatible API | `local-llm models` → Benchmark |
 
 ## Setup
 
@@ -86,7 +108,11 @@ LM Studio defaults to:
 http://localhost:1234/v1
 ```
 
-You can use any harness that can create the requested `index.html` file. OpenCode, Pi, and Hermes are useful comparison points because the harness changes tool calling, file writes, retries, and recovery behavior. LM Studio config sync remains available for supported harnesses.
+Ollama defaults to:
+
+```text
+http://localhost:11434/v1
+```
 
 ## Publishing your own gallery
 
@@ -99,23 +125,13 @@ git commit -m "data: publish gallery update"
 git push
 ```
 
-That single publish command refreshes the publish-safe gallery snapshot in `public/export/`, runs checks/tests, and creates a smoke-testable static site in:
+That single publish command refreshes the publish-safe gallery snapshot in `public/export/`, runs checks/tests, and creates a smoke-testable static site in `dist-static/`.
 
-```text
-dist-static/
-```
-
-The GitHub Pages workflow deploys the static build at the custom domain root `https://localai.eeshans.com/` by setting `ASTRO_BASE=/` and publishing `public/CNAME`. To smoke-test a repository-path build instead, run `ASTRO_BASE=/local-llm-visual-benchmark/ npm run build:static` and serve `dist-static/` from that path.
-
-For this repository, GitHub Pages is deployed by `.github/workflows/deploy-pages.yml` on every push to `main`. The live site should be configured to use **GitHub Actions** as its Pages source. There is no separate gallery branch: `main` contains the app code plus the publish-safe `public/export/` snapshot that the workflow deploys.
-
-New captured results still start locally in ignored `runs/`. Running `npm run publish` copies only the public-safe parts into `public/export/`; CI then reuses that committed snapshot rather than reading local `runs/`.
-
-The static export includes benchmark metadata, summary run metadata, preview images, MP4 preview videos, and a build-time machine profile for the header pill. It does not publish raw generated `index.html` files, prepared per-run prompts, raw responses, stream logs, launch commands, local paths, local WebM captures, or operational controls.
+The GitHub Pages workflow deploys at `https://localai.eeshans.com/` on every push to `main`.
 
 ## Architecture notes
 
-The browser workbench is intentionally one site, not separate local and public apps. Local dev mode and the static GitHub Pages export share the same Astro page and viewer modules. Static mode only loads `export/manifest.json` and hides local operational controls such as Setup, Prepare run, Refresh/capture, Open in Finder, Recapture, and Delete.
+The browser workbench is intentionally one site, not separate local and public apps. Local dev mode and the static GitHub Pages export share the same Astro page and viewer modules. Static mode only loads `export/manifest.json` and hides local operational controls.
 
 The viewer bootstrap lives in `public/js/app.js`; feature behavior is split into small controller modules under `public/js/` for data loading, model sources, capture, prepare-run, detail actions, workbench rendering, operational-control visibility, icons, and the machine-profile pill.
 
@@ -147,7 +163,7 @@ npm run check         # Astro + TypeScript checks
 ## Privacy
 
 - Runs are local by default.
-- oMLX and LM Studio stay on your machine.
+- oMLX, LM Studio, and Ollama stay on your machine.
 - The production site may use PostHog pageview analytics; local builds keep analytics disabled unless explicitly enabled with public env vars.
 - The app only publishes captured media, the benchmark prompt text, publish-safe summary metadata, and a build-time machine profile when you build the static export.
 - Raw generated HTML, prepared run prompts, raw responses, stream logs, launch commands, local service URLs, and local filesystem paths are kept local and are not included in the published workbench.
