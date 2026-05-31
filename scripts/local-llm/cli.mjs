@@ -86,7 +86,7 @@ async function listAll() {
     }
   }
   console.log("");
-
+  console.log(colors.dim("─".repeat(60)));
   console.log(colors.bold("Downloaded models not set up yet"));
   const visibleModels = unprofiledGguf;
   if (visibleModels.length === 0) {
