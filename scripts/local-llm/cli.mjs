@@ -78,10 +78,13 @@ async function listAll() {
         const index = items.push({ type: "profile", profile });
         const running = await isProfileRunning(profile);
         const timestamp = await profileTimestamp(profile.id);
+        const piOk = await hasPiModel(profile);
+        const ocOk = await hasOpenCodeModel(profile);
         const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
         const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
+        const harnessTag = ` · ${piOk ? colors.green("pi") : colors.yellow("pi")}/${ocOk ? colors.green("oc") : colors.yellow("oc")}`;
         console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
-        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
+        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${harnessTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
       }
     }
     for (const [beId, group] of groups) {
@@ -94,10 +97,13 @@ async function listAll() {
         const index = items.push({ type: "profile", profile });
         const running = await isProfileRunning(profile);
         const timestamp = await profileTimestamp(profile.id);
+        const piOk = await hasPiModel(profile);
+        const ocOk = await hasOpenCodeModel(profile);
         const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
         const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
+        const harnessTag = ` · ${piOk ? colors.green("pi") : colors.yellow("pi")}/${ocOk ? colors.green("oc") : colors.yellow("oc")}`;
         console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
-        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
+        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${harnessTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
       }
     }
   }
