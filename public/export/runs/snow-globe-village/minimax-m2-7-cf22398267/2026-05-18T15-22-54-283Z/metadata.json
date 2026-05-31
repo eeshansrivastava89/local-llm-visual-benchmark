@@ -25,9 +25,9 @@
   },
   "runner": {
     "mode": "external",
-    "modelSource": "custom",
+    "modelSource": "cloud",
     "intendedRunner": "Pi",
-    "backendLabel": "cloud",
+    "backendLabel": "Cloud",
     "model": "Minimax M2.7",
     "retries": 0
   },

@@ -149,10 +149,6 @@ function renderMetadataEditor(run) {
         '<span>Backend</span>' +
         '<select class="input" name="backend">' + renderBackendOptions(currentBackendValue(run)) + '</select>' +
       '</label>' +
-      '<label class="metadata-editor-field" data-custom-backend-field>' +
-        '<span>Custom backend</span>' +
-        '<input class="input" name="customBackend" value="' + escapeAttribute(currentBackendLabel(run)) + '" placeholder="cloud" />' +
-      '</label>' +
       '<label class="metadata-editor-field">' +
         '<span>Coding harness</span>' +
         '<select class="input" name="harness">' + renderHarnessOptions(currentHarnessValue(run)) + '</select>' +
@@ -166,13 +162,6 @@ function wireMetadataEditor(run) {
   const form = document.querySelector("#detailMetadataEditor");
   if (!form) return;
 
-  const backendSelect = form.elements.backend;
-  const customField = form.querySelector("[data-custom-backend-field]");
-  const updateCustomVisibility = () => {
-    customField.hidden = backendSelect.value !== "custom";
-  };
-  backendSelect.addEventListener("change", updateCustomVisibility);
-  updateCustomVisibility();
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     void saveMetadataEditor(run, form);
@@ -188,7 +177,6 @@ async function saveMetadataEditor(run, form) {
     const data = await patchJson("/api/runs", {
       runDirectory: run.runDirectory,
       backend: form.elements.backend.value,
-      customBackend: form.elements.customBackend.value,
       harness: form.elements.harness.value,
       modelId: form.elements.modelId.value
     });
@@ -211,13 +199,12 @@ async function saveMetadataEditor(run, form) {
 
 function renderBackendOptions(selected) {
   return [
-    ["unrecorded", "Source unrecorded"],
-    ["omlx", "oMLX"],
-    ["lmstudio", "LM Studio"],
-    ["llama.cpp", "llama.cpp"],
+    ["llama-cpp", "llama.cpp"],
+    ["llama-cpp-mtp", "llama.cpp MTP"],
     ["ollama", "Ollama"],
-    ["mlx", "Base MLX"],
-    ["custom", "Custom…"]
+    ["omlx", "oMLX"],
+    ["cloud", "Cloud API"],
+    ["unrecorded", "Source unrecorded"]
   ].map(([value, label]) => renderOption(value, label, selected)).join("");
 }
 
@@ -235,23 +222,26 @@ function renderOption(value, label, selected) {
 }
 
 function currentBackendValue(run) {
-  if (run.runner?.modelSource === "omlx" || run.runner?.modelSource === "lmstudio") {
-    return run.runner.modelSource;
-  }
-  if (run.runner?.modelSource === "custom") return "custom";
+  const source = run.runner?.modelSource;
+  if (source === "ollama") return "ollama";
+  if (source === "omlx") return "omlx";
+  if (source === "llama-cpp") return "llama-cpp";
+  if (source === "llama-cpp-mtp") return "llama-cpp-mtp";
+  if (source === "cloud") return "cloud";
+  // Fallback for unrecorded or old data
   const backend = String(run.runner?.backendLabel ?? "").toLowerCase();
-  if (/lm studio|lmstudio/u.test(backend)) return "lmstudio";
   if (/omlx/u.test(backend)) return "omlx";
-  if (/llama\.cpp/u.test(backend)) return "llama.cpp";
+  if (/llama\.cpp|llamacpp/u.test(backend)) return "llama-cpp";
+  if (/lm\s*studio|lmstudio/u.test(backend)) return "llama-cpp";
   if (/ollama/u.test(backend)) return "ollama";
   if (/mlx/u.test(backend)) return "mlx";
-  if (backend && backend !== "manual") return "custom";
+  if (/cloud/u.test(backend)) return "cloud";
   return "unrecorded";
 }
 
 function currentBackendLabel(run) {
   const value = currentBackendValue(run);
-  if (value === "custom") return run.runner?.backendLabel ?? "";
+  if (value === "cloud") return run.runner?.backendLabel ?? "";
   return "";
 }
 

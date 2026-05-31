@@ -59,6 +59,14 @@ function initWorkspaceState() {
       document.body.dataset.workspace = savedKind;
     }
   } catch { /* localStorage unavailable */ }
+  // Restore persisted cloud models toggle
+  try {
+    const savedCloud = localStorage.getItem("showCloudModels");
+    if (savedCloud === "true") {
+      state.showCloudModels = true;
+      if (els.cloudModelsToggle) els.cloudModelsToggle.checked = true;
+    }
+  } catch { /* localStorage unavailable */ }
 }
 
 function configureControllers() {
@@ -159,6 +167,7 @@ function wireEvents() {
   });
   els.cloudModelsToggle?.addEventListener("change", () => {
     state.showCloudModels = els.cloudModelsToggle.checked;
+    try { localStorage.setItem("showCloudModels", String(state.showCloudModels)); } catch {}
     resetRunPage();
     renderModels();
     renderRuns();

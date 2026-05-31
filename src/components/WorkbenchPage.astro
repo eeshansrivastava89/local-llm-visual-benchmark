@@ -67,8 +67,8 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
               <button type="button" class="btn-sm-ghost" id="dismissOnboarding">Dismiss</button>
             </div>
             <ol class="onboarding-steps">
-              <li data-onboarding-step="1"><span class="step-num">1</span><code>local-llm setup</code> — create a model profile</li>
-              <li data-onboarding-step="2"><span class="step-num">2</span><code>local-llm prepare</code> — pick a benchmark and harness</li>
+              <li data-onboarding-step="1"><span class="step-num">1</span><code>local-llm models</code> → Set up — create a model profile</li>
+              <li data-onboarding-step="2"><span class="step-num">2</span><code>local-llm models</code> → Benchmark — pick a prompt and harness</li>
               <li data-onboarding-step="3"><span class="step-num">3</span>Generate and capture your result</li>
             </ol>
           </div>
@@ -249,23 +249,19 @@ const iconStyle = (name: string) => `--icon: url('${basePath}assets/icons/${name
           <div class="deprecation-notice">
             <div class="cli-commands mt-0">
               <div class="cli-command">
-                <div class="cli-cmd-row"><code class="cli-cmd">local-llm setup</code><button type="button" class="cli-copy-btn" data-copy="local-llm setup" title="Copy command"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span></button></div>
-                <span class="muted-copy text-sm">Create a model profile — llama.cpp, Ollama, or oMLX</span>
-              </div>
-              <div class="cli-command">
-                <div class="cli-cmd-row"><code class="cli-cmd">local-llm prepare</code><button type="button" class="cli-copy-btn" data-copy="local-llm prepare" title="Copy command"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span></button></div>
-                <span class="muted-copy text-sm">Pick a benchmark, model source, and harness → creates the run directory with prompt</span>
+                <div class="cli-cmd-row"><code class="cli-cmd">local-llm models</code><button type="button" class="cli-copy-btn" data-copy="local-llm models" title="Copy command"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span></button></div>
+                <span class="muted-copy text-sm">List models and profiles; inspect, set up, run, benchmark, or remove</span>
               </div>
               <div class="cli-command">
                 <div class="cli-cmd-row"><code class="cli-cmd">local-llm run &lt;profile&gt; --with pi</code><button type="button" class="cli-copy-btn" data-copy="local-llm run <profile> --with pi" title="Copy command"><span class="ui-icon" aria-hidden="true" style={iconStyle("copy")}></span></button></div>
-                <span class="muted-copy text-sm">Start the model server and launch your harness</span>
+                <span class="muted-copy text-sm">Start the model server and launch your harness directly</span>
               </div>
             </div>
             <div class="cli-flow mt-5">
               <h4 class="text-sm font-semibold">Typical flow</h4>
               <ol class="cli-steps mt-2">
-                <li><strong>Setup</strong> — <code>local-llm setup</code> — pick a backend and model, save a profile</li>
-                <li><strong>Prepare</strong> — <code>local-llm prepare</code> — choose benchmark + model source + harness, get a run directory and prompt</li>
+                <li><strong>Set up</strong> — <code>local-llm models</code> → Set up — pick a backend and model, create a profile</li>
+                <li><strong>Benchmark</strong> — <code>local-llm models</code> → Benchmark — choose a prompt + harness, get a run directory</li>
                 <li><strong>Run</strong> — <code>local-llm run &lt;profile&gt; --with pi</code> — starts the server and fires up your coding tool</li>
               </ol>
             </div>

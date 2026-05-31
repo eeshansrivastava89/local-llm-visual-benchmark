@@ -4,7 +4,7 @@ import { ROOT } from "./paths.mjs";
 import { BACKENDS, backendFor } from "./backends.mjs";
 import { scanGgufModels } from "./scan.mjs";
 import { loadProfiles } from "./profiles.mjs";
-import { colors, createPrompt, formatBytes, startInteractive } from "./ui.mjs";
+import { colors, createPrompt, formatBytes, parseOptions as parsePrepareOptions, renderRows, renderSection, startInteractive } from "./ui.mjs";
 import { slugModelId, createRunId, buildToolPrompt, loadBenchmarks } from "./shared/run-utils.mjs";
 
 // ── Model source choices ───────────────────────────────────────────────
@@ -25,7 +25,7 @@ export async function prepareCommand(argv) {
   const runsDir = options.runs ?? join(ROOT, "runs");
 
   if (!process.stdin.isTTY) {
-    throw new Error("Interactive prepare requires a terminal. Use: local-llm prepare");
+    throw new Error("Interactive prepare requires a terminal. Use: local-llm models and select Benchmark.");
   }
 
   startInteractive("local-llm prepare");
@@ -57,7 +57,7 @@ export async function prepareCommand(argv) {
 
     if (source === "profile") {
       const profiles = await loadProfiles();
-      if (profiles.length === 0) throw new Error("No profiles yet. Run: local-llm setup");
+      if (profiles.length === 0) throw new Error("No profiles yet. Run: local-llm models");
       const profileId = await prompt.choice("Profile", await Promise.all(profiles.map(async (p) => {
         const be = backendFor(p.backend);
         return {
@@ -69,7 +69,7 @@ export async function prepareCommand(argv) {
       const profile = profiles.find((p) => p.id === profileId);
       if (!profile) throw new Error(`Profile "${profileId}" not found.`);
       modelId = profile.modelAlias;
-      modelSource = profile.backend === "ollama" ? "ollama" : profile.backend === "omlx" ? "omlx" : "lmstudio";
+      modelSource = profile.providerId === "llama-cpp-mtp" ? "llama-cpp-mtp" : profile.backend === "ollama" ? "ollama" : profile.backend === "omlx" ? "omlx" : "llama-cpp";
       backendLabel = backendFor(profile.backend).label;
       baseUrl = profile.baseUrl;
     } else if (source === "ollama") {
@@ -105,7 +105,7 @@ export async function prepareCommand(argv) {
         hint: `${m.aliasSuggestion} · ${formatBytes(m.sizeBytes)}`
       })), ggufModels[0].path);
       modelId = ggufModels.find((m) => m.path === modelChoice)?.aliasSuggestion ?? "gguf-model";
-      modelSource = "lmstudio";
+      modelSource = "llama-cpp";
       backendLabel = "llama.cpp";
       baseUrl = "http://127.0.0.1:8080/v1";
     } else {
@@ -113,7 +113,7 @@ export async function prepareCommand(argv) {
       backendLabel = await prompt.text("Backend label", "cloud");
       modelId = await prompt.text("Model name", "");
       if (!modelId) throw new Error("Model name is required for custom source.");
-      modelSource = "custom";
+      modelSource = "cloud";
       baseUrl = "";
     }
 
@@ -153,7 +153,7 @@ export async function prepareCommand(argv) {
         : { metadata: "metadata.json", prompt: "prompt.md", html: "index.html", preview: "preview.png", video: "preview.webm", rawResponse: "response.raw.txt" },
       runner: {
         mode: runner === "manual" ? "manual" : "external",
-        ...(modelSource && modelSource !== "custom" ? { modelSource } : { modelSource: "custom" }),
+        ...(modelSource ? { modelSource } : {}),
         intendedRunner: runnerLabel(runner),
         ...(backendLabel ? { backendLabel } : {}),
         ...(baseUrl ? { baseUrl } : {}),
@@ -230,42 +230,4 @@ function runnerLabel(runner) {
   if (runner === "pi") return "Pi";
   if (runner === "opencode") return "OpenCode";
   return "manual";
-}
-
-function renderSection(title, body) {
-  return `${colors.magenta("◆")} ${colors.bold(title)}\n${body}`;
-}
-
-function renderRows(rows) {
-  const width = Math.max(...rows.map(([key]) => stripAnsi(String(key)).length));
-  return rows.map(([key, value]) => {
-    const keyText = String(key);
-    const visible = stripAnsi(keyText).length;
-    return `${keyText}${" ".repeat(Math.max(1, width - visible + 2))}${value}`;
-  }).join("\n");
-}
-
-function stripAnsi(value) {
-  return value.replace(/\x1b\[[0-9;]*m/gu, "");
-}
-
-function parsePrepareOptions(argv) {
-  const positional = [];
-  const options = {};
-  for (let i = 0; i < argv.length; i++) {
-    const item = argv[i];
-    if (item.startsWith("--")) {
-      const key = item.slice(2);
-      const next = argv[i + 1];
-      if (next && !next.startsWith("--")) {
-        options[key] = next;
-        i += 1;
-      } else {
-        options[key] = true;
-      }
-    } else {
-      positional.push(item);
-    }
-  }
-  return { positional, options };
 }

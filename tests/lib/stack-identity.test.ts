@@ -46,22 +46,23 @@ describe("stackAttemptIdentity", () => {
     });
   });
 
-  it("uses stable fallback fields for historical/manual runs", () => {
+  it("uses modelSource for stack identity", () => {
     const identity = stackAttemptIdentity({
       model: {
         id: "local/qwen2.5-vl"
       },
       runner: {
         mode: "manual",
+        modelSource: "llama-cpp",
         backendLabel: "LM Studio"
       }
     });
 
-    expect(identity.key).toBe("lm-studio|local/qwen2.5-vl|manual");
+    expect(identity.key).toBe("llama-cpp|local/qwen2.5-vl|manual");
     expect(identity.label).toBe("local/qwen2.5-vl · LM Studio · manual");
   });
 
-  it("infers historical source labels from local backend URLs when runner source fields are missing", () => {
+  it("uses source-unrecorded when model source fields are missing", () => {
     const identity = stackAttemptIdentity({
       model: {
         id: "local/qwen2.5-vl"
@@ -72,8 +73,8 @@ describe("stackAttemptIdentity", () => {
       }
     });
 
-    expect(identity.key).toBe("omlx|local/qwen2.5-vl|manual");
-    expect(identity.label).toBe("local/qwen2.5-vl · oMLX · manual");
+    expect(identity.key).toBe("source-unrecorded|local/qwen2.5-vl|manual");
+    expect(identity.label).toBe("local/qwen2.5-vl · source unrecorded · manual");
   });
 
   it("uses source-unrecorded instead of unknown-source when historical runs have no source metadata", () => {
@@ -105,7 +106,7 @@ describe("stackAttemptIdentity", () => {
     expect(identity.label).not.toContain("manual · manual");
   });
 
-  it("uses custom backend labels when model source is custom", () => {
+  it("uses cloud backend labels when model source is cloud", () => {
     const identity = stackAttemptIdentity({
       model: {
         id: "ChatGPT",
@@ -113,13 +114,13 @@ describe("stackAttemptIdentity", () => {
       },
       runner: {
         mode: "manual",
-        modelSource: "custom",
-        backendLabel: "cloud"
+        modelSource: "cloud",
+        backendLabel: "Cloud"
       }
     });
 
-    expect(identity.key).toBe("custom|chatgpt|manual");
-    expect(identity.label).toBe("ChatGPT · cloud · manual");
+    expect(identity.key).toBe("cloud|chatgpt|manual");
+    expect(identity.label).toBe("ChatGPT · Cloud · manual");
   });
 
   it("includes optional harness version labels when present", () => {

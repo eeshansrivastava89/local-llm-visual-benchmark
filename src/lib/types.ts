@@ -35,7 +35,7 @@ export interface OmlxModel {
   owned_by?: string;
 }
 
-export type ModelSourceId = "omlx" | "lmstudio" | "custom";
+export type ModelSourceId = "ollama" | "omlx" | "llama-cpp" | "llama-cpp-mtp" | "cloud";
 
 export interface RunModelRecord {
   id: string;

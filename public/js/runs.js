@@ -24,9 +24,7 @@ export function filteredRuns() {
 }
 
 export function isCloudRun(run) {
-  const source = run.runner?.modelSource;
-  if (!source) return false;
-  return source !== "omlx" && source !== "lmstudio";
+  return run.runner?.modelSource === "cloud";
 }
 
 export function groupRuns(runs, titleForRun, subtitleForRun) {
@@ -246,42 +244,25 @@ function searchableRunText(run) {
 }
 
 function stackSource(run) {
-  if (run.runner?.modelSource) {
+  const source = run.runner?.modelSource;
+  if (source) {
     return {
-      key: run.runner.modelSource,
-      label: run.runner.backendLabel ?? modelSourceLabel(run.runner.modelSource)
+      key: source,
+      label: run.runner?.backendLabel ?? modelSourceLabel(source)
     };
   }
-
-  if (isBackendSourceLabel(run.runner?.backendLabel)) {
-    return {
-      key: run.runner.backendLabel,
-      label: run.runner.backendLabel
-    };
-  }
-
-  const baseUrl = run.runner?.baseUrl;
-  if (/127\.0\.0\.1:8000|localhost:8000/iu.test(baseUrl ?? "")) {
-    return { key: "omlx", label: "oMLX" };
-  }
-  if (/127\.0\.0\.1:1234|localhost:1234/iu.test(baseUrl ?? "")) {
-    return { key: "lmstudio", label: "LM Studio" };
-  }
-
   return {
     key: "source-unrecorded",
     label: "source unrecorded"
   };
 }
 
-function isBackendSourceLabel(label) {
-  return /^(omlx|lm studio|lmstudio|llama\.cpp|ollama|mlx|base mlx)$/iu.test(label ?? "");
-}
-
 function modelSourceLabel(source) {
+  if (source === "ollama") return "Ollama";
   if (source === "omlx") return "oMLX";
-  if (source === "lmstudio") return "LM Studio";
-  if (source === "custom") return "Custom";
+  if (source === "llama-cpp") return "llama.cpp";
+  if (source === "llama-cpp-mtp") return "llama.cpp MTP";
+  if (source === "cloud") return "Cloud";
   return source;
 }
 

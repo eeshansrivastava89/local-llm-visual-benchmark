@@ -286,9 +286,11 @@ function comparisonStackParts(run: RunMetadata): Pick<ComparisonItem, "modelLabe
 }
 
 function inferredBackendLabel(run: RunMetadata): string {
+  if (run.runner?.modelSource === "ollama") return "Ollama";
   if (run.runner?.modelSource === "omlx") return "oMLX";
-  if (run.runner?.modelSource === "lmstudio") return "LM Studio";
-  if (run.runner?.modelSource === "custom") return "Custom";
+  if (run.runner?.modelSource === "llama-cpp") return "llama.cpp";
+  if (run.runner?.modelSource === "llama-cpp-mtp") return "llama.cpp MTP";
+  if (run.runner?.modelSource === "cloud") return "Cloud";
   return "source unrecorded";
 }
 

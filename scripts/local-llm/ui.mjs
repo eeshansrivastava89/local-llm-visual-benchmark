@@ -15,19 +15,18 @@ export function printHelp() {
   console.log(`${colors.bold("local-llm")} - local LLM profile runner\n`);
   console.log("Usage:");
   console.log("  local-llm models");
-  console.log("  local-llm setup [profile]");
-  console.log("  local-llm prepare [--benchmarks <dir>] [--runs <dir>]");
   console.log("  local-llm run [profile] [--with pi|opencode] [--reuse-existing] [--keep-server]");
   console.log("  local-llm stop [profile|--all]");
-  console.log("  local-llm remove [profile] [--force] [--keep-logs]");
   console.log("");
   console.log(colors.bold("Commands:"));
-  console.log("  models    List all profiles and models; inspect, set up, or remove");
-  console.log("  setup     Create or edit a profile (interactive)");
-  console.log("  prepare   Prepare a run directory with prompt and metadata");
+  console.log("  models    List profiles and models; inspect, set up, run, benchmark, or remove");
   console.log("  run       Start server + launch harness for a profile");
   console.log("  stop      Stop a tracked llama-server process");
-  console.log("  remove    Delete a profile and its harness configs");
+  console.log("");
+  console.log(colors.bold("Run modes (use with models → Run):"));
+  console.log("  pi        Launch Pi with the selected model");
+  console.log("  opencode  Launch OpenCode with the selected model");
+  console.log("  server    Start server only, no harness");
 }
 
 export function formatBytes(bytes) {
@@ -122,6 +121,32 @@ export function renderRows(rows) {
   }).join("\n");
 }
 
-function stripAnsi(value) {
+export function stripAnsi(value) {
   return value.replace(/\x1b\[[0-9;]*m/gu, "");
 }
+
+export function renderSection(title, body) {
+  return `${colors.magenta("◆")} ${colors.bold(title)}\n${body}`;
+}
+
+export function parseOptions(argv) {
+  const positional = [];
+  const options = {};
+  for (let i = 0; i < argv.length; i++) {
+    const item = argv[i];
+    if (item.startsWith("--")) {
+      const key = item.slice(2);
+      const next = argv[i + 1];
+      if (next && !next.startsWith("--")) {
+        options[key] = next;
+        i += 1;
+      } else {
+        options[key] = true;
+      }
+    } else {
+      positional.push(item);
+    }
+  }
+  return { positional, options };
+}
+

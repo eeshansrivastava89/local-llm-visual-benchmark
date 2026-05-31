@@ -25,9 +25,9 @@
   },
   "runner": {
     "mode": "external",
-    "modelSource": "custom",
+    "modelSource": "cloud",
     "intendedRunner": "Pi",
-    "backendLabel": "cloud",
+    "backendLabel": "Cloud",
     "model": "Deepseek v4 Flash",
     "retries": 0
   },

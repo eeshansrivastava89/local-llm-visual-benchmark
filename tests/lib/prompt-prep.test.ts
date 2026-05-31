@@ -67,8 +67,8 @@ describe("prepareRun", () => {
     const prepared = await prepareRun({
       benchmark,
       modelId: "ChatGPT",
-      modelSource: "custom",
-      backendLabel: "cloud",
+      modelSource: "cloud",
+      backendLabel: "Cloud",
       runner: "manual",
       runsRoot,
       now: new Date("2026-05-07T04:00:32.122Z")
@@ -81,9 +81,9 @@ describe("prepareRun", () => {
       },
       runner: {
         mode: "manual",
-        modelSource: "custom",
+        modelSource: "cloud",
         intendedRunner: "manual",
-        backendLabel: "cloud",
+        backendLabel: "Cloud",
         model: "ChatGPT"
       }
     });

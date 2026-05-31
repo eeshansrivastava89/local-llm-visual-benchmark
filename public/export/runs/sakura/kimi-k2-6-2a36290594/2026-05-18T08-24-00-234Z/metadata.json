@@ -25,9 +25,9 @@
   },
   "runner": {
     "mode": "external",
-    "modelSource": "custom",
+    "modelSource": "cloud",
     "intendedRunner": "Pi",
-    "backendLabel": "cloud",
+    "backendLabel": "Cloud",
     "model": "Kimi K2.6",
     "retries": 0
   },

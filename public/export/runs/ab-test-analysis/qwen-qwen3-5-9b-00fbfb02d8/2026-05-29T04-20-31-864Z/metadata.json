@@ -29,6 +29,7 @@
   },
   "runner": {
     "mode": "external",
+    "modelSource": "llama-cpp",
     "intendedRunner": "Pi",
     "backendLabel": "llama.cpp",
     "model": "qwen/qwen3.5-9b",

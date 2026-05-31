@@ -25,9 +25,9 @@
   },
   "runner": {
     "mode": "external",
-    "modelSource": "custom",
+    "modelSource": "cloud",
     "intendedRunner": "Pi",
-    "backendLabel": "cloud",
+    "backendLabel": "Cloud",
     "model": "gpt-5.5",
     "retries": 0
   },

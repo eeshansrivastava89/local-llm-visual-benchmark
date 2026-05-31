@@ -29,6 +29,7 @@
   },
   "runner": {
     "mode": "external",
+    "modelSource": "llama-cpp",
     "intendedRunner": "Pi",
     "backendLabel": "llama.cpp",
     "model": "gemma-4-26b-a4b-it",

@@ -67,3 +67,39 @@ export async function loadBenchmarks(benchDir) {
   }
   return benchmarks;
 }
+
+/**
+ * Scan run directories for cloud model IDs (modelSource === "cloud").
+ * Returns deduplicated list of { id, label } sorted by frequency (most-used first).
+ */
+export async function loadCloudModels(runsDir) {
+  const cloudModels = new Map();
+  try {
+    const benchDirs = await readdir(runsDir);
+    for (const benchDir of benchDirs) {
+      const benchPath = join(runsDir, benchDir);
+      let modelDirs;
+      try { modelDirs = await readdir(benchPath); } catch { continue; }
+      for (const modelDir of modelDirs) {
+        const modelPath = join(benchPath, modelDir);
+        let runDirs;
+        try { runDirs = await readdir(modelPath); } catch { continue; }
+        for (const runId of runDirs) {
+          try {
+            const raw = await readFile(join(modelPath, runId, "metadata.json"), "utf8");
+            const meta = JSON.parse(raw);
+            if (meta.runner?.modelSource === "cloud") {
+              const modelId = meta.model?.id;
+              if (modelId) {
+                cloudModels.set(modelId, (cloudModels.get(modelId) ?? 0) + 1);
+              }
+            }
+          } catch { /* skip */ }
+        }
+      }
+    }
+  } catch { /* runs dir may not exist */ }
+  return [...cloudModels.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => ({ id, label: id }));
+}

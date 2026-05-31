@@ -165,9 +165,12 @@ function runnerLabel(runner: PrepareRunRunner): string {
 }
 
 function modelSourceLabel(source: ModelSourceId, customLabel?: string): string {
+  if (source === "ollama") return "Ollama";
   if (source === "omlx") return "oMLX";
-  if (source === "lmstudio") return "LM Studio";
-  return normalizeOptionalString(customLabel) ?? "Custom";
+  if (source === "llama-cpp") return "llama.cpp";
+  if (source === "llama-cpp-mtp") return "llama.cpp MTP";
+  if (source === "cloud") return customLabel ?? "Cloud";
+  return source;
 }
 
 function normalizeOptionalString(value: string | undefined): string | undefined {

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-30T22:55:29.445Z",
+  "generatedAt": "2026-05-31T00:48:05.375Z",
   "benchmarks": [
     {
       "id": "ab-test-analysis",
@@ -43,6 +43,60 @@
     {
       "schemaVersion": 1,
       "kind": "visual",
+      "runId": "2026-05-31T00-23-06-945Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show about five to seven large foreground flowers with detailed petals, stems, leaves, and pollen centers, rather than a huge field of tiny flowers. Around them, animate a few butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nBuild and edit the file in small chunks instead of writing a monolith in one go, so it's easier for you to modify and debug components if anything doesn't work as expected."
+      },
+      "model": {
+        "id": "gemma-4-E2B-it-GGUF",
+        "slug": "gemma-4-e2b-it-gguf"
+      },
+      "status": "completed",
+      "createdAt": "2026-05-31T00:23:06.945Z",
+      "updatedAt": "2026-05-31T00:25:53.210Z",
+      "preparedAt": "2026-05-31T00:23:06.945Z",
+      "completedAt": "2026-05-31T00:25:53.210Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/gemma-4-e2b-it-gguf/2026-05-31T00-23-06-945Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "llama-cpp",
+        "intendedRunner": "Pi",
+        "backendLabel": "llama.cpp",
+        "model": "gemma-4-E2B-it-GGUF",
+        "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-05-31T00:25:53.210Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-05-31T00:25:53.210Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
       "runId": "2026-05-30T04-17-59-111Z",
       "benchmark": {
         "id": "macro-wildflower-meadow",
@@ -67,7 +121,7 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "LM Studio",
         "model": "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive",
@@ -125,6 +179,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwopus3.5-9b-coder",
@@ -289,6 +344,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "gemma-4-26b-a4b-it",
@@ -453,6 +509,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen/qwen3.5-9b",
@@ -615,6 +672,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-27b-mtp",
@@ -780,9 +838,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "GLM 5.1",
         "retries": 0
       },
@@ -943,6 +1001,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-35b-a3b-mtp",
@@ -1104,6 +1163,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwopus3.5-9b-coder",
@@ -1262,9 +1322,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Flash",
         "retries": 0
       },
@@ -1316,9 +1376,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Flash",
         "retries": 0
       },
@@ -1370,9 +1430,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Flash",
         "retries": 0
       },
@@ -1424,9 +1484,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Flash",
         "retries": 0
       },
@@ -1478,9 +1538,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Flash",
         "retries": 0
       },
@@ -1532,9 +1592,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Pro",
         "retries": 0
       },
@@ -1586,9 +1646,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Pro",
         "retries": 0
       },
@@ -1640,9 +1700,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Pro",
         "retries": 0
       },
@@ -1694,9 +1754,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Pro",
         "retries": 0
       },
@@ -1748,9 +1808,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Deepseek v4 Pro",
         "retries": 0
       },
@@ -1802,9 +1862,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Minimax M2.7",
         "retries": 0
       },
@@ -1856,9 +1916,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Minimax M2.7",
         "retries": 0
       },
@@ -1910,9 +1970,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Minimax M2.7",
         "retries": 0
       },
@@ -1964,9 +2024,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Minimax M2.7",
         "retries": 0
       },
@@ -2018,9 +2078,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "GLM 5.1",
         "retries": 0
       },
@@ -2072,9 +2132,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "GLM 5.1",
         "retries": 0
       },
@@ -2126,9 +2186,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "GLM 5.1",
         "retries": 0
       },
@@ -2180,9 +2240,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "Kimi K2.6",
         "retries": 0
       },
@@ -2234,9 +2294,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "GLM 5.1",
         "retries": 0
       },
@@ -2288,9 +2348,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "GLM 5.1",
         "retries": 0
       },
@@ -2342,7 +2402,7 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Hermes",
         "backendLabel": "LM Studio",
         "model": "qwen3.6-35b-a3b-mtp",
@@ -2396,6 +2456,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-27b-mtp",
@@ -2449,6 +2510,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-35b-a3b-mtp",
@@ -2502,6 +2564,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-35b-a3b-mtp",
@@ -2555,9 +2618,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "gpt-5.5",
         "retries": 0
       },
@@ -2609,9 +2672,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "gpt-5.5",
         "retries": 0
       },
@@ -2663,9 +2726,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "gpt-5.5",
         "retries": 0
       },
@@ -2717,9 +2780,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "gpt-5.5",
         "retries": 0
       },
@@ -2771,9 +2834,9 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "custom",
+        "modelSource": "cloud",
         "intendedRunner": "Pi",
-        "backendLabel": "cloud",
+        "backendLabel": "Cloud",
         "model": "gpt-5.5",
         "retries": 0
       },
@@ -2825,6 +2888,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-27b-mtp",
@@ -2878,6 +2942,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "gemma-4-26b-a4b-it",
@@ -2931,6 +2996,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-35b-a3b-mtp",
@@ -2984,6 +3050,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-27b-mtp",
@@ -3037,6 +3104,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-27b-mtp",
@@ -3090,6 +3158,7 @@
       },
       "runner": {
         "mode": "external",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "llama.cpp",
         "model": "qwen3.6-27b-mtp",
@@ -3247,7 +3316,7 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
+        "modelSource": "llama-cpp",
         "intendedRunner": "OpenCode",
         "backendLabel": "LM Studio"
       },
@@ -3298,7 +3367,7 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
+        "modelSource": "llama-cpp",
         "intendedRunner": "OpenCode",
         "backendLabel": "LM Studio"
       },
@@ -3349,7 +3418,7 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
+        "modelSource": "llama-cpp",
         "intendedRunner": "OpenCode",
         "backendLabel": "LM Studio"
       },
@@ -3400,7 +3469,7 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "LM Studio"
       },
@@ -3451,7 +3520,7 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "LM Studio"
       },
@@ -3502,7 +3571,7 @@
       },
       "runner": {
         "mode": "external",
-        "modelSource": "lmstudio",
+        "modelSource": "llama-cpp",
         "intendedRunner": "Pi",
         "backendLabel": "LM Studio"
       },
@@ -3796,7 +3865,7 @@
     }
   ],
   "machineProfile": {
-    "collectedAt": "2026-05-30T22:55:29.446Z",
+    "collectedAt": "2026-05-31T00:48:05.376Z",
     "platform": {
       "node": "v26.0.0",
       "platform": "darwin",
@@ -3806,7 +3875,7 @@
       "type": "Darwin",
       "release": "25.5.0",
       "hostname": "Eeshans-MacBook-Pro-16.local",
-      "uptimeSeconds": 922942
+      "uptimeSeconds": 929698
     },
     "cpu": {
       "model": "Apple M4 Pro",
@@ -3815,10 +3884,10 @@
     },
     "memory": {
       "totalBytes": 51539607552,
-      "availableBytes": 25210028032,
-      "freeBytes": 3237838848,
-      "usedBytes": 26329579520,
-      "pressurePercent": 51.1,
+      "availableBytes": 25311592448,
+      "freeBytes": 5626134528,
+      "usedBytes": 26228015104,
+      "pressurePercent": 50.9,
       "pressureLabel": "low",
       "source": "macOS VM stats, cached and purgeable memory excluded"
     },

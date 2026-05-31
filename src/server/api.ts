@@ -333,16 +333,22 @@ function runnerBackendPatch(backend: EditableRunBackend, customBackend?: string)
       backendLabel: "oMLX"
     };
   }
-  if (backend === "lmstudio") {
+  if (backend === "llama-cpp" || backend === "lmstudio" || backend === "llama.cpp") {
     return {
-      modelSource: "lmstudio",
-      backendLabel: "LM Studio"
+      modelSource: "llama-cpp",
+      backendLabel: backend === "lmstudio" ? "LM Studio" : "llama.cpp"
     };
   }
-  if (backend === "custom") {
+  if (backend === "llama-cpp-mtp") {
     return {
-      modelSource: "custom",
-      backendLabel: customBackend ?? "Custom"
+      modelSource: "llama-cpp-mtp",
+      backendLabel: "llama.cpp MTP"
+    };
+  }
+  if (backend === "cloud" || backend === "custom") {
+    return {
+      modelSource: "cloud",
+      backendLabel: customBackend ?? "Cloud"
     };
   }
   return {

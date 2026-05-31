@@ -1,28 +1,26 @@
 import { existsSync, statSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { ensureLocalDirs } from "./paths.mjs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { ensureLocalDirs, RUN_DIR, ROOT } from "./paths.mjs";
 import { PRESETS } from "./presets.mjs";
 import { scanGgufModels } from "./scan.mjs";
-import { ensureProfileCommand, loadProfiles, profileExists, readProfile, saveProfile, profilePath, profileTimestamp, sanitizeProfileId, slugFromLabel, normalizeProfile, readState, deleteProfile } from "./profiles.mjs";
+import { ensureProfileCommand, loadProfiles, profileExists, readProfile, saveProfile, profilePath, profileTimestamp, sanitizeProfileId, slugFromLabel, normalizeProfile, deleteProfile } from "./profiles.mjs";
 import { buildPrettyCommand } from "./command.mjs";
 import { estimateMemory } from "./estimate.mjs";
-import { colors, createPrompt, formatBytes, printHelp, relativeTime, renderRows, startInteractive } from "./ui.mjs";
+import { colors, createPrompt, formatBytes, parseOptions, printHelp, relativeTime, renderRows, renderSection, startInteractive } from "./ui.mjs";
 import { hasOpenCodeModel, hasPiModel, launchHarness, syncOpenCodeConfig, syncPiConfig, removeFromPiConfig, removeFromOpenCodeConfig } from "./harnesses.mjs";
 import { isProfileRunning, profileRuntimeStatus, serverReady, startServer, stopProfile, waitForReady } from "./process.mjs";
 import { tailFriendly } from "./logs.mjs";
-import { backendFor, BACKENDS, backendChoices, inferBackendId } from "./backends.mjs";
-import { SERVER_VARIANTS, serverBinaryFor } from "./server-variants.mjs";
-import { prepareCommand } from "./prepare.mjs";
+import { backendFor, BACKENDS } from "./backends.mjs";
+import { SERVER_VARIANTS, serverBinaryFor, inferServerVariantId } from "./server-variants.mjs";
+import { slugModelId, createRunId, buildToolPrompt, loadBenchmarks, loadCloudModels } from "./shared/run-utils.mjs";
 
 export async function runCli(argv) {
   const [command = "help", ...args] = argv;
   if (["help", "--help", "-h"].includes(command)) return printHelp();
   if (command === "models") return modelsCommand(args);
-  if (command === "setup") return setupCommand(args);
-  if (command === "prepare" || command === "prep") return prepareCommand(args);
   if (command === "run") return runCommand(args);
   if (command === "stop") return stopCommand(args);
-  if (command === "remove" || command === "rm") return removeCommand(args);
   throw new Error(`Unknown command: ${command}. Run local-llm help`);
 }
 
@@ -50,63 +48,60 @@ async function listAll() {
   const items = [];
 
   console.log(colors.bold("Saved profiles"));
-    if (profiles.length === 0) {
-      console.log(colors.yellow("  None yet. Download a model, then choose Set up from local-llm models"));
-    } else {
-      const backendColors = {
-        "llama-cpp": colors.yellow,
-        "llama-cpp-mtp": colors.blue,
-        "ollama": colors.magenta,
-        "omlx": colors.cyan
-      };
-      // Group profiles by backend
-      const backendOrder = ["llama-cpp", "llama-cpp-mtp", "ollama", "omlx"];
-      const groups = new Map();
-      for (const beId of backendOrder) groups.set(beId, []);
-      for (const profile of profiles) {
-        const beId = profile.backend ?? "llama-cpp";
-        if (!groups.has(beId)) groups.set(beId, []);
-        groups.get(beId).push(profile);
-      }
-      let firstGroup = true;
-      for (const beId of backendOrder) {
-        const group = groups.get(beId);
-        if (!group || group.length === 0) continue;
-        const backend = backendFor(beId);
-        const colorFn = backendColors[beId] ?? colors.magenta;
-        if (!firstGroup) console.log("");
-        firstGroup = false;
-        console.log(colorFn(colors.bold(backend.label)));
-        for (const profile of group) {
-          const index = items.push({ type: "profile", profile });
-          const running = await isProfileRunning(profile);
-          const timestamp = await profileTimestamp(profile.id);
-          const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
-          const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
-          console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
-          console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
-        }
-      }
-      // Print any backend groups not in the standard order
-      for (const [beId, group] of groups) {
-        if (backendOrder.includes(beId) || group.length === 0) continue;
-        const backend = backendFor(beId);
-        const colorFn = backendColors[beId] ?? colors.magenta;
-        console.log("");
-        console.log(colorFn(colors.bold(backend.label)));
-        for (const profile of group) {
-          const index = items.push({ type: "profile", profile });
-          const running = await isProfileRunning(profile);
-          const timestamp = await profileTimestamp(profile.id);
-          const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
-          const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
-          console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
-          console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
-        }
+  if (profiles.length === 0) {
+    console.log(colors.yellow("  None yet. Download a model, then choose Set up from local-llm models"));
+  } else {
+    const backendColors = {
+      "llama-cpp": colors.yellow,
+      "llama-cpp-mtp": colors.blue,
+      "ollama": colors.magenta,
+      "omlx": colors.cyan
+    };
+    const backendOrder = ["llama-cpp", "llama-cpp-mtp", "ollama", "omlx"];
+    const groups = new Map();
+    for (const beId of backendOrder) groups.set(beId, []);
+    for (const profile of profiles) {
+      const beId = profile.backend ?? "llama-cpp";
+      if (!groups.has(beId)) groups.set(beId, []);
+      groups.get(beId).push(profile);
+    }
+    let firstGroup = true;
+    for (const beId of backendOrder) {
+      const group = groups.get(beId);
+      if (!group || group.length === 0) continue;
+      const backend = backendFor(beId);
+      const colorFn = backendColors[beId] ?? colors.magenta;
+      if (!firstGroup) console.log("");
+      firstGroup = false;
+      console.log(colorFn(colors.bold(backend.label)));
+      for (const profile of group) {
+        const index = items.push({ type: "profile", profile });
+        const running = await isProfileRunning(profile);
+        const timestamp = await profileTimestamp(profile.id);
+        const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
+        const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
+        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
+        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
       }
     }
-  console.log("");
+    for (const [beId, group] of groups) {
+      if (backendOrder.includes(beId) || group.length === 0) continue;
+      const backend = backendFor(beId);
+      const colorFn = backendColors[beId] ?? colors.magenta;
+      console.log("");
+      console.log(colorFn(colors.bold(backend.label)));
+      for (const profile of group) {
+        const index = items.push({ type: "profile", profile });
+        const running = await isProfileRunning(profile);
+        const timestamp = await profileTimestamp(profile.id);
+        const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
+        const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
+        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
+        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
+      }
+    }
   }
+  console.log("");
 
   console.log(colors.bold("Downloaded models not set up yet"));
   const visibleModels = unprofiledGguf;
@@ -148,10 +143,28 @@ async function listAll() {
     }
   }
 
+  // Cloud model entries — from past runs, plus a new option
+  const existingCloudModels = await loadCloudModels(resolve(ROOT, "runs"));
+  console.log("");
+  console.log(colors.bold("Cloud models"));
+  for (const cm of existingCloudModels) {
+    const cmIndex = items.push({ type: "cloud", modelId: cm.id });
+    console.log(`${String(cmIndex).padStart(2, " ")}. ${colors.magenta(cm.id)}`);
+  }
+  const newCloudIndex = items.push({ type: "cloud", modelId: null });
+  console.log(`${String(newCloudIndex).padStart(2, " ")}. ${colors.dim("New cloud model")} ${colors.dim("· API-based")}`);
+
   if (process.stdin.isTTY && items.length > 0) {
     const prompt = createPrompt();
     try {
-      const input = await prompt.text("Select a number (Enter to skip)", "");
+      const action = await prompt.choice("What do you want to do?", [
+        { value: "inspect", label: "Inspect", hint: "View details" },
+        { value: "setup", label: "Set up", hint: "Create or re-sync a profile" },
+        { value: "run", label: "Run", hint: "Start server and launch a harness" },
+        { value: "benchmark", label: "Benchmark", hint: "Run a benchmark prompt" },
+        { value: "remove", label: "Remove", hint: "Delete a profile" }
+      ], "inspect");
+      const input = await prompt.text("Select a number", "");
       if (!input) return;
       const index = Number(input) - 1;
       if (Number.isNaN(index) || index < 0 || index >= items.length) {
@@ -159,47 +172,50 @@ async function listAll() {
         return;
       }
       const item = items[index];
-      if (item.type === "profile") {
-        const backend = backendFor(item.profile.backend);
-        const action = await prompt.choice("Action", [
-          { value: "inspect", label: "Inspect" },
-          { value: "setup", label: "Re-sync harness" },
-          { value: "remove", label: "Remove" },
-          { value: "cancel", label: "Cancel" }
-        ], "inspect");
-        if (action === "cancel") return;
-        if (action === "inspect") {
+      if (action === "inspect") {
+        if (item.type === "profile") {
+          const backend = backendFor(item.profile.backend);
           console.log("\n" + await renderFullProfile(backend.needsCommandFile ? await ensureProfileCommand(item.profile) : item.profile));
-        } else if (action === "setup") {
-          await syncHarnessConfigs(item.profile, await prompt.choice("Sync", syncChoices(), "both"));
-        } else if (action === "remove") {
-          await removeProfile(item.profile.id, {});
-        }
-      } else if (item.type === "managed") {
-        const action = await prompt.choice("Action", [
-          { value: "inspect", label: "Inspect" },
-          { value: "setup", label: "Set up" },
-          { value: "cancel", label: "Cancel" }
-        ], "setup");
-        if (action === "cancel") return;
-        if (action === "inspect") {
+        } else if (item.type === "managed") {
           console.log("\n" + renderManagedModelDetails(item.model, BACKENDS[item.backendId]));
-        } else if (action === "setup") {
-          const suggestedId = slugFromLabel(item.model.label);
-          await setupCommand([suggestedId]);
-        }
-      } else {
-        const action = await prompt.choice("Action", [
-          { value: "inspect", label: "Inspect" },
-          { value: "setup", label: "Set up" },
-          { value: "cancel", label: "Cancel" }
-        ], "setup");
-        if (action === "cancel") return;
-        if (action === "inspect") {
+        } else if (item.type === "cloud") {
+          console.log(colors.dim("Cloud models are benchmarked by name. Use Benchmark to start a run."));
+        } else {
           console.log("\n" + renderModelDetails(item.model));
-        } else if (action === "setup") {
-          const suggestedId = slugFromLabel(item.model.label);
-          await setupCommand([suggestedId]);
+        }
+      } else if (action === "setup") {
+        if (item.type === "profile") {
+          await syncHarnessConfigs(item.profile, await prompt.choice("Sync", syncChoices(), "both"));
+        } else if (item.type === "managed") {
+          await setupManagedProfile(item.model, item.backendId);
+        } else if (item.type === "cloud") {
+          console.log(colors.yellow("Cloud models don't need a local profile. Use Benchmark to start a run."));
+        } else {
+          await setupGgufProfile(item.model);
+        }
+      } else if (action === "run") {
+        if (item.type === "profile") {
+          await runFromProfile(item.profile);
+        } else if (item.type === "cloud") {
+          console.log(colors.yellow("Cloud models don't run a local server. Use Benchmark to start a run."));
+        } else {
+          console.log(colors.yellow("Set up a profile first, then run it."));
+        }
+      } else if (action === "benchmark") {
+        if (item.type === "profile") {
+          await benchmarkFromProfile(item.profile);
+        } else if (item.type === "cloud") {
+          await benchmarkFromCloudModel(item.modelId);
+        } else {
+          console.log(colors.yellow("Set up a profile first, then benchmark it."));
+        }
+      } else if (action === "remove") {
+        if (item.type === "profile") {
+          await removeProfile(item.profile.id, {});
+        } else if (item.type === "cloud") {
+          console.log(colors.yellow("Cloud models have no profile to remove."));
+        } else {
+          console.log(colors.yellow("Only saved profiles can be removed. Use Set up to create one first."));
         }
       }
     } finally {
@@ -209,7 +225,6 @@ async function listAll() {
 }
 
 function renderModelDetails(model) {
-  const suggestedId = slugFromLabel(model.label);
   const lines = [
     colors.bold(model.label),
     `Alias:  ${model.aliasSuggestion}`,
@@ -217,137 +232,27 @@ function renderModelDetails(model) {
     `MMProj: ${model.mmprojPath ?? "none"}`,
     `Size:   ${formatBytes(model.sizeBytes)}`,
     "",
-    colors.bold("To create a runnable profile"),
-    `local-llm setup ${suggestedId}`,
-    "",
-    colors.dim("After setup, this model will move into the Saved profiles section.")
+    colors.dim("Use local-llm models → Set up to create a profile."),
+    ""
   ];
   return lines.join("\n");
 }
 
-async function setupCommand(argv) {
+// ── Setup flows ──────────────────────────────────────────────────────────
+
+async function setupGgufProfile(model) {
   await ensureLocalDirs();
-  const { positional, options } = parseOptions(argv);
-  const requestedId = positional[0];
-  if (requestedId && options.sync && profileExists(requestedId)) {
-    const existing = await ensureProfileCommand(await readProfile(requestedId));
-    await syncHarnessConfigs(existing, String(options.sync));
-    return;
-  }
-
-  if (!process.stdin.isTTY) {
-    throw new Error("Interactive setup requires a terminal. For config sync, use: scripts/local-llm.mjs setup <profile> --sync pi|opencode|both");
-  }
-
+  if (!process.stdin.isTTY) throw new Error("Interactive setup requires a terminal.");
   startInteractive("local-llm setup");
   const prompt = createPrompt();
   try {
-    if (requestedId && profileExists(requestedId)) {
-      const existing = await ensureProfileCommand(await readProfile(requestedId));
-      console.log(renderProfileSummary(existing));
-      console.log(colors.bold("Command file"));
-      console.log(existing.commandPath);
-      console.log(colors.dim("Existing profiles are edited by changing llama-server.sh directly. Setup will not rewrite launch flags."));
-      const sync = await prompt.choice("Update harness configs?", syncChoices(), "both");
-      await syncHarnessConfigs(existing, sync);
-      return;
-    }
-
-    // ── Backend selection ─────────────────────────────────────────────────
-    const backendId = await prompt.choice("Backend", backendChoices(), "llama-cpp");
-    const backend = backendFor(backendId);
-
-    if (backend.type === "managed-server") {
-      // Ollama / oMLX: pick from running service models
-      const managedModels = await backend.scanModels();
-      if (managedModels.length === 0) {
-        console.log(colors.yellow(`No models found from ${backend.label}. Is the service running?`));
-        return;
-      }
-      const modelChoice = await prompt.choice(`${backend.label} model`, managedModels.map((m) => ({
-        value: m.id,
-        label: m.label,
-        hint: [m.quant, m.family].filter(Boolean).join(" · ") || m.id
-      })), managedModels[0].id);
-      const model = managedModels.find((m) => m.id === modelChoice);
-      if (!model) throw new Error(`Model disappeared: ${modelChoice}`);
-
-      const existingById = profiles.find((p) => p.backend === backendId && (p.ollamaModel === model.id || p.omlxModel === model.id || p.modelAlias === model.id));
-      if (existingById) {
-        console.log(renderProfileSummary(existingById));
-        console.log(colors.bold("Already set up"));
-        const sync = await prompt.choice("Update harness configs?", syncChoices(), "both");
-        await syncHarnessConfigs(existingById, sync);
-        return;
-      }
-
-      const id = sanitizeProfileId(await prompt.text("Profile id", requestedId ?? slugFromLabel(model.label)));
-      const modelAlias = await prompt.text("Model alias for Pi/OpenCode", model.id);
-      const host = await prompt.text("Host", "127.0.0.1");
-      const port = await prompt.number("Port", backend.defaultPort, 1, 65535);
-
-      const profile = normalizeProfile({
-        id,
-        backend: backendId,
-        label: model.label,
-        providerId: backend.providerId,
-        modelAlias,
-        ollamaModel: backendId === "ollama" ? model.id : undefined,
-        omlxModel: backendId === "omlx" ? model.id : undefined,
-        flags: { host, port, ctxSize: 131072, temperature: 0.6, topP: 0.95, topK: 20, minP: 0, presencePenalty: 0, repeatPenalty: 1, parallel: 1, cacheTypeK: "bf16", cacheTypeV: "bf16", flashAttention: "on", jinja: true, batchSize: 512 },
-        harnesses: {
-          pi: { enabled: true, model: `${backend.providerId}/${modelAlias}` },
-          opencode: { enabled: true, model: `${backend.providerId}/${modelAlias}` }
-        }
-      });
-
-      console.log("\n" + renderProfileSummary(profile));
-      if (!(await prompt.yesNo("Save profile", true))) return;
-      await saveProfile(profile);
-      const saved = await readProfile(id);
-      console.log(colors.green(`Saved ${profilePath(id)}`));
-
-      const sync = await prompt.choice("Update harness configs?", syncChoices(), "both");
-      await syncHarnessConfigs(saved, sync);
-      return;
-    }
-
-    // ── llama.cpp: GGUF model selection ─────────────────────────────────
-    if (models.length === 0) throw new Error(`No GGUF models found under ~/.lmstudio/models.`);
-    const profiles = await Promise.all((await loadProfiles()).map(async (profile) => {
-      const be = backendFor(profile.backend);
-      return be.needsCommandFile ? ensureProfileCommand(profile) : profile;
-    }));
-    const profileByModelPath = new Map(profiles.map((profile) => [profile.modelPath, profile]));
-    const modelChoices = models.map((model) => {
-      const profile = profileByModelPath.get(model.path);
-      return {
-        value: model.path,
-        label: profile ? `${profile.label}  ✓ profiled` : model.label,
-        hint: profile ? `${profile.id} · ${profile.modelAlias} · ${profile.baseUrl}` : `alias: ${model.aliasSuggestion} · ${formatBytes(model.sizeBytes)}${model.mmprojPath ? " · vision" : ""}`
-      };
-    });
-    const unprofiled = models.find((model) => !profileByModelPath.has(model.path));
-    const modelPath = await prompt.choice("Model", modelChoices, unprofiled?.path ?? models[0].path);
-    const model = models.find((item) => item.path === modelPath);
-    if (!model) throw new Error(`Selected model disappeared: ${modelPath}`);
-    const existingForModel = profileByModelPath.get(model.path);
-    if (existingForModel) {
-      console.log(renderProfileSummary(existingForModel));
+    const existing = (await loadProfiles()).find((p) => p.modelPath === model.path);
+    if (existing) {
+      const enhanced = await ensureProfileCommand(existing);
+      console.log(renderProfileSummary(enhanced));
       console.log(colors.bold("Already set up"));
-      console.log(`Profile: ${existingForModel.id}`);
-      console.log(`Command: ${existingForModel.commandPath}`);
-      const action = await prompt.choice("What next?", [
-        { value: "sync", label: "Sync Pi/OpenCode", hint: "update harness config from llama-server.sh" },
-        { value: "details", label: "Show details", hint: "inspect profile and command" },
-        { value: "done", label: "Done", hint: "leave it unchanged" }
-      ], "sync");
-      if (action === "sync") {
-        const sync = await prompt.choice("Sync", syncChoices(), "both");
-        await syncHarnessConfigs(existingForModel, sync);
-      } else if (action === "details") {
-        console.log("\n" + await renderFullProfile(existingForModel));
-      }
+      const sync = await prompt.choice("Update harness configs?", syncChoices(), "both");
+      await syncHarnessConfigs(enhanced, sync);
       return;
     }
 
@@ -366,7 +271,7 @@ async function setupCommand(argv) {
     })), presetIds[0]);
     const defaults = { ...PRESETS[presetId].flags, ...serverVariant.flags };
 
-    const id = sanitizeProfileId(await prompt.text("Profile id", requestedId ?? slugFromLabel(model.label)));
+    const id = sanitizeProfileId(await prompt.text("Profile id", slugFromLabel(model.label)));
     const modelAlias = await prompt.text("Model alias for Pi/OpenCode", model.aliasSuggestion);
     console.log(colors.dim(`Host and port use ${serverVariant.label} defaults: ${defaults.host}:${defaults.port}. Edit llama-server.sh after setup if you need to change them.`));
     const ctxSize = await prompt.number("Context size - prompt window in tokens; larger means more memory", defaults.ctxSize, 1, 1048576);
@@ -421,7 +326,321 @@ async function setupCommand(argv) {
   }
 }
 
+async function setupManagedProfile(model, backendId) {
+  await ensureLocalDirs();
+  if (!process.stdin.isTTY) throw new Error("Interactive setup requires a terminal.");
+  const backend = backendFor(backendId);
+  startInteractive("local-llm setup");
+  const prompt = createPrompt();
+  try {
+    const existing = (await loadProfiles()).find((p) => {
+      if (backendId === "ollama") return p.backend === "ollama" && (p.ollamaModel === model.id || p.modelAlias === model.id);
+      if (backendId === "omlx") return p.backend === "omlx" && (p.omlxModel === model.id || p.modelAlias === model.id);
+      return false;
+    });
+    if (existing) {
+      const enhanced = await ensureProfileCommand(existing);
+      console.log(renderProfileSummary(enhanced));
+      console.log(colors.bold("Already set up"));
+      const sync = await prompt.choice("Update harness configs?", syncChoices(), "both");
+      await syncHarnessConfigs(enhanced, sync);
+      return;
+    }
 
+    const id = sanitizeProfileId(await prompt.text("Profile id", slugFromLabel(model.label)));
+    const modelAlias = await prompt.text("Model alias for Pi/OpenCode", model.id);
+    const host = await prompt.text("Host", "127.0.0.1");
+    const port = await prompt.number("Port", backend.defaultPort, 1, 65535);
+
+    const profile = normalizeProfile({
+      id,
+      backend: backendId,
+      label: model.label,
+      providerId: backend.providerId,
+      modelAlias,
+      ollamaModel: backendId === "ollama" ? model.id : undefined,
+      omlxModel: backendId === "omlx" ? model.id : undefined,
+      flags: { host, port, ctxSize: 131072, temperature: 0.6, topP: 0.95, topK: 20, minP: 0, presencePenalty: 0, repeatPenalty: 1, parallel: 1, cacheTypeK: "bf16", cacheTypeV: "bf16", flashAttention: "on", jinja: true, batchSize: 512 },
+      harnesses: {
+        pi: { enabled: true, model: `${backend.providerId}/${modelAlias}` },
+        opencode: { enabled: true, model: `${backend.providerId}/${modelAlias}` }
+      }
+    });
+
+    console.log("\n" + renderProfileSummary(profile));
+    if (!(await prompt.yesNo("Save profile", true))) return;
+    await saveProfile(profile);
+    const saved = await readProfile(id);
+    console.log(colors.green(`Saved ${profilePath(id)}`));
+
+    const sync = await prompt.choice("Update harness configs?", syncChoices(), "both");
+    await syncHarnessConfigs(saved, sync);
+  } finally {
+    prompt.close();
+  }
+}
+
+// ── Run from models ─────────────────────────────────────────────────────
+
+async function runFromProfile(profile) {
+  const prompt = createPrompt();
+  try {
+    const withHarness = await prompt.choice("Harness", [
+      { value: "pi", label: "Pi" },
+      { value: "opencode", label: "OpenCode" },
+      { value: "server", label: "Server only" }
+    ], "pi");
+    await runProfile(await ensureProfileCommand(profile), { with: withHarness === "server" ? null : withHarness });
+  } finally {
+    prompt.close();
+  }
+}
+
+// ── Benchmark from models ───────────────────────────────────────────────
+
+async function benchmarkFromProfile(profile) {
+  const benchDir = resolve(ROOT, "benchmarks");
+  const runsDir = resolve(ROOT, "runs");
+
+  const benchmarks = await loadBenchmarks(benchDir);
+  if (benchmarks.length === 0) {
+    console.log(colors.yellow(`No benchmarks found in ${benchDir}`));
+    return;
+  }
+
+  const prompt = createPrompt();
+  try {
+    const kind = await prompt.choice("Category", [
+      { value: "visual", label: "Visual Benchmark", hint: "HTML/CSS/JS animation benchmarks" },
+      { value: "data-science", label: "Data Science", hint: "Analysis and charting benchmarks" }
+    ], "visual");
+
+    const filtered = benchmarks.filter((b) => b.kind === kind);
+    if (filtered.length === 0) {
+      console.log(colors.yellow(`No ${kind} benchmarks found.`));
+      return;
+    }
+
+    const benchmarkId = await prompt.choice("Prompt", filtered.map((b) => ({
+      value: b.id,
+      label: b.title,
+      hint: b.description || b.id
+    })), filtered[0].id);
+    const selectedBenchmark = filtered.find((b) => b.id === benchmarkId);
+    if (!selectedBenchmark) throw new Error(`Benchmark "${benchmarkId}" not found.`);
+
+    const runner = await prompt.choice("Harness", [
+      { value: "pi", label: "Pi" },
+      { value: "opencode", label: "OpenCode" },
+      { value: "manual", label: "Manual chat", hint: "copy the prompt yourself" }
+    ], "pi");
+
+  const backend = backendFor(profile.backend);
+  const modelId = profile.modelAlias;
+  const modelSource = profile.providerId === "llama-cpp-mtp" ? "llama-cpp-mtp" : profile.backend === "ollama" ? "ollama" : profile.backend === "omlx" ? "omlx" : "llama-cpp";
+  const backendLabel = backend.label;
+  const baseUrl = profile.baseUrl;
+  const toolPrompt = buildToolPrompt(selectedBenchmark, kind);
+
+  const now = new Date();
+  const runId = createRunId(now);
+  const modelSlug = slugModelId(modelId);
+  const benchmarkDirectory = join(runsDir, selectedBenchmark.id);
+  const modelDirectory = join(benchmarkDirectory, modelSlug);
+  const runDirectory = join(modelDirectory, runId);
+
+  await mkdir(runDirectory, { recursive: true });
+
+  const isDs = kind === "data-science";
+  const metadata = {
+    schemaVersion: 1,
+    kind,
+    runId,
+    benchmark: { id: selectedBenchmark.id, title: selectedBenchmark.title, description: selectedBenchmark.description, prompt: selectedBenchmark.prompt },
+    model: { id: modelId, slug: modelSlug },
+    status: "prepared",
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    preparedAt: now.toISOString(),
+    runDirectory,
+    assets: isDs
+      ? { metadata: "metadata.json", prompt: "prompt.md", rawResponse: "response.raw.txt", ds: { notebook: "analysis.ipynb", summary: "summary.json", chartDistribution: "chart-distribution.png", chartTreatmentEffect: "chart-treatment-effect.png", chartCompletionRates: "chart-completion-rates.png" } }
+      : { metadata: "metadata.json", prompt: "prompt.md", html: "index.html", preview: "preview.png", video: "preview.webm", rawResponse: "response.raw.txt" },
+    runner: {
+      mode: runner === "manual" ? "manual" : "external",
+      modelSource,
+      intendedRunner: runner === "pi" ? "Pi" : runner === "opencode" ? "OpenCode" : "manual",
+      backendLabel,
+      baseUrl,
+      model: modelId,
+      retries: 0,
+      tokenMetrics: { reported: false }
+    },
+    tool: runner !== "manual" ? runner : undefined
+  };
+
+  await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(metadata, null, 2) + "\n", "utf8");
+  await writeFile(join(runDirectory, "prompt.md"), toolPrompt + "\n", "utf8");
+
+  if (isDs) {
+    try {
+      const envPath = resolve(ROOT, ".env");
+      const envContent = await readFile(envPath, "utf8");
+      const supabaseUrl = envContent.split("\n").find((l) => l.startsWith("SUPABASE_URL="))?.split("=")[1]?.trim();
+      const supabaseKey = envContent.split("\n").find((l) => l.startsWith("SUPABASE_ANON_KEY="))?.split("=")[1]?.trim();
+      if (supabaseUrl && supabaseKey) {
+        await writeFile(join(runDirectory, "supabase.json"), JSON.stringify({
+          url: `${supabaseUrl}/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null`,
+          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+        }, null, 2) + "\n", "utf8");
+      }
+    } catch { /* no .env, skip supabase config */ }
+  }
+
+  console.log("");
+  console.log(colors.bold(colors.green("✓ Run slot prepared")));
+  console.log(renderSection("Run", renderRows([
+    ["Directory", colors.cyan(runDirectory)],
+    ["Benchmark", selectedBenchmark.title],
+    ["Kind", kind],
+    ["Model", colors.bold(modelId)],
+    ["Source", backendLabel],
+    ["Harness", runner === "pi" ? "Pi" : runner === "opencode" ? "OpenCode" : "Manual"]
+  ])));
+  console.log("");
+  console.log(colors.bold("Prompt"));
+  console.log(colors.dim("─".repeat(60)));
+  console.log(toolPrompt);
+  console.log(colors.dim("─".repeat(60)));
+  console.log("");
+  console.log(colors.bold("Next steps"));
+  console.log(`  1. ${colors.cyan(`cd ${runDirectory}`)}`);
+  if (runner === "manual") {
+    console.log("  2. Copy the prompt above into your tool of choice.");
+  } else {
+    console.log(`  2. ${colors.cyan(`local-llm run ${profile.id} --with ${runner}`)}`);
+  }
+  } finally {
+    prompt.close();
+  }
+}
+
+// ── Benchmark cloud model ────────────────────────────────────────────────
+
+async function benchmarkFromCloudModel(prequickModelId) {
+  const benchDir = resolve(ROOT, "benchmarks");
+  const runsDir = resolve(ROOT, "runs");
+
+  const benchmarks = await loadBenchmarks(benchDir);
+  if (benchmarks.length === 0) {
+    console.log(colors.yellow(`No benchmarks found in ${benchDir}`));
+    return;
+  }
+
+  const prompt = createPrompt();
+  try {
+    // Pick cloud model name — preselected from list or enter new
+    let modelId = prequickModelId;
+    if (!modelId) {
+      const existingCloudModels = await loadCloudModels(runsDir);
+      if (existingCloudModels.length > 0) {
+        const modelChoice = await prompt.choice("Model", [
+          ...existingCloudModels.map((m) => ({ value: m.id, label: m.label })),
+          { value: "__new__", label: "New model", hint: "enter a cloud model name" }
+        ], existingCloudModels[0].id);
+        if (modelChoice === "__new__") {
+          modelId = await prompt.text("Model name", "gpt-4o");
+        } else {
+          modelId = modelChoice;
+        }
+      } else {
+        modelId = await prompt.text("Model name", "gpt-4o");
+      }
+    }
+    if (!modelId) return;
+
+    const kind = await prompt.choice("Category", [
+      { value: "visual", label: "Visual Benchmark", hint: "HTML/CSS/JS animation benchmarks" },
+      { value: "data-science", label: "Data Science", hint: "Analysis and charting benchmarks" }
+    ], "visual");
+
+    const filtered = benchmarks.filter((b) => b.kind === kind);
+    if (filtered.length === 0) {
+      console.log(colors.yellow(`No ${kind} benchmarks found.`));
+      return;
+    }
+
+    const benchmarkId = await prompt.choice("Prompt", filtered.map((b) => ({
+      value: b.id,
+      label: b.title,
+      hint: b.description || b.id
+    })), filtered[0].id);
+    const selectedBenchmark = filtered.find((b) => b.id === benchmarkId);
+    if (!selectedBenchmark) throw new Error(`Benchmark "${benchmarkId}" not found.`);
+
+    const toolPrompt = buildToolPrompt(selectedBenchmark, kind);
+
+    const now = new Date();
+    const runId = createRunId(now);
+    const modelSlug = slugModelId(modelId);
+    const benchmarkDirectory = join(runsDir, selectedBenchmark.id);
+    const modelDirectory = join(benchmarkDirectory, modelSlug);
+    const runDirectory = join(modelDirectory, runId);
+
+    await mkdir(runDirectory, { recursive: true });
+
+    const isDs = kind === "data-science";
+    const metadata = {
+      schemaVersion: 1,
+      kind,
+      runId,
+      benchmark: { id: selectedBenchmark.id, title: selectedBenchmark.title, description: selectedBenchmark.description, prompt: selectedBenchmark.prompt },
+      model: { id: modelId, slug: modelSlug },
+      status: "prepared",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      preparedAt: now.toISOString(),
+      runDirectory,
+      assets: isDs
+        ? { metadata: "metadata.json", prompt: "prompt.md", rawResponse: "response.raw.txt", ds: { notebook: "analysis.ipynb", summary: "summary.json", chartDistribution: "chart-distribution.png", chartTreatmentEffect: "chart-treatment-effect.png", chartCompletionRates: "chart-completion-rates.png" } }
+        : { metadata: "metadata.json", prompt: "prompt.md", html: "index.html", preview: "preview.png", video: "preview.webm", rawResponse: "response.raw.txt" },
+      runner: {
+        mode: "manual",
+        modelSource: "cloud",
+        intendedRunner: "manual",
+        backendLabel: "Cloud",
+        model: modelId,
+        retries: 0,
+        tokenMetrics: { reported: false }
+      }
+    };
+
+    await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(metadata, null, 2) + "\n", "utf8");
+    await writeFile(join(runDirectory, "prompt.md"), toolPrompt + "\n", "utf8");
+
+    console.log("");
+    console.log(colors.bold(colors.green("\u2713 Run slot prepared")));
+    console.log(renderSection("Run", renderRows([
+      ["Directory", colors.cyan(runDirectory)],
+      ["Benchmark", selectedBenchmark.title],
+      ["Kind", kind],
+      ["Model", colors.bold(modelId)],
+      ["Source", colors.magenta("Cloud")]
+    ])));
+    console.log("");
+    console.log("");
+    console.log(colors.bold("Prompt"));
+    console.log(colors.dim("─".repeat(60)));
+    console.log(toolPrompt);
+    console.log(colors.dim("─".repeat(60)));
+    console.log("");
+    console.log(colors.bold("Next steps"));
+    console.log(`  1. ${colors.cyan(`cd ${runDirectory}`)}`);
+    console.log("  2. Copy the prompt above into your cloud model tool of choice.");
+  } finally {
+    prompt.close();
+  }
+}
 
 async function runCommand(argv) {
   await ensureLocalDirs();
@@ -435,7 +654,7 @@ async function runCommand(argv) {
 async function interactiveRunSelection(options) {
   if (!process.stdin.isTTY) throw new Error("Profile id is required when not running in an interactive terminal.");
   const profiles = await Promise.all((await loadProfiles()).map((profile) => ensureProfileCommand(profile)));
-  if (profiles.length === 0) throw new Error("No profiles yet. Run: local-llm setup");
+  if (profiles.length === 0) throw new Error("No profiles yet. Run: local-llm models");
   startInteractive("local-llm run");
 
   const prompt = createPrompt();
@@ -452,7 +671,7 @@ async function interactiveRunSelection(options) {
     if (!profile) throw new Error(`Selected profile disappeared: ${profileId}`);
     const requestedHarness = options.with;
     if (requestedHarness && !["pi", "opencode"].includes(requestedHarness)) throw new Error("--with must be pi or opencode.");
-    const withHarness = requestedHarness ?? await prompt.choice("Run mode", [
+    const withHarness = requestedHarness ?? await prompt.choice("Harness", [
       { value: "pi", label: "Pi" },
       { value: "opencode", label: "OpenCode" },
       { value: "server", label: "Server only" }
@@ -466,8 +685,8 @@ async function interactiveRunSelection(options) {
 async function runProfile(profile, options) {
   const withHarness = options.with;
   if (withHarness && !["pi", "opencode"].includes(withHarness)) throw new Error("--with must be pi or opencode.");
-  if (withHarness === "pi" && !(await hasPiModel(profile))) throw new Error(`Pi config is missing ${profile.harnesses.pi.model}. Run setup and choose pi/both config sync.`);
-  if (withHarness === "opencode" && !(await hasOpenCodeModel(profile))) throw new Error(`OpenCode config is missing ${profile.harnesses.opencode.model}. Run setup and choose opencode/both config sync.`);
+  if (withHarness === "pi" && !(await hasPiModel(profile))) throw new Error(`Pi config is missing ${profile.harnesses.pi.model}. Run local-llm models, select Set up, and sync harness configs.`);
+  if (withHarness === "opencode" && !(await hasOpenCodeModel(profile))) throw new Error(`OpenCode config is missing ${profile.harnesses.opencode.model}. Run local-llm models, select Set up, and sync harness configs.`);
   assertProfileFiles(profile);
 
   const backend = backendFor(profile.backend);
@@ -519,6 +738,8 @@ async function runProfile(profile, options) {
     tail.stop();
   }
 }
+
+// ── Stop ─────────────────────────────────────────────────────────────────
 
 async function stopCommand(argv) {
   await ensureLocalDirs();
@@ -592,12 +813,7 @@ async function stopInteractive() {
   }
 }
 
-async function removeCommand(argv) {
-  await ensureLocalDirs();
-  const { positional, options } = parseOptions(argv);
-  if (positional[0]) return removeProfile(positional[0], options);
-  return removeInteractive();
-}
+// ── Remove ───────────────────────────────────────────────────────────────
 
 async function removeProfile(id, options) {
   if (!profileExists(id)) throw new Error(`Profile "${id}" not found.`);
@@ -656,38 +872,7 @@ async function removeProfile(id, options) {
   if (keepLogs) console.log(colors.dim("Logs preserved (--keep-logs)"));
 }
 
-async function removeInteractive() {
-  const profiles = await loadProfiles();
-  if (profiles.length === 0) {
-    console.log(colors.dim("No profiles to remove."));
-    return;
-  }
-
-  if (!process.stdin.isTTY) throw new Error("Profile id is required when not running in an interactive terminal.");
-  startInteractive("local-llm remove");
-
-  const prompt = createPrompt();
-  try {
-    const choices = await Promise.all(profiles.map(async (profile) => {
-      const missing = missingProfileFiles(profile);
-      const running = await isProfileRunning(profile);
-      return {
-        value: profile.id,
-        label: profile.label,
-        hint: `${running ? "running · " : ""}${profile.providerId}/${profile.modelAlias}${missing ? ` · ${missing}` : ""}`
-      };
-    }));
-    choices.push({ value: "__cancel", label: "Cancel" });
-    const selected = await prompt.choice("Remove profile", choices, "__cancel");
-    if (selected === "__cancel") {
-      console.log(colors.dim("Cancelled."));
-      return;
-    }
-    await removeProfile(selected, {});
-  } finally {
-    prompt.close();
-  }
-}
+// ── Helpers ──────────────────────────────────────────────────────────────
 
 async function allProfileStatuses() {
   const profiles = await loadProfiles();
@@ -759,7 +944,7 @@ async function renderFullProfile(profile) {
     sections.push(renderSection("Memory", renderRows([
       ["Estimated total", colors.bold(`~${formatBytes(est.totalBytes)}`)],
       ["Model", formatBytes(est.modelBytes)],
-      ["KV cache", est.kvBytes ? `~${formatBytes(est.kvBytes)} (ctx ${profile.flags.ctxSize}, ${profile.flags.parallel ?? 1} slot${(profile.flags.parallel ?? 1) !== 1 ? "s" : ""}, ${profile.flags.cacheTypeK}/${profile.flags.cacheTypeV})` : "unknown"],
+      ["KV cache", est.kvBytes ? `~${formatBytes(est.kvBytes)} (ctx ${profile.flags.ctxSize}, ${profile.flags.parallel ?? 1} slot, ${profile.flags.cacheTypeK}/${profile.flags.cacheTypeV})` : "unknown"],
       ...(est.note ? [["Note", colors.yellow(est.note)]] : [])
     ])));
     sections.push("");
@@ -780,10 +965,6 @@ async function renderFullProfile(profile) {
   sections.push("");
   sections.push(renderSection("Next", `${colors.green("Run:")} local-llm run ${profile.id} --with pi`));
   return sections.join("\n");
-}
-
-function backendId(profile) {
-  return profile.backend ?? (profile.serverVariant === "mtp" ? "llama-cpp-mtp" : "llama-cpp");
 }
 
 function renderProfileSummary(profile) {
@@ -835,7 +1016,6 @@ function missingProfileFiles(profile) {
 }
 
 function renderManagedModelDetails(model, backend) {
-  const suggestedId = slugFromLabel(model.label);
   const lines = [
     colors.bold(model.label),
     `Id:     ${model.id}`,
@@ -844,10 +1024,8 @@ function renderManagedModelDetails(model, backend) {
     model.family ? `Family: ${model.family}` : null,
     model.sizeBytes ? `Size:   ${formatBytes(model.sizeBytes)}` : null,
     "",
-    colors.bold("To create a runnable profile"),
-    `local-llm setup ${suggestedId}`,
-    "",
-    colors.dim("After setup, this model will appear in the Saved profiles section.")
+    colors.dim("Use local-llm models → Set up to create a profile."),
+    ""
   ].filter(Boolean);
   return lines.join("\n");
 }
@@ -857,15 +1035,9 @@ function renderPathStatus(path, missingLabel) {
   return existsSync(path) ? colors.dim(path) : `${colors.red(missingLabel)} ${colors.dim(path)}`;
 }
 
-function renderSection(title, body) {
-  return `${colors.magenta("◆")} ${colors.bold(title)}\n${body}`;
-}
-
 function configBadge(configured) {
   return configured ? colors.green("configured") : colors.yellow("missing");
 }
-
-
 
 function highlightShell(text) {
   return text
@@ -891,7 +1063,10 @@ function cacheTypeChoices() {
 }
 
 function serverVariantChoices() {
-  return backendChoices().filter((c) => c.value === "llama-cpp" || c.value === "llama-cpp-mtp");
+  return [
+    { value: "standard", label: BACKENDS["llama-cpp"].label, hint: "manages llama-server process" },
+    { value: "mtp", label: BACKENDS["llama-cpp-mtp"].label, hint: "speculative decoding with draft-mtp" }
+  ];
 }
 
 function syncChoices() {
@@ -901,25 +1076,4 @@ function syncChoices() {
     { value: "opencode", label: "OpenCode only" },
     { value: "none", label: "None" }
   ];
-}
-
-function parseOptions(argv) {
-  const positional = [];
-  const options = {};
-  for (let i = 0; i < argv.length; i++) {
-    const item = argv[i];
-    if (item.startsWith("--")) {
-      const key = item.slice(2);
-      const next = argv[i + 1];
-      if (next && !next.startsWith("--")) {
-        options[key] = next;
-        i += 1;
-      } else {
-        options[key] = true;
-      }
-    } else {
-      positional.push(item);
-    }
-  }
-  return { positional, options };
 }

@@ -83,7 +83,7 @@ async function writeRun(runsRoot: string) {
     },
     runner: {
       mode: "manual",
-      modelSource: "lmstudio",
+      modelSource: "llama-cpp",
       intendedRunner: "manual",
       backendLabel: "LM Studio",
       baseUrl: "http://localhost:1234/v1",
@@ -182,7 +182,7 @@ describe("generateStaticExport", () => {
     expect(JSON.stringify(manifest)).not.toContain("promptText");
     expect(manifest.runs[0].runner).toEqual({
       mode: "manual",
-      modelSource: "lmstudio",
+      modelSource: "llama-cpp",
       intendedRunner: "manual",
       backendLabel: "LM Studio",
       model: "local/qwen2.5-vl",

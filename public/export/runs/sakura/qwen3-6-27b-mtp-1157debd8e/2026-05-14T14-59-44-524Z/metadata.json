@@ -25,6 +25,7 @@
   },
   "runner": {
     "mode": "external",
+    "modelSource": "llama-cpp",
     "intendedRunner": "Pi",
     "backendLabel": "llama.cpp",
     "model": "qwen3.6-27b-mtp",

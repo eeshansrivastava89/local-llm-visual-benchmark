@@ -25,7 +25,7 @@
   },
   "runner": {
     "mode": "external",
-    "modelSource": "lmstudio",
+    "modelSource": "llama-cpp",
     "intendedRunner": "Hermes",
     "backendLabel": "LM Studio",
     "model": "qwen3.6-35b-a3b-mtp",

@@ -293,7 +293,7 @@ describe("createLocalApi", () => {
     const response = await api.updateSavedRunMetadata({
       runDirectory,
       backend: "custom",
-      customBackend: "cloud",
+      customBackend: "Cloud",
       harness: "manual",
       modelId: "ChatGPT"
     });
@@ -301,8 +301,8 @@ describe("createLocalApi", () => {
     expect(response.run.model).toMatchObject({ id: "ChatGPT", slug: "model-a" });
     expect(response.run.runner).toMatchObject({
       mode: "manual",
-      modelSource: "custom",
-      backendLabel: "cloud",
+      modelSource: "cloud",
+      backendLabel: "Cloud",
       intendedRunner: "manual",
       model: "ChatGPT"
     });

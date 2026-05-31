@@ -24,7 +24,7 @@
   },
   "runner": {
     "mode": "external",
-    "modelSource": "lmstudio",
+    "modelSource": "llama-cpp",
     "intendedRunner": "Pi",
     "backendLabel": "LM Studio"
   },

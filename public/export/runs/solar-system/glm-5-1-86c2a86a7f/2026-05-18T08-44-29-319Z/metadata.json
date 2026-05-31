@@ -25,9 +25,9 @@
   },
   "runner": {
     "mode": "external",
-    "modelSource": "custom",
+    "modelSource": "cloud",
     "intendedRunner": "Pi",
-    "backendLabel": "cloud",
+    "backendLabel": "Cloud",
     "model": "GLM 5.1",
     "retries": 0
   },

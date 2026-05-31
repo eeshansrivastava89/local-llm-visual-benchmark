@@ -28,10 +28,10 @@ function stackTone(label, role) {
     if (/manual/u.test(value)) return "manual";
     return "harness";
   }
-  if (/omlx|base mlx/u.test(value)) return "omlx";
-  if (/llama\.cpp|llamacpp/u.test(value)) return "llamacpp";
-  if (/lm studio|lmstudio/u.test(value)) return "lmstudio";
   if (/cloud|gpt|chatgpt|openai|anthropic|claude/u.test(value)) return "cloud";
+  if (/omlx|base mlx/u.test(value)) return "omlx";
+  if (/llama\.cpp mtp|llama-cpp-mtp/u.test(value)) return "llamacpp-mtp";
+  if (/llama\.cpp|llamacpp|lm studio|lmstudio/u.test(value)) return "llamacpp";
   if (/ollama/u.test(value)) return "ollama";
   if (/source unrecorded|unrecorded/u.test(value)) return "unknown";
   return "backend";

@@ -35,7 +35,7 @@ Why: local benchmark runs are written to ignored `runs/`, but production reads t
 - If `--alias`, `--port`, or provider-facing details change, sync harness config:
 
 ```bash
-local-llm setup <profile-id> --sync both
+local-llm models  # then choose Set up → sync both harnesses
 ```
 
 - `local-llm stop` with no profile should show running tracked servers; use `local-llm stop --all` for emergencies.

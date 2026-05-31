@@ -15,7 +15,7 @@ export class ApiRequestError extends Error {
  * Extracted from api.ts to keep the API class focused on handler logic.
  */
 
-export type EditableRunBackend = "unrecorded" | "omlx" | "lmstudio" | "llama.cpp" | "ollama" | "mlx" | "custom";
+export type EditableRunBackend = "unrecorded" | "omlx" | "llama-cpp" | "llama-cpp-mtp" | "llama.cpp" | "lmstudio" | "ollama" | "mlx" | "cloud" | "custom";
 export type EditableRunHarness = "manual" | "pi" | "opencode" | "hermes";
 
 export function readRequiredString(value: unknown, field: string): string {
@@ -65,16 +65,19 @@ export function readRunBackend(value: unknown): EditableRunBackend {
   }
   if (
     value === "unrecorded" ||
+    value === "ollama" ||
     value === "omlx" ||
+    value === "llama-cpp" ||
+    value === "llama-cpp-mtp" ||
     value === "lmstudio" ||
     value === "llama.cpp" ||
-    value === "ollama" ||
     value === "mlx" ||
+    value === "cloud" ||
     value === "custom"
   ) {
     return value;
   }
-  throw new ApiRequestError(400, "backend must be unrecorded, omlx, lmstudio, llama.cpp, ollama, mlx, or custom.");
+  throw new ApiRequestError(400, "backend must be unrecorded, ollama, omlx, llama-cpp, llama-cpp-mtp, cloud, or mlx.");
 }
 
 export function readRunHarness(value: unknown): EditableRunHarness {
