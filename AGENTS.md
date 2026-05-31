@@ -39,7 +39,7 @@ local-llm models  # then choose Set up → sync both harnesses
 ```
 
 - `local-llm stop` with no profile should show running tracked servers; use `local-llm stop --all` for emergencies.
-- `local-llm list` shows all profiles across llama.cpp, Ollama, and oMLX backends.
+- `local-llm models` is the single entry point for all actions (inspect, set up, run, benchmark, remove).
 
 ## Supported backends
 
@@ -67,9 +67,24 @@ local-llm models  # then choose Set up → sync both harnesses
 --spec-draft-n-max 2
 ```
 
+- MTP profiles can optionally include a separate drafter model via `draftModelPath` in the profile, which emits `--spec-draft-model <path>` in the command. If not set, uses built-in MTP heads.
+- Gemma 4 MTP drafter (`gemma4_assistant` architecture) requires the `atomic-llama-cpp-turboquant` fork, not stock llama.cpp.
 - Current upstream default for `--spec-draft-p-min` is `0.00`; leave it implicit unless intentionally testing that parameter.
 - MTP decoding can affect output, not just speed, so keep `llama-cpp-mtp` labeled separately in benchmark metadata.
 - MTP profiles use port `8081`; only run one at a time unless you edit the port and sync configs.
+
+## Model source schema
+
+- `modelSource` ∈ `{ollama, omlx, llama-cpp, llama-cpp-mtp, cloud}`
+- Old values `custom`, `lmstudio`, `(none)` have been migrated to the new set
+- `isCloudRun` in UI: `run.runner?.modelSource === "cloud"`
+- `backendLabel` is display-only, not used for filtering
+
+## CLI commands
+
+- `local-llm models` — interactive: inspect, set up, run, benchmark, remove
+- `local-llm run <profile>` — start server + launch harness (auto-syncs Pi/OpenCode config)
+- `local-llm stop [profile|--all]` — stop tracked servers
 
 ## Validation
 
