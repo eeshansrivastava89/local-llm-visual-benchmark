@@ -74,18 +74,7 @@ async function listAll() {
       if (!firstGroup) console.log("");
       firstGroup = false;
       console.log(colorFn(colors.bold(backend.label)));
-      for (const profile of group) {
-        const index = items.push({ type: "profile", profile });
-        const running = await isProfileRunning(profile);
-        const timestamp = await profileTimestamp(profile.id);
-        const piOk = await hasPiModel(profile);
-        const ocOk = await hasOpenCodeModel(profile);
-        const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
-        const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
-        const harnessTag = ` · ${piOk ? colors.green("pi") : colors.yellow("pi")}/${ocOk ? colors.green("oc") : colors.yellow("oc")}`;
-        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
-        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${harnessTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
-      }
+      await printProfileGroup(group, backend, items);
     }
     for (const [beId, group] of groups) {
       if (backendOrder.includes(beId) || group.length === 0) continue;
@@ -93,18 +82,7 @@ async function listAll() {
       const colorFn = backendColors[beId] ?? colors.magenta;
       console.log("");
       console.log(colorFn(colors.bold(backend.label)));
-      for (const profile of group) {
-        const index = items.push({ type: "profile", profile });
-        const running = await isProfileRunning(profile);
-        const timestamp = await profileTimestamp(profile.id);
-        const piOk = await hasPiModel(profile);
-        const ocOk = await hasOpenCodeModel(profile);
-        const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
-        const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
-        const harnessTag = ` · ${piOk ? colors.green("pi") : colors.yellow("pi")}/${ocOk ? colors.green("oc") : colors.yellow("oc")}`;
-        console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
-        console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${harnessTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
-      }
+      await printProfileGroup(group, backend, items);
     }
   }
   console.log("");
@@ -441,91 +419,91 @@ async function benchmarkFromProfile(profile) {
       { value: "manual", label: "Manual chat", hint: "copy the prompt yourself" }
     ], "pi");
 
-  const backend = backendFor(profile.backend);
-  const modelId = profile.modelAlias;
-  const modelSource = profile.providerId === "llama-cpp-mtp" ? "llama-cpp-mtp" : profile.backend === "ollama" ? "ollama" : profile.backend === "omlx" ? "omlx" : "llama-cpp";
-  const backendLabel = backend.label;
-  const baseUrl = profile.baseUrl;
-  const toolPrompt = buildToolPrompt(selectedBenchmark, kind);
+    const backend = backendFor(profile.backend);
+    const modelId = profile.modelAlias;
+    const modelSource = profile.providerId;
+    const backendLabel = backend.label;
+    const baseUrl = profile.baseUrl;
+    const toolPrompt = buildToolPrompt(selectedBenchmark, kind);
 
-  const now = new Date();
-  const runId = createRunId(now);
-  const modelSlug = slugModelId(modelId);
-  const benchmarkDirectory = join(runsDir, selectedBenchmark.id);
-  const modelDirectory = join(benchmarkDirectory, modelSlug);
-  const runDirectory = join(modelDirectory, runId);
+    const now = new Date();
+    const runId = createRunId(now);
+    const modelSlug = slugModelId(modelId);
+    const benchmarkDirectory = join(runsDir, selectedBenchmark.id);
+    const modelDirectory = join(benchmarkDirectory, modelSlug);
+    const runDirectory = join(modelDirectory, runId);
 
-  await mkdir(runDirectory, { recursive: true });
+    await mkdir(runDirectory, { recursive: true });
 
-  const isDs = kind === "data-science";
-  const metadata = {
-    schemaVersion: 1,
-    kind,
-    runId,
-    benchmark: { id: selectedBenchmark.id, title: selectedBenchmark.title, description: selectedBenchmark.description, prompt: selectedBenchmark.prompt },
-    model: { id: modelId, slug: modelSlug },
-    status: "prepared",
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-    preparedAt: now.toISOString(),
-    runDirectory,
-    assets: isDs
-      ? { metadata: "metadata.json", prompt: "prompt.md", rawResponse: "response.raw.txt", ds: { notebook: "analysis.ipynb", summary: "summary.json", chartDistribution: "chart-distribution.png", chartTreatmentEffect: "chart-treatment-effect.png", chartCompletionRates: "chart-completion-rates.png" } }
-      : { metadata: "metadata.json", prompt: "prompt.md", html: "index.html", preview: "preview.png", video: "preview.webm", rawResponse: "response.raw.txt" },
-    runner: {
-      mode: runner === "manual" ? "manual" : "external",
-      modelSource,
-      intendedRunner: runner === "pi" ? "Pi" : runner === "opencode" ? "OpenCode" : "manual",
-      backendLabel,
-      baseUrl,
-      model: modelId,
-      retries: 0,
-      tokenMetrics: { reported: false }
-    },
-    tool: runner !== "manual" ? runner : undefined
-  };
+    const isDs = kind === "data-science";
+    const metadata = {
+      schemaVersion: 1,
+      kind,
+      runId,
+      benchmark: { id: selectedBenchmark.id, title: selectedBenchmark.title, description: selectedBenchmark.description, prompt: selectedBenchmark.prompt },
+      model: { id: modelId, slug: modelSlug },
+      status: "prepared",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      preparedAt: now.toISOString(),
+      runDirectory,
+      assets: isDs
+        ? { metadata: "metadata.json", prompt: "prompt.md", rawResponse: "response.raw.txt", ds: { notebook: "analysis.ipynb", summary: "summary.json", chartDistribution: "chart-distribution.png", chartTreatmentEffect: "chart-treatment-effect.png", chartCompletionRates: "chart-completion-rates.png" } }
+        : { metadata: "metadata.json", prompt: "prompt.md", html: "index.html", preview: "preview.png", video: "preview.webm", rawResponse: "response.raw.txt" },
+      runner: {
+        mode: runner === "manual" ? "manual" : "external",
+        modelSource,
+        intendedRunner: runner === "pi" ? "Pi" : runner === "opencode" ? "OpenCode" : "manual",
+        backendLabel,
+        baseUrl,
+        model: modelId,
+        retries: 0,
+        tokenMetrics: { reported: false }
+      },
+      tool: runner !== "manual" ? runner : undefined
+    };
 
-  await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(metadata, null, 2) + "\n", "utf8");
-  await writeFile(join(runDirectory, "prompt.md"), toolPrompt + "\n", "utf8");
+    await writeFile(join(runDirectory, "metadata.json"), JSON.stringify(metadata, null, 2) + "\n", "utf8");
+    await writeFile(join(runDirectory, "prompt.md"), toolPrompt + "\n", "utf8");
 
-  if (isDs) {
-    try {
-      const envPath = resolve(ROOT, ".env");
-      const envContent = await readFile(envPath, "utf8");
-      const supabaseUrl = envContent.split("\n").find((l) => l.startsWith("SUPABASE_URL="))?.split("=")[1]?.trim();
-      const supabaseKey = envContent.split("\n").find((l) => l.startsWith("SUPABASE_ANON_KEY="))?.split("=")[1]?.trim();
-      if (supabaseUrl && supabaseKey) {
-        await writeFile(join(runDirectory, "supabase.json"), JSON.stringify({
-          url: `${supabaseUrl}/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null`,
-          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-        }, null, 2) + "\n", "utf8");
-      }
-    } catch { /* no .env, skip supabase config */ }
-  }
+    if (isDs) {
+      try {
+        const envPath = resolve(ROOT, ".env");
+        const envContent = await readFile(envPath, "utf8");
+        const supabaseUrl = envContent.split("\n").find((l) => l.startsWith("SUPABASE_URL="))?.split("=")[1]?.trim();
+        const supabaseKey = envContent.split("\n").find((l) => l.startsWith("SUPABASE_ANON_KEY="))?.split("=")[1]?.trim();
+        if (supabaseUrl && supabaseKey) {
+          await writeFile(join(runDirectory, "supabase.json"), JSON.stringify({
+            url: `${supabaseUrl}/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null`,
+            headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+          }, null, 2) + "\n", "utf8");
+        }
+      } catch { /* no .env, skip supabase config */ }
+    }
 
-  console.log("");
-  console.log(colors.bold(colors.green("✓ Run slot prepared")));
-  console.log(renderSection("Run", renderRows([
-    ["Directory", colors.cyan(runDirectory)],
-    ["Benchmark", selectedBenchmark.title],
-    ["Kind", kind],
-    ["Model", colors.bold(modelId)],
-    ["Source", backendLabel],
-    ["Harness", runner === "pi" ? "Pi" : runner === "opencode" ? "OpenCode" : "Manual"]
-  ])));
-  console.log("");
-  console.log(colors.bold("Prompt"));
-  console.log(colors.dim("─".repeat(60)));
-  console.log(toolPrompt);
-  console.log(colors.dim("─".repeat(60)));
-  console.log("");
-  console.log(colors.bold("Next steps"));
-  console.log(`  1. ${colors.cyan(`cd ${runDirectory}`)}`);
-  if (runner === "manual") {
-    console.log("  2. Copy the prompt above into your tool of choice.");
-  } else {
-    console.log(`  2. ${colors.cyan(`local-llm run ${profile.id} --with ${runner}`)}`);
-  }
+    console.log("");
+    console.log(colors.bold(colors.green("✓ Run slot prepared")));
+    console.log(renderSection("Run", renderRows([
+      ["Directory", colors.cyan(runDirectory)],
+      ["Benchmark", selectedBenchmark.title],
+      ["Kind", kind],
+      ["Model", colors.bold(modelId)],
+      ["Source", backendLabel],
+      ["Harness", runner === "pi" ? "Pi" : runner === "opencode" ? "OpenCode" : "Manual"]
+    ])));
+    console.log("");
+    console.log(colors.bold("Prompt"));
+    console.log(colors.dim("─".repeat(60)));
+    console.log(toolPrompt);
+    console.log(colors.dim("─".repeat(60)));
+    console.log("");
+    console.log(colors.bold("Next steps"));
+    console.log(`  1. ${colors.cyan(`cd ${runDirectory}`)}`);
+    if (runner === "manual") {
+      console.log("  2. Copy the prompt above into your tool of choice.");
+    } else {
+      console.log(`  2. ${colors.cyan(`local-llm run ${profile.id} --with ${runner}`)}`);
+    }
   } finally {
     prompt.close();
   }
@@ -633,7 +611,6 @@ async function benchmarkFromCloudModel(prequickModelId) {
       ["Model", colors.bold(modelId)],
       ["Source", colors.magenta("Cloud")]
     ])));
-    console.log("");
     console.log("");
     console.log(colors.bold("Prompt"));
     console.log(colors.dim("─".repeat(60)));
@@ -879,6 +856,21 @@ async function removeProfile(id, options) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
+
+async function printProfileGroup(profiles, backend, items) {
+  for (const profile of profiles) {
+    const index = items.push({ type: "profile", profile });
+    const running = await isProfileRunning(profile);
+    const timestamp = await profileTimestamp(profile.id);
+    const piOk = await hasPiModel(profile);
+    const ocOk = await hasOpenCodeModel(profile);
+    const missing = backend.needsModelFile ? missingProfileFiles(profile) : "";
+    const sizeTag = profile.modelPath && existsSync(profile.modelPath) ? ` · ${colors.dim(formatBytes(statSync(profile.modelPath).size))}` : "";
+    const harnessTag = ` · ${piOk ? colors.green("pi") : colors.yellow("pi")}/${ocOk ? colors.green("oc") : colors.yellow("oc")}`;
+    console.log(`${String(index).padStart(2, " ")}. ${running ? colors.green("●") : colors.dim("○")} ${colors.bold(profile.label)} ${colors.dim(relativeTime(timestamp))}`);
+    console.log(`    id: ${colors.cyan(profile.id)} · alias: ${colors.cyan(profile.modelAlias)} · ${profile.baseUrl}${sizeTag}${harnessTag}${missing ? ` · ${colors.red(missing)}` : ""}`);
+  }
+}
 
 async function allProfileStatuses() {
   const profiles = await loadProfiles();

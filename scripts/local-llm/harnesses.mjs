@@ -11,7 +11,8 @@ const PROVIDER_TEMPLATES = {
   "llama-cpp": { name: "llama.cpp", apiKey: "none", api: "openai-completions", compat: { supportsDeveloperRole: false, supportsReasoningEffort: false } },
   "llama-cpp-mtp": { name: "llama.cpp MTP", apiKey: "none", api: "openai-completions", compat: { supportsDeveloperRole: false, supportsReasoningEffort: false } },
   "ollama": { name: "Ollama", apiKey: "ollama", api: "openai-completions", compat: { supportsDeveloperRole: true, supportsReasoningEffort: false } },
-  "omlx": { name: "oMLX", apiKey: "none", api: "openai-completions", compat: { supportsDeveloperRole: false, supportsReasoningEffort: false } }
+  "omlx": { name: "oMLX", apiKey: "none", api: "openai-completions", compat: { supportsDeveloperRole: false, supportsReasoningEffort: false } },
+  "cloud": { name: "Cloud API", apiKey: "none", api: "openai-completions", compat: { supportsDeveloperRole: true, supportsReasoningEffort: true } }
 };
 
 // ── Pi config ────────────────────────────────────────────────────────────
