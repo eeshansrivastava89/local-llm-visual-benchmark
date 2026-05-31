@@ -48,7 +48,7 @@ function init() {
 
 function initWorkspaceState() {
   state.workspace = "visual";
-  state.mode = "model";
+  state.mode = "benchmark";
   state.staticMode = document.body?.dataset.staticBuild === "true";
 
   // Restore persisted kind tab selection

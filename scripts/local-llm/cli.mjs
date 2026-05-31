@@ -685,8 +685,8 @@ async function interactiveRunSelection(options) {
 async function runProfile(profile, options) {
   const withHarness = options.with;
   if (withHarness && !["pi", "opencode"].includes(withHarness)) throw new Error("--with must be pi or opencode.");
-  if (withHarness === "pi" && !(await hasPiModel(profile))) throw new Error(`Pi config is missing ${profile.harnesses.pi.model}. Run local-llm models, select Set up, and sync harness configs.`);
-  if (withHarness === "opencode" && !(await hasOpenCodeModel(profile))) throw new Error(`OpenCode config is missing ${profile.harnesses.opencode.model}. Run local-llm models, select Set up, and sync harness configs.`);
+  if (withHarness === "pi" && !(await hasPiModel(profile))) await syncPiConfig(profile);
+  if (withHarness === "opencode" && !(await hasOpenCodeModel(profile))) await syncOpenCodeConfig(profile);
   assertProfileFiles(profile);
 
   const backend = backendFor(profile.backend);
