@@ -42,15 +42,33 @@ jobs:
       - name: Run unit tests
         run: npm test
 
+      - name: Validate production analytics secrets
+        run: |
+          if [ "$GITHUB_REPOSITORY" = "eeshansrivastava89/local-llm-visual-benchmark" ] && [ "$PUBLIC_ENABLE_ANALYTICS" = "true" ]; then
+            if [ -z "$PUBLIC_POSTHOG_KEY" ]; then
+              echo "::error::Missing required secret PUBLIC_POSTHOG_KEY for production deploy"
+              exit 1
+            fi
+            if [ -z "$PUBLIC_POSTHOG_HOST" ]; then
+              echo "::error::Missing required secret PUBLIC_POSTHOG_HOST for production deploy"
+              exit 1
+            fi
+          fi
+        env:
+          PUBLIC_ENABLE_ANALYTICS: ${{ vars.PUBLIC_ENABLE_ANALYTICS || 'true' }}
+          PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
+          PUBLIC_POSTHOG_HOST: ${{ secrets.PUBLIC_POSTHOG_HOST }}
+
       - name: Build static site
         run: npm run build:static
         env:
           STATIC_USE_EXISTING_EXPORT: "true"
           ASTRO_BASE: "/"
-          PUBLIC_ENABLE_ANALYTICS: "true"
-          PUBLIC_POSTHOG_KEY: "phc_zfue5Ca8VaxypRHPCi9j2h2R3Qy1eytEHt3TMPWlOOS"
-          PUBLIC_POSTHOG_HOST: "https://api-v2.eeshans.com"
-          PUBLIC_POSTHOG_UI_HOST: "https://us.posthog.com"
+          PUBLIC_ENABLE_ANALYTICS: ${{ vars.PUBLIC_ENABLE_ANALYTICS || 'true' }}
+          PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
+          PUBLIC_POSTHOG_HOST: ${{ secrets.PUBLIC_POSTHOG_HOST }}
+          PUBLIC_POSTHOG_UI_HOST: ${{ vars.PUBLIC_POSTHOG_UI_HOST || 'https://us.posthog.com' }}
+          PUBLIC_ANALYTICS_ALLOWED_HOSTS: ${{ vars.PUBLIC_ANALYTICS_ALLOWED_HOSTS || (github.repository == 'eeshansrivastava89/local-llm-visual-benchmark' && 'localai.eeshans.com' || '') }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
