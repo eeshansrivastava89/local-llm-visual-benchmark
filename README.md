@@ -15,7 +15,7 @@
 <img width="1467" height="897" alt="image" src="https://github.com/user-attachments/assets/6499b82d-1cba-402e-b2c6-eca3f3b6076e" />
 
 
-> **Requirements:** [Node.js 24+](https://nodejs.org/) and a local model source: [oMLX](https://omlx.ai/), [LM Studio](https://lmstudio.ai/), [Ollama](https://ollama.com/), or any OpenAI-compatible API. Run benchmarks with Pi, OpenCode, or manual chat.
+> **Requirements:** [Node.js 24+](https://nodejs.org/) and [offgrid-ai](https://www.npmjs.com/package/offgrid-ai) for running benchmarks.
 
 ```bash
 npm install
@@ -34,53 +34,55 @@ If a model understands layout, animation, visual hierarchy, browser APIs, and in
 
 The point of view is intentionally narrow: this is an Apple Silicon daily-driver stack benchmark, not a universal local-inference leaderboard. The project is about finding which combination of model source (oMLX, LM Studio, Ollama, cloud), model artifact (GGUF quant, MLOX format, API), coding harness (Pi, OpenCode, manual chat), and prompt workflow is usable enough for real local work.
 
-## What it tests
-
-| | |
-|---|---|
-| **Visual reasoning** | Can the model translate a prompt into a coherent scene? |
-| **Frontend execution** | Can it produce valid HTML/CSS/JS that actually runs? |
-| **Animation quality** | Does motion feel intentional, smooth, and visible? |
-| **Instruction following** | Does it save the artifact in the requested place and respect constraints? |
-| **Model comparison** | Which local model gives the best result for the same benchmark? |
-| **Rerun quality** | Does the same model improve when prompted again? |
-
 ## How it works
 
-### Running benchmarks
+### Running benchmarks with offgrid-ai
 
-Use the CLI to prepare, run, and manage benchmarks:
+[offgrid-ai](https://www.npmjs.com/package/offgrid-ai) is the runner — it manages local models, launches servers, and prepares benchmark runs.
 
 ```bash
-local-llm models          # interactive: inspect, set up, run, benchmark, remove
-local-llm run <profile>   # start server + launch harness
-local-llm stop [profile]  # stop tracked servers
+npm install -g offgrid-ai
+offgrid-ai models          # select a model → run, benchmark, or inspect
+offgrid-ai run <profile>   # start the model server and open Pi
+offgrid-ai benchmark       # prepare a benchmark run (standalone)
 ```
 
-The `local-llm models` flow is action-first: pick what you want to do (inspect, set up, run, benchmark, remove), then pick the item. It discovers GGUF models from LM Studio, live models from Ollama and oMLX, and cloud models from past benchmark runs.
+The model-first flow in `offgrid-ai models` lets you pick a model, then choose an action:
+
+1. **Run** — start the server and open Pi
+2. **Benchmark** — choose a prompt, create a run slot in this repo
+3. **Reconfigure** — change context window, MTP, or other settings
+4. **Details** — inspect ports, paths, and flags
+
+For benchmark runs, offgrid-ai creates the run directory under `runs/` with `metadata.json` and `prompt.md`, then you:
+
+1. Start the model with `offgrid-ai run <profile>`
+2. Open the gallery with `npm run dev`
+3. Find your run in the gallery and copy the prompt from the run details
+4. Paste into Pi and generate
 
 ### Using the workbench
 
 1. Open the app locally with `npm run dev`.
-2. Browse results in the workbench using **By prompt**, **By model**, or **Table** views.
+2. Browse results in the workbench using **By prompt**, **By model**, or **Compare** views.
 3. Toggle cloud models on/off with the **Include cloud models** checkbox.
-4. In **Table**, select rows to compare visual runs side by side.
+4. In **Compare**, select rows to compare visual runs side by side.
 
 The live site is the same workbench as a static export of captured results. The local app is where run preparation, capture, deletion, folder-opening, and config sync happen.
 
 ### Cloud model benchmarks
 
-Cloud models (GPT, Claude, Gemini, DeepSeek, etc.) are benchmarked the same way: `local-llm models` → Benchmark → choose "New cloud model" or a previously used cloud model. The prompt is copied into your cloud tool of choice. No local server needed.
+Cloud models (GPT, Claude, Gemini, DeepSeek, etc.) are benchmarked the same way: `offgrid-ai benchmark` → choose "Custom / cloud" → enter a model name. The prompt is copied into your cloud tool of choice. No local server needed.
 
 ## Supported backends
 
 | Backend | Type | Model source | Setup |
 |---|---|---|---|
-| **llama.cpp** | Local server | `~/.lmstudio/models/` GGUF | `local-llm models` → Set up |
-| **llama.cpp MTP** | Local server (speculative decoding) | `~/.lmstudio/models/` GGUF | `local-llm models` → Set up → MTP variant |
-| **Ollama** | Managed server | Ollama API (`localhost:11434`) | `local-llm models` → Set up |
-| **oMLX** | Managed server | oMLX API (`127.0.0.1:8000`) | `local-llm models` → Set up |
-| **Cloud** | No server | Any OpenAI-compatible API | `local-llm models` → Benchmark |
+| **llama.cpp** | Local server | `~/.lmstudio/models/` GGUF | `offgrid-ai models` → Set up |
+| **llama.cpp MTP** | Local server (speculative decoding) | `~/.lmstudio/models/` GGUF | `offgrid-ai models` → Set up → MTP variant |
+| **Ollama** | Managed server | Ollama API (`localhost:11434`) | `offgrid-ai models` → Set up |
+| **oMLX** | Managed server | oMLX API (`127.0.0.1:8000`) | `offgrid-ai models` → Set up |
+| **Cloud** | No server | Any OpenAI-compatible API | `offgrid-ai benchmark` → Custom / cloud |
 
 ## Setup
 
@@ -90,7 +92,7 @@ Install dependencies:
 npm install
 ```
 
-Start the local app:
+Start the local gallery:
 
 ```bash
 npm run dev

@@ -25,21 +25,18 @@ Why: local benchmark runs are written to ignored `runs/`, but production reads t
 - `runs/` — ignored local run source data. Do not commit.
 - `public/export/` — tracked public gallery snapshot. Commit this after `npm run publish`.
 - `comparison-exports/` — ignored local video exports. Preserve unless explicitly told otherwise.
-- `.local-llm/` — ignored local model profiles, logs, and state. Preserve unless explicitly told otherwise.
 - `dist/` and `dist-static/` — ignored build output.
 
-## Local LLM profile rules
+## Runner
 
-- `.local-llm/profiles/*/profile.json` stores backend, model info, and display metadata.
-- `.local-llm/profiles/*/llama-server.sh` is the runtime source of truth for llama.cpp profiles: binary, model path, alias, port, context/cache, MTP flags, sampling flags. Ollama/oMLX profiles have no command file.
-- If `--alias`, `--port`, or provider-facing details change, sync harness config:
+Benchmark runs are prepared and executed using [offgrid-ai](https://www.npmjs.com/package/offgrid-ai), an external npm package. The `local-llm` CLI that was previously in `scripts/local-llm/` has been removed — its functionality is now in offgrid-ai.
 
 ```bash
-local-llm models  # then choose Set up → sync both harnesses
+npm install -g offgrid-ai
+offgrid-ai models          # select a model → run, benchmark, or inspect
+offgrid-ai run <profile>   # start the model server and open Pi
+offgrid-ai benchmark       # prepare a benchmark run (standalone)
 ```
-
-- `local-llm stop` with no profile should show running tracked servers; use `local-llm stop --all` for emergencies.
-- `local-llm models` is the single entry point for all actions (inspect, set up, run, benchmark, remove).
 
 ## Supported backends
 
@@ -50,41 +47,12 @@ local-llm models  # then choose Set up → sync both harnesses
 | Ollama | managed-server | Verify connectivity | Ollama API (`localhost:11434`) |
 | oMLX | managed-server | Verify connectivity | oMLX API (`127.0.0.1:8000`) |
 
-## llama.cpp setup
-
-- Canonical local server binary for both standard and MTP profiles:
-
-```text
-/Users/eeshans/dev/llama.cpp-mtp/build/bin/llama-server
-```
-
-- This checkout tracks upstream `ggml-org/llama.cpp` and is used until Homebrew stable `llama-server` is new enough for MTP.
-- Standard profiles use provider `llama-cpp`, port `8080`, and no MTP speculative flags.
-- MTP profiles use provider `llama-cpp-mtp`, port `8081`, and these flags:
-
-```bash
---spec-type draft-mtp
---spec-draft-n-max 2
-```
-
-- MTP profiles can optionally include a separate drafter model via `draftModelPath` in the profile, which emits `--spec-draft-model <path>` in the command. If not set, uses built-in MTP heads.
-- Gemma 4 MTP drafter (`gemma4_assistant` architecture) requires the `atomic-llama-cpp-turboquant` fork, not stock llama.cpp.
-- Current upstream default for `--spec-draft-p-min` is `0.00`; leave it implicit unless intentionally testing that parameter.
-- MTP decoding can affect output, not just speed, so keep `llama-cpp-mtp` labeled separately in benchmark metadata.
-- MTP profiles use port `8081`; only run one at a time unless you edit the port and sync configs.
-
 ## Model source schema
 
 - `modelSource` ∈ `{ollama, omlx, llama-cpp, llama-cpp-mtp, cloud}`
 - Old values `custom`, `lmstudio`, `(none)` have been migrated to the new set
 - `isCloudRun` in UI: `run.runner?.modelSource === "cloud"`
 - `backendLabel` is display-only, not used for filtering
-
-## CLI commands
-
-- `local-llm models` — interactive: inspect, set up, run, benchmark, remove
-- `local-llm run <profile>` — start server + launch harness (auto-syncs Pi/OpenCode config)
-- `local-llm stop [profile|--all]` — stop tracked servers
 
 ## Validation
 
