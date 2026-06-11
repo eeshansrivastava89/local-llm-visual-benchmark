@@ -28,6 +28,7 @@ export function buildArgvFromFlags(profile) {
   if (f.repeatPenalty !== undefined) argv.push("--repeat-penalty", String(f.repeatPenalty));
   if (f.batchSize) argv.push("--batch-size", String(f.batchSize));
   if (f.parallel) argv.push("--parallel", String(f.parallel));
+  if (f.chatTemplateKwargs) argv.push("--chat-template-kwargs", JSON.stringify(f.chatTemplateKwargs));
   argv.push(...serverExtraArgsFor(profile));
   return argv;
 }
@@ -114,6 +115,11 @@ export function applyCommandArgv(profile, argv) {
   if (batchSize !== undefined) flags.batchSize = batchSize;
   if (parallel !== undefined) flags.parallel = parallel;
   flags.jinja = argv.includes("--jinja");
+  const ctKwargs = optionValue(argv, "--chat-template-kwargs");
+  if (ctKwargs) {
+    try { flags.chatTemplateKwargs = JSON.parse(ctKwargs); }
+    catch { flags.chatTemplateKwargs = ctKwargs; }
+  }
 
   const providerId = profile.providerId ?? "llama-cpp";
   return {

@@ -2,7 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { ensureLocalDirs, RUN_DIR, ROOT } from "./paths.mjs";
-import { PRESETS } from "./presets.mjs";
+import { PRESETS, MODEL_HINTS } from "./presets.mjs";
 import { scanGgufModels } from "./scan.mjs";
 import { ensureProfileCommand, loadProfiles, profileExists, readProfile, saveProfile, profilePath, profileTimestamp, sanitizeProfileId, slugFromLabel, normalizeProfile, deleteProfile } from "./profiles.mjs";
 import { buildPrettyCommand } from "./command.mjs";
@@ -248,11 +248,13 @@ async function setupGgufProfile(model) {
     }
 
     const presetIds = Object.keys(PRESETS);
+    const isThinkingModel = MODEL_HINTS.thinkingModels.some((hint) => model.label.toLowerCase().includes(hint) || model.path.toLowerCase().includes(hint));
+    const suggestedPreset = isThinkingModel ? "gemma-4-thinking" : presetIds[0];
     const presetId = await prompt.choice("Preset", presetIds.map((id) => ({
       value: id,
       label: id,
       hint: PRESETS[id].label
-    })), presetIds[0]);
+    })), suggestedPreset);
     const defaults = { ...PRESETS[presetId].flags, ...serverVariant.flags };
 
     const id = sanitizeProfileId(await prompt.text("Profile id", slugFromLabel(model.label)));
@@ -279,6 +281,15 @@ async function setupGgufProfile(model) {
     }
 
     const flags = { ...defaults, ctxSize, cacheTypeK, cacheTypeV, temperature, topP, topK, minP, presencePenalty, repeatPenalty };
+    if (flags.chatTemplateKwargs === undefined) {
+      if (isThinkingModel) {
+        const enableThinking = await prompt.yesNo("Enable thinking/reasoning mode? (Gemma 4: recommended; uses --chat-template-kwargs enable_thinking=true)", true);
+        if (enableThinking) flags.chatTemplateKwargs = { enable_thinking: true };
+      } else {
+        const enableThinking = await prompt.yesNo("Enable thinking/reasoning mode? (--chat-template-kwargs enable_thinking=true)", false);
+        if (enableThinking) flags.chatTemplateKwargs = { enable_thinking: true };
+      }
+    }
     const profile = normalizeProfile({
       id,
       label: model.label,
