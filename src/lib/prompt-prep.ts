@@ -18,17 +18,22 @@ import { buildRunPaths, createRunId } from "./paths";
         process.env[key] = trimmed.slice(eq + 1).trim();
       }
     }
-  } catch { /* no .env file — that's fine */ }
+  } catch {
+    /* no .env file — that's fine */
+  }
 })();
 
 import { writePromptMarkdown, writeRunMetadata } from "./runs";
-import type { BenchmarkRecord, ModelSourceId, PreparedRun, RunnerMode, RunKind, RunMetadata } from "./types";
+import type {
+  BenchmarkRecord,
+  ModelSourceId,
+  PreparedRun,
+  RunnerMode,
+  RunKind,
+  RunMetadata,
+} from "./types";
 
-export type PrepareRunRunner =
-  | "manual"
-  | "pi"
-  | "opencode"
-  | "hermes";
+export type PrepareRunRunner = "manual" | "pi" | "opencode" | "hermes";
 
 export interface PrepareRunInput {
   benchmark: BenchmarkRecord;
@@ -50,15 +55,17 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     runsRoot: input.runsRoot,
     benchmarkId: input.benchmark.id,
     modelId: input.modelId,
-    runId: createRunId(now)
+    runId: createRunId(now),
   });
   const prompt = buildToolPrompt({
     benchmark: input.benchmark,
-    kind
+    kind,
   });
   const timestamp = now.toISOString();
   const modelSource = input.modelSource;
-  const backendLabel = modelSource ? modelSourceLabel(modelSource, input.backendLabel) : undefined;
+  const backendLabel = modelSource
+    ? modelSourceLabel(modelSource, input.backendLabel)
+    : undefined;
   const isDs = kind === "data-science";
   const run: RunMetadata = {
     schemaVersion: 1,
@@ -67,7 +74,7 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
     benchmark: input.benchmark,
     model: {
       id: input.modelId,
-      slug: paths.modelSlug
+      slug: paths.modelSlug,
     },
     status: "prepared",
     createdAt: timestamp,
@@ -84,8 +91,8 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
             summary: "summary.json",
             chartDistribution: "chart-distribution.png",
             chartTreatmentEffect: "chart-treatment-effect.png",
-            chartCompletionRates: "chart-completion-rates.png"
-          }
+            chartCompletionRates: "chart-completion-rates.png",
+          },
         }
       : {
           metadata: "metadata.json",
@@ -93,7 +100,7 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
           html: "index.html",
           preview: "preview.png",
           video: "preview.webm",
-          rawResponse: "response.raw.txt"
+          rawResponse: "response.raw.txt",
         },
     runner: {
       mode: runnerModeFor(runner),
@@ -104,15 +111,18 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
       model: input.modelId,
       retries: 0,
       tokenMetrics: {
-        reported: false
-      }
+        reported: false,
+      },
     },
-    ...(runner === "manual" ? {} : { tool: runner })
+    ...(runner === "manual" ? {} : { tool: runner }),
   };
 
   await mkdir(paths.runDirectory, { recursive: true });
 
-  const writes: Promise<unknown>[] = [writeRunMetadata(paths, run), writeSupabaseConfig(paths.runDirectory)];
+  const writes: Promise<unknown>[] = [
+    writeRunMetadata(paths, run),
+    writeSupabaseConfig(paths.runDirectory),
+  ];
   if (prompt) {
     writes.push(writePromptMarkdown(paths, prompt));
   }
@@ -127,8 +137,8 @@ export async function prepareRun(input: PrepareRunInput): Promise<PreparedRun> {
       commandPath: paths.commandPath,
       htmlPath: paths.htmlPath,
       metadataPath: paths.metadataPath,
-      previewPath: paths.previewPath
-    }
+      previewPath: paths.previewPath,
+    },
   };
 }
 
@@ -146,9 +156,8 @@ export function buildToolPrompt(input: {
     "Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat.",
     "",
     "The HTML must include all CSS and JavaScript inline and must not depend on external network assets.",
-    "After building the page, run a visual QA pass with agent-browser or Playwright: open the saved index.html, inspect the rendered result, and fix any obvious layout, animation, console, or viewport issues before you finish.",
     "",
-    input.benchmark.prompt.trim()
+    input.benchmark.prompt.trim(),
   ].join("\n");
 }
 
@@ -173,14 +182,14 @@ function modelSourceLabel(source: ModelSourceId, customLabel?: string): string {
   return source;
 }
 
-function normalizeOptionalString(value: string | undefined): string | undefined {
+function normalizeOptionalString(
+  value: string | undefined,
+): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
 }
 
-async function writeSupabaseConfig(
-  runDirectory: string
-): Promise<void> {
+async function writeSupabaseConfig(runDirectory: string): Promise<void> {
   const baseUrl = process.env.SUPABASE_URL?.trim();
   const anonKey = process.env.SUPABASE_ANON_KEY?.trim();
   if (!baseUrl || !anonKey) return;
@@ -189,13 +198,13 @@ async function writeSupabaseConfig(
     url: `${baseUrl}/rest/v1/posthog_events?select=*&session_id=not.is.null&variant=not.is.null`,
     headers: {
       apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`
-    }
+      Authorization: `Bearer ${anonKey}`,
+    },
   };
 
   return writeFile(
     join(runDirectory, "supabase.json"),
     JSON.stringify(config, null, 2) + "\n",
-    "utf8"
+    "utf8",
   );
 }
