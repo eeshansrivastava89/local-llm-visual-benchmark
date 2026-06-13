@@ -15,4 +15,4 @@ Use a vivid imaginative color palette with saturated flower colors, fresh greens
 
 Keep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.
 
-After generating the HTML, do a visual review of the animation to ensure it meets the criteria above.
+After generating the HTML, do a visual review of the animation using Playwright to ensure it meets the criteria above, and make any necessary adjustments until the animation is accurate and meets the desired quality & performance standards.

@@ -17,4 +17,4 @@ Make the glass dome visually convincing with curved highlights, soft reflections
 
 The animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.
 
-After generating the HTML, do a visual review of the animation to ensure it meets the criteria above.
+After generating the HTML, do a visual review of the animation using Playwright to ensure it meets the criteria above, and make any necessary adjustments until the animation is accurate and meets the desired quality & performance standards.
