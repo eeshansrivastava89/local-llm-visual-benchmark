@@ -4,4 +4,9 @@ title: Sakura Tree
 description: Dreamy Japanese cherry blossom tree animation with falling petals.
 ---
 
+Create a complete, self-contained HTML file for the request below.
+Write the file as `index.html` in the current working directory.
+Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat.
+
+The HTML must include all CSS and JavaScript inline and must not depend on external network assets.
 Animate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.

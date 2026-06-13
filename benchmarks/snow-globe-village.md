@@ -4,6 +4,11 @@ title: Snow Globe Village
 description: Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.
 ---
 
+Create a complete, self-contained HTML file for the request below.
+Write the file as `index.html` in the current working directory.
+Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat.
+
+The HTML must include all CSS and JavaScript inline and must not depend on external network assets.
 Create a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.
 
 Animate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.

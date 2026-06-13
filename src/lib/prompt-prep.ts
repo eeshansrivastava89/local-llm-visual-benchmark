@@ -146,19 +146,7 @@ export function buildToolPrompt(input: {
   benchmark: BenchmarkRecord;
   kind?: RunKind;
 }): string {
-  const kind = input.kind ?? "visual";
-  if (kind === "data-science") {
-    return input.benchmark.prompt.trim();
-  }
-  return [
-    "Create a complete, self-contained HTML file for the request below.",
-    "Write the file as `index.html` in the current working directory.",
-    "Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat.",
-    "",
-    "The HTML must include all CSS and JavaScript inline and must not depend on external network assets.",
-    "",
-    input.benchmark.prompt.trim(),
-  ].join("\n");
+  return input.benchmark.prompt.trim();
 }
 
 function runnerModeFor(runner: PrepareRunRunner): RunnerMode {
