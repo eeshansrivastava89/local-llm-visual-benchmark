@@ -16,3 +16,5 @@ Animate thousands of snowflakes swirling inside the globe with layered depth: so
 Make the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.
 
 The animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.
+
+After generating the HTML, do a visual review of the animation to ensure it meets the criteria above.

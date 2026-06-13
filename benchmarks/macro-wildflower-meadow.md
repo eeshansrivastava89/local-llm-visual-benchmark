@@ -14,3 +14,5 @@ Create a full-screen animated close-up meadow scene on a bright breezy day, view
 Use a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.
 
 Keep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.
+
+After generating the HTML, do a visual review of the animation to ensure it meets the criteria above.
