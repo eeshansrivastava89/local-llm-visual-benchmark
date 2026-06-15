@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareRun } from "../../src/lib/prompt-prep";
+import { loadBenchmarks } from "../../src/lib/benchmarks";
 import type { BenchmarkRecord } from "../../src/lib/types";
+
+const BENCHMARKS = join(import.meta.dirname, "..", "..", "benchmarks");
 
 const benchmark: BenchmarkRecord = {
   id: "sakura",
@@ -35,6 +38,9 @@ describe("prepareRun", () => {
         preview: "preview.png"
       }
     });
+    // Prompt is a pass-through — HTML instructions come from .md files, not prepareRun
+    expect(prepared.prompt).toContain("Animate a cherry blossom tree.");
+    // Tool-agnostic: prepareRun must never leak tool-specific details into the prompt
     expect(prepared.prompt).not.toContain("OpenCode");
     expect(prepared.prompt).not.toContain("Pi");
     expect(prepared.prompt).not.toContain("Model label:");
@@ -43,15 +49,6 @@ describe("prepareRun", () => {
     expect(prepared.prompt).not.toContain("Output contract:");
     expect(prepared.prompt).not.toContain(prepared.paths.htmlPath);
     expect(prepared.prompt).not.toContain(prepared.paths.runDirectory);
-    expect(prepared.prompt).toContain("Write the file as `index.html` in the current working directory");
-    expect(prepared.prompt).toContain("Do not create any folders");
-    expect(prepared.prompt).toContain("do not print the HTML in chat");
-    expect(prepared.prompt).not.toContain("1280x720");
-    expect(prepared.prompt).not.toContain("agent-browser path:");
-    expect(prepared.prompt).toContain("run a visual QA pass with agent-browser or Playwright");
-    expect(prepared.prompt).toContain("open the saved index.html");
-    expect(prepared.prompt).toContain("Playwright");
-    expect(prepared.prompt).toContain("Animate a cherry blossom tree.");
     expect(prepared.prompt).not.toContain("preview.png");
     await expect(stat(prepared.paths.runDirectory)).resolves.toBeTruthy();
     await expect(readFile(prepared.paths.promptPath, "utf8")).resolves.toBe(
@@ -117,6 +114,32 @@ describe("prepareRun", () => {
     await expect(readFile(prepared.paths.metadataPath, "utf8")).resolves.toContain(
       "\"modelSource\": \"omlx\""
     );
+  });
+
+  it("creates a prepared run with HTML instructions from a loaded visual benchmark", async () => {
+    const benchmarks = await loadBenchmarks(BENCHMARKS);
+    const sakura = benchmarks.find((b) => b.id === "sakura");
+    expect(sakura).toBeDefined();
+    if (!sakura) return;
+
+    const runsRoot = await mkdtemp(join(tmpdir(), "viewer-prep-loaded-"));
+    const prepared = await prepareRun({
+      benchmark: sakura,
+      modelId: "google/gemma-4-e4b",
+      runsRoot,
+      now: new Date("2026-05-07T04:00:32.122Z")
+    });
+
+    // HTML instructions come from the .md file via loadBenchmarks
+    expect(prepared.prompt).toContain("Create a complete, self-contained HTML file");
+    expect(prepared.prompt).toContain("Write the file as `index.html`");
+    expect(prepared.prompt).toContain("cherry blossom");
+    // QA pass instructions also come from the .md file
+    expect(prepared.prompt).toContain("Playwright");
+    // Still tool-agnostic — no leaked paths or tool names
+    expect(prepared.prompt).not.toContain("OpenCode");
+    expect(prepared.prompt).not.toContain(prepared.paths.htmlPath);
+    expect(prepared.prompt).not.toContain(prepared.paths.runDirectory);
   });
 
   it("prepares data-science runs with DS assets and raw prompt", async () => {

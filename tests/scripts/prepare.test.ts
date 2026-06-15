@@ -22,24 +22,20 @@ describe("buildToolPrompt", () => {
     sourcePath: "",
   };
 
-  it("builds a visual prompt with HTML instructions", () => {
+  it("returns a visual benchmark prompt as-is", () => {
     const prompt = buildToolPrompt({
       benchmark: visualBenchmark,
       kind: "visual",
     });
-    expect(prompt).toContain("Create a complete, self-contained HTML file");
-    expect(prompt).toContain("Write the file as `index.html`");
-    expect(prompt).toContain("Animate a cherry blossom tree.");
-    expect(prompt).toContain("visual QA pass");
+    expect(prompt).toBe("Animate a cherry blossom tree.");
   });
 
-  it("builds a data-science prompt as-is (no HTML wrapper)", () => {
+  it("returns a data-science benchmark prompt as-is", () => {
     const prompt = buildToolPrompt({
       benchmark: dsBenchmark,
       kind: "data-science",
     });
-    expect(prompt).not.toContain("Create a complete, self-contained HTML file");
-    expect(prompt).toContain("Analyze the A/B test data from Supabase.");
+    expect(prompt).toBe("Analyze the A/B test data from Supabase.");
   });
 });
 
@@ -62,6 +58,27 @@ describe("loadBenchmarks", () => {
     if (ab) {
       expect(ab.title).toBeTruthy();
       expect(ab.prompt).toContain("Supabase");
+    }
+  });
+
+  it("visual benchmarks include HTML creation instructions in their .md files", async () => {
+    const benchmarks = await loadBenchmarks(BENCHMARKS);
+    const visualIds = ["sakura", "snow-globe-village", "sunset-ocean-study", "solar-system", "macro-wildflower-meadow"];
+    const visualBenchmarks = benchmarks.filter((b) => visualIds.includes(b.id));
+    expect(visualBenchmarks).toHaveLength(visualIds.length);
+    for (const benchmark of visualBenchmarks) {
+      expect(benchmark.prompt).toContain("Create a complete, self-contained HTML file");
+      expect(benchmark.prompt).toContain("Write the file as `index.html`");
+    }
+  });
+
+  it("data-science benchmarks do not include HTML instructions", async () => {
+    const benchmarks = await loadBenchmarks(BENCHMARKS);
+    const ds = benchmarks.find((b) => b.id === "ab-test-analysis");
+    expect(ds).toBeDefined();
+    if (ds) {
+      expect(ds.prompt).not.toContain("Create a complete, self-contained HTML file");
+      expect(ds.prompt).not.toContain("Write the file as `index.html`");
     }
   });
 });
