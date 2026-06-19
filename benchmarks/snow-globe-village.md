@@ -17,6 +17,6 @@ Make the glass dome visually convincing with curved highlights, soft reflections
 
 The animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.
 
-After generating the HTML, do a visual review of the animation using Playwright to ensure it meets the criteria above, and make any necessary adjustments until the animation is accurate and meets the desired quality & performance standards.
+After generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.
 
 Optimize for smooth playback: the scene should animate at 30+ fps at 1080p. Keep the snowflake count modest, use simple shapes or cached sprites for particles, and avoid expensive glass refraction or blur effects that would drop the frame rate.
