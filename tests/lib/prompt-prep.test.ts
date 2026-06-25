@@ -134,9 +134,11 @@ describe("prepareRun", () => {
     expect(prepared.prompt).toContain("Create a complete, self-contained HTML file");
     expect(prepared.prompt).toContain("Write the file as `index.html`");
     expect(prepared.prompt).toContain("cherry blossom");
-    // Prompts no longer contain a model-in-the-loop QA pass — mechanical
-    // verification is handled harness-side, never fed back to the model.
-    expect(prepared.prompt).not.toContain("Playwright");
+    // Aesthetic self-review via Playwright is part of the prompt — the model
+    // screenshots its output and refines until accurate and aesthetically
+    // pleasing. Mechanical correctness is implied (a broken canvas can't be
+    // aesthetically pleasing), so it is not instructed separately.
+    expect(prepared.prompt).toContain("Playwright");
     // Still tool-agnostic — no leaked paths or tool names
     expect(prepared.prompt).not.toContain("OpenCode");
     expect(prepared.prompt).not.toContain(prepared.paths.htmlPath);
