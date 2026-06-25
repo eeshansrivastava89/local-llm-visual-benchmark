@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-18T03:03:18.910Z",
+  "generatedAt": "2026-06-25T05:42:07.365Z",
   "benchmarks": [
     {
       "id": "ab-test-analysis",
@@ -12,34 +12,1268 @@
       "id": "macro-wildflower-meadow",
       "title": "Macro Wildflower Meadow",
       "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
-      "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show foreground flowers with detailed petals, stems, leaves, and pollen centers. Around them, animate butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nAfter generating the HTML, do a visual review of the animation using Playwright to ensure it meets the criteria above, and make any necessary adjustments until the animation is accurate and meets the desired quality & performance standards.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer lightweight rendering for insects and moving foliage, batch canvas operations, and avoid heavy per-frame effects that would drop the frame rate."
+      "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nCreate a full-screen animated close-up meadow scene on a bright breezy day, as if viewed from inside a small patch of wildflowers. Show foreground flowers with detailed petals, stems, and leaves, with butterflies and bees moving through the scene on curved flight paths. Use a vivid, saturated color palette with fresh greens and warm sunlight. Add wind motion: stems sway gently, petals flutter, and insects ride small gusts.\n\nCompose the subject centered and fully visible within the viewport. Keep rendering lightweight so the animation runs smoothly in real time and loops naturally. Use a full-page canvas and no external libraries."
     },
     {
       "id": "sakura",
       "title": "Sakura Tree",
       "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
-      "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nAfter generating the HTML, do a visual review of the animation using Playwright to ensure it meets the criteria above, and make any necessary adjustments until the animation is accurate and meets the desired quality & performance standards.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate."
+      "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. Use dark, elegant lines for the trunk and branches with pink-white blossoms throughout, and have thousands of delicate petals fall continuously with realistic physics — subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, and subtle sunlight from the top right. The scene should feel poetic and serene.\n\nCompose the subject centered and fully visible within the viewport. Keep rendering lightweight so the animation runs smoothly in real time and loops naturally. Use a full-page canvas and no external libraries."
     },
     {
       "id": "snow-globe-village",
       "title": "Snow Globe Village",
       "description": "Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.",
-      "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.\n\nAnimate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.\n\nMake the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.\n\nThe animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.\n\nAfter generating the HTML, do a visual review of the animation using Playwright to ensure it meets the criteria above, and make any necessary adjustments until the animation is accurate and meets the desired quality & performance standards.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Keep the snowflake count modest, use simple shapes or cached sprites for particles, and avoid expensive glass refraction or blur effects that would drop the frame rate."
+      "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nCreate a full-screen animated snow globe with a cozy alpine winter village inside. Build small houses with glowing windows, pine trees, and snowy hills within the globe, and animate thousands of snowflakes swirling with layered depth and believable globe-like physics — circular wind currents, varied speeds, and gentle rotation. Make the glass dome convincing with curved highlights, soft reflections, and a bright specular shine. Add warm bokeh holiday lights in the dark background.\n\nCompose the subject centered and fully visible within the viewport. Keep rendering lightweight so the animation runs smoothly in real time and loops naturally. Use a full-page canvas and no external libraries."
     },
     {
       "id": "solar-system",
       "title": "Solar System",
       "description": "Realistic animated solar system with visible planets and orbital motion.",
-      "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nBuild an HTML animation of the solar system with the Sun at the center and all planets orbiting around it. Make the scene as realistic as practical while keeping all planets visible: the Sun should glow clearly but must not be so large that it hides or overwhelms Mercury, Venus, Earth, or Mars. Preserve the relative scale of orbital distances, use accurate orbital shapes, realistic planet colors, and visible rings where appropriate. Show the system from roughly a 30-degree viewing angle rather than directly overhead. Include as many realistic visual details as possible while keeping the animation smooth. Make sure the full solar system composition fits cleanly within the browser viewport without cropping important planets or orbital paths.\n\nAfter generating the HTML, do a visual review of the animation using Playwright to ensure it meets the criteria above, and make any necessary adjustments until the animation is accurate and meets the desired quality & performance standards.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer simple shapes and efficient canvas draws for planets and orbits, and avoid heavy per-frame glow or blur effects that would drop the frame rate."
+      "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nBuild an HTML animation of the solar system with the Sun at the center and all planets orbiting around it. Keep all planets visible while preserving the relative scale of orbital distances, with realistic planet colors and visible rings where appropriate. Include as many realistic visual details as practical — a glowing sun, orbital paths, and distinct planet appearances.\n\nCompose the subject centered and fully visible within the viewport. Keep rendering lightweight so the animation runs smoothly in real time and loops naturally. Use a full-page canvas and no external libraries."
     },
     {
       "id": "sunset-ocean-study",
       "title": "Sunset Ocean Study",
       "description": "Golden-hour ocean scene with rolling waves, reflected sunlight, and atmospheric rays.",
-      "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated ocean sunset viewed from low above the water, looking toward the horizon. The sun should be partially visible, with about one third of the disk above the horizon and two thirds below it, so the scene feels like late golden hour rather than midday. Use a warm palette of amber, peach, coral, rose, lavender, and deep blue shadows. The ocean should have broad rolling waves moving toward the viewer, with smaller ripples layered on top and bright reflected highlights forming a shimmering path from the sun to the foreground. Add soft volumetric-looking sun rays breaking through thin clouds, but keep them subtle and elegant. Clouds should be stretched horizontally near the horizon, with glowing edges and darker undersides. The water should show changing reflections, foam accents on a few wave crests, and gentle color shifts from warm near the sun to cooler blue-violet in the foreground. Keep the composition clean: one horizon line, one sun, a readable wave rhythm, and no cluttered objects. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the horizon, sun, and wave composition visible without awkward cropping. Keep the implementation performant while maximizing creativity. Use no external libraries.\n\nAfter generating the HTML, do a visual review of the animation using Playwright to ensure it meets the criteria above, and make any necessary adjustments until the animation is accurate and meets the desired quality & performance standards.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer efficient wave rendering (e.g. layered curves, simple gradients) and avoid heavy per-frame blur or ray-marching effects that would drop the frame rate."
+      "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nCreate a full-screen animated ocean sunset viewed from low above the water, looking toward the horizon. The sun sits partially below the horizon in late golden hour, with broad rolling waves moving toward the viewer and bright reflected highlights forming a shimmering path from the sun to the foreground. Use a warm palette of amber, peach, coral, and lavender, with stretched clouds glowing near the horizon. Keep the composition clean with one horizon line and one sun.\n\nCompose the subject centered and fully visible within the viewport. Keep rendering lightweight so the animation runs smoothly in real time and loops naturally. Use a full-page canvas and no external libraries."
     }
   ],
   "runs": [
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-25T05-38-48-580Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nCreate a full-screen animated close-up meadow scene on a bright breezy day, as if viewed from inside a small patch of wildflowers. Show foreground flowers with detailed petals, stems, and leaves, with butterflies and bees moving through the scene on curved flight paths. Use a vivid, saturated color palette with fresh greens and warm sunlight. Add wind motion: stems sway gently, petals flutter, and insects ride small gusts.\n\nCompose the subject centered and fully visible within the viewport. Keep rendering lightweight so the animation runs smoothly in real time and loops naturally. Use a full-page canvas and no external libraries."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "slug": "qwen3-6-35b-a3b-optiq-4bit-df902d2bed",
+        "displayName": "Qwen 3.6 35B A3B OptiQ 4bit"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-25T05:38:48.580Z",
+      "updatedAt": "2026-06-25T05:41:30.580Z",
+      "preparedAt": "2026-06-25T05:38:48.580Z",
+      "completedAt": "2026-06-25T05:41:30.580Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-optiq-4bit-df902d2bed/2026-06-25T05-38-48-580Z",
+      "assets": {
+        "metadata": "metadata.json"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 20137,
+          "completionTokens": 6988,
+          "totalTokens": 27125
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-25T05-32-32-925Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nCreate a full-screen animated close-up meadow scene on a bright breezy day, as if viewed from inside a small patch of wildflowers. Show foreground flowers with detailed petals, stems, and leaves, with butterflies and bees moving through the scene on curved flight paths. Use a vivid, saturated color palette with fresh greens and warm sunlight. Add wind motion: stems sway gently, petals flutter, and insects ride small gusts.\n\nCompose the subject centered and fully visible within the viewport. Keep rendering lightweight so the animation runs smoothly in real time and loops naturally. Use a full-page canvas and no external libraries."
+      },
+      "model": {
+        "id": "gemma-4-26B-A4B-it-QAT-MLX-4bit",
+        "slug": "gemma-4-26b-a4b-it-qat-mlx-4bit",
+        "displayName": "Gemma 4 26B A4B QAT MLX 4bit (it)"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-25T05:32:32.925Z",
+      "updatedAt": "2026-06-25T05:37:58.892Z",
+      "preparedAt": "2026-06-25T05:32:32.925Z",
+      "completedAt": "2026-06-25T05:37:58.892Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/gemma-4-26b-a4b-it-qat-mlx-4bit/2026-06-25T05-32-32-925Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "gemma-4-26B-A4B-it-QAT-MLX-4bit",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 22332,
+          "completionTokens": 9570,
+          "totalTokens": 31902
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-25T05:37:58.892Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-25T05:37:58.892Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-24T22-45-58-400Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nCreate a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show foreground flowers with detailed petals, stems, leaves, and pollen centers. Around them, animate butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nOptimize for smooth playback. Prefer lightweight rendering for insects and moving foliage, batch canvas operations, and avoid heavy per-frame effects that would drop the frame rate.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-UD-Q4_K_S",
+        "slug": "qwen3-6-35b-a3b-ud-q4-k-s-b31c5d18a4",
+        "displayName": "Qwen 3.6 35B A3B › UD-Q4_K_S"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-24T22:45:58.400Z",
+      "updatedAt": "2026-06-24T23:02:31.245Z",
+      "preparedAt": "2026-06-24T22:45:58.400Z",
+      "completedAt": "2026-06-24T23:02:31.245Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-ud-q4-k-s-b31c5d18a4/2026-06-24T22-45-58-400Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "llama-cpp-mtp",
+        "intendedRunner": "Pi",
+        "backendLabel": "llama.cpp MTP",
+        "model": "Qwen3.6-35B-A3B-UD-Q4_K_S",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 10296,
+          "completionTokens": 12351,
+          "totalTokens": 22647
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-24T23:02:31.245Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-24T23:02:31.245Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-24T22-38-15-473Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nOptimize for smooth playback. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-UD-Q4_K_S",
+        "slug": "qwen3-6-35b-a3b-ud-q4-k-s-b31c5d18a4",
+        "displayName": "Qwen 3.6 35B A3B › UD-Q4_K_S"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-24T22:38:15.473Z",
+      "updatedAt": "2026-06-24T22:45:49.124Z",
+      "preparedAt": "2026-06-24T22:38:15.473Z",
+      "completedAt": "2026-06-24T22:45:49.124Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-35b-a3b-ud-q4-k-s-b31c5d18a4/2026-06-24T22-38-15-473Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "llama-cpp-mtp",
+        "intendedRunner": "Pi",
+        "backendLabel": "llama.cpp MTP",
+        "model": "Qwen3.6-35B-A3B-UD-Q4_K_S",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 18121,
+          "completionTokens": 8460,
+          "totalTokens": 26581
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-24T22:45:49.124Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-24T22:45:49.124Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-24T21-04-56-163Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nCreate a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show foreground flowers with detailed petals, stems, leaves, and pollen centers. Around them, animate butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nOptimize for smooth playback. Prefer lightweight rendering for insects and moving foliage, batch canvas operations, and avoid heavy per-frame effects that would drop the frame rate.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "slug": "qwen3-6-35b-a3b-optiq-4bit-df902d2bed",
+        "displayName": "Qwen 3.6 35B A3B OptiQ 4bit"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-24T21:04:56.163Z",
+      "updatedAt": "2026-06-24T21:39:03.555Z",
+      "preparedAt": "2026-06-24T21:04:56.163Z",
+      "completedAt": "2026-06-24T21:39:03.555Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-optiq-4bit-df902d2bed/2026-06-24T21-04-56-163Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 112462,
+          "completionTokens": 40923,
+          "totalTokens": 153385
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-24T21:39:03.555Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-24T21:39:03.555Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-23T03-28-37-466Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nOptimize for smooth playback. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-UD-Q4_K_S",
+        "slug": "qwen3-6-35b-a3b-ud-q4-k-s-b31c5d18a4",
+        "displayName": "Qwen 3.6 35B A3B › UD-Q4_K_S"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-23T03:28:37.466Z",
+      "updatedAt": "2026-06-23T03:51:42.520Z",
+      "preparedAt": "2026-06-23T03:28:37.466Z",
+      "completedAt": "2026-06-23T03:51:42.520Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-35b-a3b-ud-q4-k-s-b31c5d18a4/2026-06-23T03-28-37-466Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "llama-cpp-mtp",
+        "intendedRunner": "Pi",
+        "backendLabel": "llama.cpp MTP",
+        "model": "Qwen3.6-35B-A3B-UD-Q4_K_S",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 24631,
+          "completionTokens": 34151,
+          "totalTokens": 58782
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-23T03:51:42.520Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-23T03:51:42.520Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-23T02-44-15-868Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nOptimize for smooth playback. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "slug": "qwen3-6-35b-a3b-optiq-4bit-df902d2bed",
+        "displayName": "Qwen 3.6 35B A3B OptiQ 4bit"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-23T02:44:15.868Z",
+      "updatedAt": "2026-06-23T02:54:29.488Z",
+      "preparedAt": "2026-06-23T02:44:15.868Z",
+      "completedAt": "2026-06-23T02:54:29.488Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-35b-a3b-optiq-4bit-df902d2bed/2026-06-23T02-44-15-868Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 34247,
+          "completionTokens": 9989,
+          "totalTokens": 44236
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-23T02:54:29.488Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-23T02:54:29.488Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-23T02-23-56-606Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.\n\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nOptimize for smooth playback. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-27B-MTPLX-Optimized-Speed",
+        "slug": "qwen3-6-27b-mtplx-optimized-speed-f08860801f",
+        "displayName": "Qwen 3.6 27B MTPLX Optimized Speed"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-23T02:23:56.606Z",
+      "updatedAt": "2026-06-23T02:41:30.001Z",
+      "preparedAt": "2026-06-23T02:23:56.606Z",
+      "completedAt": "2026-06-23T02:41:30.001Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-27b-mtplx-optimized-speed-f08860801f/2026-06-23T02-23-56-606Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-27B-MTPLX-Optimized-Speed",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 26422,
+          "completionTokens": 7991,
+          "totalTokens": 34413
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-23T02:41:30.001Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-23T02:41:30.001Z",
+          "quality": {
+            "measuredFps": 31.1,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 50,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-21T06-07-43-824Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M",
+        "slug": "qwen3-6-35b-a3b-uncensored-hauhaucs-aggressive-q4-k-m-79a5978fde",
+        "displayName": "Qwen 3.6 35B A3B Uncensored HauhauCS Aggressive › Q4_K_M"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-21T06:07:43.824Z",
+      "updatedAt": "2026-06-21T06:13:06.050Z",
+      "preparedAt": "2026-06-21T06:07:43.824Z",
+      "completedAt": "2026-06-21T06:13:06.050Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-35b-a3b-uncensored-hauhaucs-aggressive-q4-k-m-79a5978fde/2026-06-21T06-07-43-824Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "llama-cpp",
+        "intendedRunner": "Pi",
+        "backendLabel": "llama.cpp",
+        "model": "Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 12554,
+          "completionTokens": 6819,
+          "totalTokens": 19373
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-21T06:13:06.050Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-21T06:13:06.050Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-20T19-21-03-587Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q8_0",
+        "slug": "qwen3-5-9b-uncensored-hauhaucs-aggressive-q8-0-0f1f89b229",
+        "displayName": "Qwen 3.5 9B Uncensored HauhauCS Aggressive › Q8_0"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-20T19:21:03.587Z",
+      "updatedAt": "2026-06-20T19:43:06.968Z",
+      "preparedAt": "2026-06-20T19:21:03.587Z",
+      "completedAt": "2026-06-20T19:43:06.968Z",
+      "runDirectory": "export/runs/sakura/qwen3-5-9b-uncensored-hauhaucs-aggressive-q8-0-0f1f89b229/2026-06-20T19-21-03-587Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "llama-cpp",
+        "intendedRunner": "Pi",
+        "backendLabel": "llama.cpp",
+        "model": "Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q8_0",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 13030,
+          "completionTokens": 14755,
+          "totalTokens": 27785
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T19:43:06.968Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T19:43:06.968Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-20T06-57-07-983Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "kimi k2.7",
+        "slug": "kimi-k2-7-875329b3f3",
+        "displayName": "kimi k2.7"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-20T06:57:07.983Z",
+      "updatedAt": "2026-06-20T18:49:29.352Z",
+      "preparedAt": "2026-06-20T06:57:07.983Z",
+      "completedAt": "2026-06-20T18:49:29.352Z",
+      "runDirectory": "export/runs/sakura/kimi-k2-7-875329b3f3/2026-06-20T06-57-07-983Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "manual",
+        "modelSource": "cloud",
+        "backendLabel": "cloud",
+        "model": "kimi k2.7",
+        "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T18:49:29.352Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T18:49:29.352Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-20T06-51-40-669Z",
+      "benchmark": {
+        "id": "snow-globe-village",
+        "title": "Snow Globe Village",
+        "description": "Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.\n\nAnimate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.\n\nMake the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.\n\nThe animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Keep the snowflake count modest, use simple shapes or cached sprites for particles, and avoid expensive glass refraction or blur effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "kimi k2.7",
+        "slug": "kimi-k2-7-875329b3f3",
+        "displayName": "kimi k2.7"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-20T06:51:40.669Z",
+      "updatedAt": "2026-06-20T06:56:46.040Z",
+      "preparedAt": "2026-06-20T06:51:40.669Z",
+      "completedAt": "2026-06-20T06:56:46.040Z",
+      "runDirectory": "export/runs/snow-globe-village/kimi-k2-7-875329b3f3/2026-06-20T06-51-40-669Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "manual",
+        "modelSource": "cloud",
+        "backendLabel": "cloud",
+        "model": "kimi k2.7",
+        "retries": 0
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T06:56:46.040Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T06:56:46.040Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-20T06-40-39-561Z",
+      "benchmark": {
+        "id": "snow-globe-village",
+        "title": "Snow Globe Village",
+        "description": "Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.\n\nAnimate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.\n\nMake the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.\n\nThe animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Keep the snowflake count modest, use simple shapes or cached sprites for particles, and avoid expensive glass refraction or blur effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "slug": "qwen3-6-35b-a3b-optiq-4bit-df902d2bed",
+        "displayName": "Qwen 3.6 35B A3B OptiQ 4bit"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-20T06:40:39.561Z",
+      "updatedAt": "2026-06-20T06:49:05.954Z",
+      "preparedAt": "2026-06-20T06:40:39.561Z",
+      "completedAt": "2026-06-20T06:49:05.954Z",
+      "runDirectory": "export/runs/snow-globe-village/qwen3-6-35b-a3b-optiq-4bit-df902d2bed/2026-06-20T06-40-39-561Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 33672,
+          "completionTokens": 18231,
+          "totalTokens": 51903
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T06:49:05.954Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T06:49:05.954Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-20T06-34-05-099Z",
+      "benchmark": {
+        "id": "snow-globe-village",
+        "title": "Snow Globe Village",
+        "description": "Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.\n\nAnimate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.\n\nMake the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.\n\nThe animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Keep the snowflake count modest, use simple shapes or cached sprites for particles, and avoid expensive glass refraction or blur effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-UD-MLX-4bit",
+        "slug": "qwen3-6-35b-a3b-ud-mlx-4bit-42cea9e4cc",
+        "displayName": "Qwen 3.6 35B A3B 4bit › UD-MLX"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-20T06:34:05.099Z",
+      "updatedAt": "2026-06-20T06:40:49.717Z",
+      "preparedAt": "2026-06-20T06:34:05.099Z",
+      "completedAt": "2026-06-20T06:40:49.717Z",
+      "runDirectory": "export/runs/snow-globe-village/qwen3-6-35b-a3b-ud-mlx-4bit-42cea9e4cc/2026-06-20T06-34-05-099Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-35B-A3B-UD-MLX-4bit",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 34409,
+          "completionTokens": 11339,
+          "totalTokens": 45748
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T06:40:49.717Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T06:40:49.717Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-20T06-01-28-613Z",
+      "benchmark": {
+        "id": "snow-globe-village",
+        "title": "Snow Globe Village",
+        "description": "Magical snow globe with a cozy winter village, swirling snow, glass shine, and Santa sleigh loop.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated snow globe scene. The snow globe should sit centered on a warm wooden table and must fit comfortably inside the viewport, with the full glass dome, base, and reflections visible without cropping. Inside the globe, build a cozy alpine winter village with small houses, glowing windows, pine trees, snowy hills, and a simple clock tower or chapel silhouette. The village should feel detailed and charming, but use clean readable shapes rather than tiny clutter.\n\nAnimate thousands of snowflakes swirling inside the globe with layered depth: some flakes close to the glass, some around the village, and some fading into the background. The snow should move with believable globe-like physics: circular wind currents, varied speeds, gentle rotation, drifting arcs, and occasional soft gusts. Add a tiny Santa sleigh silhouette looping smoothly around the sky inside the globe; keep it simple and readable, like a dark cutout with a few reindeer shapes or a sleigh trail, so the animation does not depend on complex character anatomy.\n\nMake the glass dome visually convincing with curved highlights, soft reflections, subtle refraction, a frosted rim, and a bright specular shine that moves slightly as the scene animates. Add warm bokeh holiday lights outside the globe in the dark background, plus a polished base with a faint reflection on the table. The mood should be magical, cinematic, cozy, and festive without becoming visually cluttered.\n\nThe animation should loop naturally, run smoothly in real time, adapt to the browser viewport, and keep the globe as the clear centered subject. Use a full-page canvas or SVG and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Keep the snowflake count modest, use simple shapes or cached sprites for particles, and avoid expensive glass refraction or blur effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-27B-MTPLX-Optimized-Speed",
+        "slug": "qwen3-6-27b-mtplx-optimized-speed-f08860801f",
+        "displayName": "Qwen 3.6 27B MTPLX Optimized Speed"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-20T06:01:28.613Z",
+      "updatedAt": "2026-06-20T06:33:43.355Z",
+      "preparedAt": "2026-06-20T06:01:28.613Z",
+      "completedAt": "2026-06-20T06:33:43.355Z",
+      "runDirectory": "export/runs/snow-globe-village/qwen3-6-27b-mtplx-optimized-speed-f08860801f/2026-06-20T06-01-28-613Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-27B-MTPLX-Optimized-Speed",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 33464,
+          "completionTokens": 9474,
+          "totalTokens": 42938
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T06:33:43.355Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-20T06:33:43.355Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "data-science",
+      "runId": "2026-06-19T17-24-40-166Z",
+      "benchmark": {
+        "id": "ab-test-analysis",
+        "title": "A/B Test Production Analysis",
+        "description": "Run a full production A/B test analysis against live Supabase data, including statistical tests, guardrail checks, visualizations, and a grounded ship/don't-ship recommendation.",
+        "prompt": "## Context\n\nIf you need Python packages, create a virtual environment and install them there — do not assume packages are pre-installed.\n\nThe A/B Simulator is a Pineapple Finder memory game. Variant A has 4 pineapples, Variant B has 5. Data lives in a Supabase `posthog_events` table that records player interactions from live randomized traffic.\n\nEach row is one event. The important event types are `puzzle_started` and `puzzle_completed`. The `variant` column (A or B) is assigned per session. The `completion_time_seconds` column is only populated on `puzzle_completed` events. A single session can have multiple puzzle completions — treat each `puzzle_completed` event as a separate observation for the primary analysis, not one per session.\n\n## Data Access\n\nSupabase connection details are in `supabase.json` in this directory. Read it and query the API:\n\n```python\nimport json, requests\nwith open(\"supabase.json\") as f:\n    cfg = json.load(f)\nresp = requests.get(cfg[\"url\"], headers=cfg[\"headers\"])\ndata = resp.json()\n```\n\nUse `requests.get()` (or equivalent). Do not read environment variables.\n\n## Required Outputs\n\nWrite these files into the current working directory:\n\n1. **`analysis.ipynb`** — a Jupyter notebook with the full analysis\n2. **`summary.json`** — a machine-readable summary (schema below)\n3. **`chart-distribution.png`** — completion time distribution by variant\n4. **`chart-treatment-effect.png`** — treatment effect confidence interval\n5. **`chart-completion-rates.png`** — completion/repeat rate comparison\n\n## Required Notebook Sections\n\n1. **Setup & data pull** — imports, Supabase API query with provided URL and headers, DataFrames\n2. **Metric definitions & sanity checks** — primary KPI, guardrails, SRM test, data quality\n3. **Primary analysis** — Welch's t-test, CI, Cohen's d, interpretation\n4. **Guardrail analysis** — completion rate χ² test, repeat rate z-test\n5. **Visualizations** — the 3 charts listed above\n6. **Conclusion & recommendation** — executive summary and `summary.json`\n\n## Not Required\n\n- OLS regression, CUPED variance reduction, power analysis\n- Outlier detection detail, KDE, daily volume/trend charts\n- Extended educational commentary\n\n## summary.json Schema\n\n```json\n{\n  \"status\": \"significant | not_significant | inconclusive\",\n  \"recommended_variant\": \"A | B | null\",\n  \"decision\": \"string — optional human-readable recommendation\",\n  \"metrics\": [\n    { \"label\": \"Completion Time\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Completion Rate\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Repeat Rate\", \"value\": \"string\", \"delta\": \"string\", \"delta_direction\": \"up|down\", \"context\": \"string\" },\n    { \"label\": \"Effect Size\", \"value\": \"string\", \"context\": \"string\" }\n  ],\n  \"raw_stats\": {\n    \"p_value\": \"number\",\n    \"cohens_d\": \"number\",\n    \"mean_a\": \"number\",\n    \"mean_b\": \"number\",\n    \"std_a\": \"number\",\n    \"std_b\": \"number\",\n    \"completion_rate_a\": \"number\",\n    \"completion_rate_b\": \"number\",\n    \"repeat_rate_a\": \"number\",\n    \"repeat_rate_b\": \"number\",\n    \"srm_p_value\": \"number\"\n  },\n  \"warnings\": [\"string\"],\n  \"methodology\": \"string\",\n  \"generated_at\": \"ISO 8601 timestamp\"\n}\n```\n\n## Scoring\n\nYour output will be scored on:\n\n- **Data access**: Did you query real Supabase data via the API (using credentials from `supabase.json`)?\n- **Statistical correctness**: Correct SRM test, Welch's t-test, effect size, CI?\n- **Guardrails**: Did you check completion rate and repeat rate, not just the primary metric?\n- **Visualizations**: 3 clear, labeled, interpretable charts?\n- **Decision quality**: Does `recommended_variant` match the data? If Variant B is worse on guardrails, recommended_variant should be \"A\", not \"B\".\n- **Hallucination resistance**: All cited numbers come from queried data, not invented?"
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "slug": "qwen3-6-35b-a3b-optiq-4bit-df902d2bed",
+        "displayName": "Qwen 3.6 35B A3B OptiQ 4bit"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-19T17:24:40.166Z",
+      "updatedAt": "2026-06-19T17:41:10.261Z",
+      "preparedAt": "2026-06-19T17:24:40.166Z",
+      "completedAt": "2026-06-19T17:41:10.261Z",
+      "runDirectory": "export/runs/ab-test-analysis/qwen3-6-35b-a3b-optiq-4bit-df902d2bed/2026-06-19T17-24-40-166Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "ds": {
+          "summary": "summary.json",
+          "chartDistribution": "chart-distribution.png",
+          "chartTreatmentEffect": "chart-treatment-effect.png",
+          "chartCompletionRates": "chart-completion-rates.png"
+        }
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 55188,
+          "completionTokens": 14550,
+          "totalTokens": 69738
+        }
+      },
+      "dsSummary": {
+        "status": "significant",
+        "recommended_variant": "A",
+        "decision": "Variant A is significantly faster (mean 5.7s vs 8.9s, p=0.0003). Recommendation: Keep Variant A.",
+        "metrics": [
+          {
+            "label": "Completion Time",
+            "value": "8.94s vs 5.65s",
+            "delta": "-3.29s",
+            "delta_direction": "up",
+            "context": "Welch's t-test p=0.0003, Cohen's d=-0.413"
+          },
+          {
+            "label": "Completion Rate",
+            "value": "71.1% vs 89.2%",
+            "delta": "-18.2%",
+            "delta_direction": "up",
+            "context": "Z-test p=0.0000"
+          },
+          {
+            "label": "Repeat Rate",
+            "value": "51.7% vs 48.6%",
+            "delta": "+3.1%",
+            "delta_direction": "down",
+            "context": "Z-test p=0.7266"
+          },
+          {
+            "label": "Effect Size",
+            "value": "Cohen's d = 0.413",
+            "context": "Interpretation: medium effect"
+          }
+        ],
+        "warnings": [
+          "None"
+        ]
+      },
+      "dsScorecard": {
+        "total": 100,
+        "earned": 95,
+        "pct": 95,
+        "checks": {
+          "summary_valid": {
+            "label": "summary.json valid",
+            "max": 5,
+            "earned": 5,
+            "pass": true,
+            "detail": "parsed 1452 bytes, all required fields present"
+          },
+          "data_access": {
+            "label": "Data accessed from Supabase",
+            "max": 15,
+            "earned": 15,
+            "pass": true,
+            "detail": "API calls using supabase.json config"
+          },
+          "data_quality": {
+            "label": "Data quality checks in notebook",
+            "max": 5,
+            "earned": 0,
+            "pass": false,
+            "detail": "only found null handling (need 2+)"
+          },
+          "srm_test": {
+            "label": "SRM test performed",
+            "max": 5,
+            "earned": 5,
+            "pass": true,
+            "detail": "SRM check found"
+          },
+          "hypothesis_tests": {
+            "label": "Hypothesis tests (t-test + chi²)",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "found: t-test, chi-square"
+          },
+          "p_value": {
+            "label": "p_value accuracy",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "got 0.000308984, oracle 0.00063, tolerance ±0.05"
+          },
+          "cohens_d": {
+            "label": "Cohen's d accuracy",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "got -0.413043, oracle 0.3961, tolerance ±0.1"
+          },
+          "completion_rates": {
+            "label": "Completion rates match oracle",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "A:0.8925 B:0.7109, oracle A:0.8889 B:0.7067"
+          },
+          "charts_exist": {
+            "label": "3 chart files exist",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "all 3 chart files present"
+          },
+          "charts_labeled": {
+            "label": "Charts have labels and titles",
+            "max": 5,
+            "earned": 5,
+            "pass": true,
+            "detail": "titles, x-labels, y-labels"
+          },
+          "recommended_variant": {
+            "label": "recommended_variant correct",
+            "max": 10,
+            "earned": 10,
+            "pass": true,
+            "detail": "got 'A', expected 'A'"
+          },
+          "decision_grounded": {
+            "label": "Decision cites specific data",
+            "max": 5,
+            "earned": 5,
+            "pass": true,
+            "detail": "p-value, statistical significance, conclusion section"
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-19T17-14-19-029Z",
+      "benchmark": {
+        "id": "macro-wildflower-meadow",
+        "title": "Macro Wildflower Meadow",
+        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show foreground flowers with detailed petals, stems, leaves, and pollen centers. Around them, animate butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer lightweight rendering for insects and moving foliage, batch canvas operations, and avoid heavy per-frame effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "gemma-4-26B-A4B-it-qat-UD-Q4_K_XL",
+        "slug": "gemma-4-26b-a4b-it-qat-ud-q4-k-xl-66aa09c38f",
+        "displayName": "Gemma 4 26B A4B qat (it) › UD-Q4_K_XL"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-19T17:14:19.029Z",
+      "updatedAt": "2026-06-19T17:18:47.127Z",
+      "preparedAt": "2026-06-19T17:14:19.029Z",
+      "completedAt": "2026-06-19T17:18:47.127Z",
+      "runDirectory": "export/runs/macro-wildflower-meadow/gemma-4-26b-a4b-it-qat-ud-q4-k-xl-66aa09c38f/2026-06-19T17-14-19-029Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "llama-cpp",
+        "intendedRunner": "Pi",
+        "backendLabel": "llama.cpp",
+        "model": "gemma-4-26B-A4B-it-qat-UD-Q4_K_XL",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 13886,
+          "completionTokens": 10477,
+          "totalTokens": 24363
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-19T17:18:47.127Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-19T17:18:47.127Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-18T04-32-49-319Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "slug": "qwen3-6-35b-a3b-optiq-4bit-df902d2bed",
+        "displayName": "Qwen 3.6 35B A3B OptiQ 4bit"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-18T04:32:49.319Z",
+      "updatedAt": "2026-06-18T04:58:57.157Z",
+      "preparedAt": "2026-06-18T04:32:49.319Z",
+      "completedAt": "2026-06-18T04:58:57.157Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-35b-a3b-optiq-4bit-df902d2bed/2026-06-18T04-32-49-319Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-35B-A3B-OptiQ-4bit",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 106824,
+          "completionTokens": 43798,
+          "totalTokens": 150622
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-18T04:58:57.157Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-18T04:58:57.157Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1600,
+            "frames": 192,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "visual",
+      "runId": "2026-06-18T03-11-53-986Z",
+      "benchmark": {
+        "id": "sakura",
+        "title": "Sakura Tree",
+        "description": "Dreamy Japanese cherry blossom tree animation with falling petals.",
+        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nAnimate a dreamy Japanese cherry blossom tree in full bloom during a gentle petal storm. The complete tree must fit comfortably inside the viewport. Compose the tree as a centered full-body subject, not a cropped close-up. Keep the trunk base near the lower part of the canvas, but do not let it extend below the viewport. The crown should use no more than about 80% of the canvas width and 70% of the canvas height, so no branches or blossoms are clipped. Use dark, elegant lines for the trunk and branches, with pink-white blossoms throughout. Thousands of delicate pink and white petals should fall continuously with realistic physics: subtle rotation, wind-curved paths, varied speeds, and occasional small gusts. Add a soft pastel sky gradient from light pink to lavender, distant misty mountains, a few petals accumulating on the ground, and subtle sunlight from the top right. The scene should feel poetic and serene, loop naturally, and run in real time. Use a full-page canvas and no external libraries.\n\nAfter generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.\n\nOptimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer lightweight rendering for particles (e.g. simple shapes, cached sprites, batched draws) and avoid heavy per-frame effects that would drop the frame rate."
+      },
+      "model": {
+        "id": "Qwen3.6-27B-MTPLX-Optimized-Speed",
+        "slug": "qwen3-6-27b-mtplx-optimized-speed-f08860801f",
+        "displayName": "Qwen 3.6 27B MTPLX Optimized Speed"
+      },
+      "status": "completed",
+      "createdAt": "2026-06-18T03:11:53.986Z",
+      "updatedAt": "2026-06-18T03:33:43.674Z",
+      "preparedAt": "2026-06-18T03:11:53.986Z",
+      "completedAt": "2026-06-18T03:33:43.674Z",
+      "runDirectory": "export/runs/sakura/qwen3-6-27b-mtplx-optimized-speed-f08860801f/2026-06-18T03-11-53-986Z",
+      "assets": {
+        "metadata": "metadata.json",
+        "preview": "preview.png",
+        "videoMp4": "preview.mp4"
+      },
+      "runner": {
+        "mode": "external",
+        "modelSource": "omlx",
+        "intendedRunner": "Pi",
+        "backendLabel": "oMLX",
+        "model": "Qwen3.6-27B-MTPLX-Optimized-Speed",
+        "retries": 0,
+        "tokenMetrics": {
+          "reported": true,
+          "promptTokens": 31023,
+          "completionTokens": 12746,
+          "totalTokens": 43769
+        }
+      },
+      "capture": {
+        "preview": {
+          "status": "ready",
+          "capturedAt": "2026-06-18T03:33:43.674Z"
+        },
+        "video": {
+          "status": "ready",
+          "capturedAt": "2026-06-18T03:33:43.674Z",
+          "quality": {
+            "measuredFps": 120,
+            "minFps": 12,
+            "sampleMs": 1608,
+            "frames": 193,
+            "viewport": {
+              "width": 1600,
+              "height": 900
+            }
+          }
+        }
+      }
+    },
     {
       "schemaVersion": 1,
       "kind": "visual",
@@ -1693,60 +2927,6 @@
             "minFps": 12,
             "sampleMs": 1600,
             "frames": 192,
-            "viewport": {
-              "width": 1600,
-              "height": 900
-            }
-          }
-        }
-      }
-    },
-    {
-      "schemaVersion": 1,
-      "kind": "visual",
-      "runId": "2026-06-13T05-56-12-998Z",
-      "benchmark": {
-        "id": "macro-wildflower-meadow",
-        "title": "Macro Wildflower Meadow",
-        "description": "Close-up colorful meadow scene with detailed butterflies, bees, flowers, and wind motion.",
-        "prompt": "Create a complete, self-contained HTML file for the request below.\nWrite the file as `index.html` in the current working directory.\nDo not create any folders, do not infer a filesystem path, and do not print the HTML in chat.\n\nThe HTML must include all CSS and JavaScript inline and must not depend on external network assets.\nCreate a full-screen animated close-up meadow scene on a bright breezy day, viewed from just above flower height as if the camera is inside a small patch of wildflowers. Keep the composition intimate and readable: show hundreds offoreground flowers with detailed petals, stems, leaves, and pollen centers. Around them, animate butterflies and bees moving through the scene. The insects should be large enough to see details: butterfly wing patterns, antennae, soft body shapes, bee stripes, tiny wings, and curved flight paths.\n\nUse a vivid imaginative color palette with saturated flower colors, fresh greens, warm sunlight, and playful accents. The model may choose the flower and butterfly colors freely, but the scene should feel joyful, lush, and eye-catching as a gallery thumbnail. Add wind motion: flower stems should sway gently, petals should flutter, leaves should tilt, and insects should adjust their flight as if riding small gusts. Include a softly blurred background with hints of more flowers and sky, but keep the foreground flowers and insects as the clear focus.\n\nKeep the implementation performant while maximizing creativity. The animation should loop naturally, run smoothly, adapt to the browser viewport, and keep the foreground flowers and insects visible without cropping. Use a full-page canvas or SVG and no external libraries.\n\nAfter generating the HTML, do a visual review of the animation to ensure it meets the criteria above."
-      },
-      "model": {
-        "id": "Qwen3.6-35B-A3B-UD-Q4_K_XL",
-        "slug": "qwen3-6-35b-a3b-ud-q4-k-xl-7a6bf09482"
-      },
-      "status": "completed",
-      "createdAt": "2026-06-13T05:56:12.998Z",
-      "updatedAt": "2026-06-13T06:08:11.246Z",
-      "preparedAt": "2026-06-13T05:56:12.998Z",
-      "completedAt": "2026-06-13T06:08:11.246Z",
-      "runDirectory": "export/runs/macro-wildflower-meadow/qwen3-6-35b-a3b-ud-q4-k-xl-7a6bf09482/2026-06-13T05-56-12-998Z",
-      "assets": {
-        "metadata": "metadata.json",
-        "preview": "preview.png",
-        "videoMp4": "preview.mp4"
-      },
-      "runner": {
-        "mode": "external",
-        "modelSource": "llama-cpp-mtp",
-        "intendedRunner": "Pi",
-        "backendLabel": "llama.cpp MTP",
-        "model": "Qwen3.6-35B-A3B-UD-Q4_K_XL",
-        "retries": 0
-      },
-      "capture": {
-        "preview": {
-          "status": "ready",
-          "capturedAt": "2026-06-13T06:08:11.246Z"
-        },
-        "video": {
-          "status": "ready",
-          "capturedAt": "2026-06-13T06:08:11.246Z",
-          "quality": {
-            "measuredFps": 3.5,
-            "minFps": 12,
-            "sampleMs": 1700,
-            "frames": 6,
             "viewport": {
               "width": 1600,
               "height": 900
@@ -6391,7 +7571,7 @@
     }
   ],
   "machineProfile": {
-    "collectedAt": "2026-06-18T03:03:18.910Z",
+    "collectedAt": "2026-06-25T05:42:07.366Z",
     "platform": {
       "node": "v26.3.0",
       "platform": "darwin",
@@ -6401,7 +7581,7 @@
       "type": "Darwin",
       "release": "25.5.0",
       "hostname": "Eeshans-MacBook-Pro-16.local",
-      "uptimeSeconds": 362492
+      "uptimeSeconds": 976819
     },
     "cpu": {
       "model": "Apple M4 Pro",
@@ -6410,10 +7590,10 @@
     },
     "memory": {
       "totalBytes": 51539607552,
-      "availableBytes": 31745916928,
-      "freeBytes": 16510943232,
-      "usedBytes": 19793690624,
-      "pressurePercent": 38.4,
+      "availableBytes": 31673286656,
+      "freeBytes": 23225155584,
+      "usedBytes": 19866320896,
+      "pressurePercent": 38.5,
       "pressureLabel": "low",
       "source": "macOS VM stats, cached and purgeable memory excluded"
     },
