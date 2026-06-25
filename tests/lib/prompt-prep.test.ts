@@ -134,8 +134,9 @@ describe("prepareRun", () => {
     expect(prepared.prompt).toContain("Create a complete, self-contained HTML file");
     expect(prepared.prompt).toContain("Write the file as `index.html`");
     expect(prepared.prompt).toContain("cherry blossom");
-    // QA pass instructions also come from the .md file
-    expect(prepared.prompt).toContain("Playwright");
+    // Prompts no longer contain a model-in-the-loop QA pass — mechanical
+    // verification is handled harness-side, never fed back to the model.
+    expect(prepared.prompt).not.toContain("Playwright");
     // Still tool-agnostic — no leaked paths or tool names
     expect(prepared.prompt).not.toContain("OpenCode");
     expect(prepared.prompt).not.toContain(prepared.paths.htmlPath);

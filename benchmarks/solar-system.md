@@ -4,13 +4,8 @@ title: Solar System
 description: Realistic animated solar system with visible planets and orbital motion.
 ---
 
-Create a complete, self-contained HTML file for the request below.
-Write the file as `index.html` in the current working directory.
-Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat.
+Create a complete, self-contained HTML file for the request below. Write the file as `index.html` in the current working directory. Do not create any folders, do not infer a filesystem path, and do not print the HTML in chat. The HTML must include all CSS and JavaScript inline and must not depend on external network assets.
 
-The HTML must include all CSS and JavaScript inline and must not depend on external network assets.
-Build an HTML animation of the solar system with the Sun at the center and all planets orbiting around it. Make the scene as realistic as practical while keeping all planets visible: the Sun should glow clearly but must not be so large that it hides or overwhelms Mercury, Venus, Earth, or Mars. Preserve the relative scale of orbital distances, use accurate orbital shapes, realistic planet colors, and visible rings where appropriate. Show the system from roughly a 30-degree viewing angle rather than directly overhead. Include as many realistic visual details as possible while keeping the animation smooth. Make sure the full solar system composition fits cleanly within the browser viewport without cropping important planets or orbital paths.
+Build an HTML animation of the solar system with the Sun at the center and all planets orbiting around it. Keep all planets visible while preserving the relative scale of orbital distances, with realistic planet colors and visible rings where appropriate. Include as many realistic visual details as practical — a glowing sun, orbital paths, and distinct planet appearances.
 
-After generating the HTML, review it with Playwright. First confirm it opens and runs with no JavaScript syntax or console errors — if it's broken, fix the root cause before anything else. Then check the visual criteria with one or two screenshots; if they're already met and there are no errors, stop and make no changes. When something is genuinely wrong, identify the root cause and fix it with one decisive change rather than many small cosmetic tweaks. Keep it to a few steps — do not over-engineer or refine indefinitely, and stop once the animation meets the stated criteria and runs at the target frame rate.
-
-Optimize for smooth playback: the scene should animate at 30+ fps at 1080p. Prefer simple shapes and efficient canvas draws for planets and orbits, and avoid heavy per-frame glow or blur effects that would drop the frame rate.
+Compose the subject centered and fully visible within the viewport. Keep rendering lightweight so the animation runs smoothly in real time and loops naturally. Use a full-page canvas and no external libraries.
